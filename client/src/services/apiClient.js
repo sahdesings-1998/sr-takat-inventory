@@ -22,14 +22,6 @@ const BASE_URL = normalizeApiBaseUrl(
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  withCredentials: true, // send/receive the httpOnly accessToken/refreshToken cookies
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-const refreshClient = axios.create({
-  baseURL: BASE_URL,
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -40,7 +32,6 @@ const AUTH_ENDPOINTS = [
   "/auth/login",
   "/auth/register",
   "/auth/logout",
-  "/auth/refresh-token",
   "/auth/me",
 ];
 
@@ -48,103 +39,55 @@ function isAuthEndpoint(url) {
   return AUTH_ENDPOINTS.some((endpoint) => url?.includes(endpoint));
 }
 
-let isRefreshing = false;
-let pendingQueue = [];
-let refreshPromise = null;
-
-function resolvePendingQueue(error) {
-  pendingQueue.forEach(({ resolve, reject }) => {
-    if (error) reject(error);
-    else resolve();
-  });
-  pendingQueue = [];
-}
+let isRedirecting = false;
 
 function notifyLogout() {
   if (typeof window !== "undefined") {
-    if (window.__srTakatAuthRedirected) {
+    if (isRedirecting) {
       return;
     }
-    window.__srTakatAuthRedirected = true;
+    isRedirecting = true;
 
     window.dispatchEvent(new CustomEvent("sr-takat:auth-logout"));
     window.location.assign("/login");
   }
 }
 
-function refreshAccessToken() {
-  if (!refreshPromise) {
-    console.info("[auth] refreshing session");
-    refreshPromise = refreshClient
-      .post("/auth/refresh-token")
-      .then((response) => {
-        console.info("[auth] refresh success");
-        refreshPromise = null;
-        return response;
-      })
-      .catch((error) => {
-        console.error("[auth] refresh failed", {
-          status: error?.response?.status,
-          message: error?.message,
-        });
-        refreshPromise = null;
-        throw error;
-      });
-  }
-  return refreshPromise;
-}
-
 apiClient.interceptors.response.use(
   (response) => response,
-  async (error) => {
+  (error) => {
     const response = error.response;
     const originalRequest = error.config;
+    const url = originalRequest?.url || "unknown";
 
-    if (!response || response.status !== 401 || !originalRequest) {
-      if (response?.status && response.status >= 400) {
-        console.error("[auth] request failed", {
-          url: originalRequest?.url,
-          status: response.status,
-          message: error.message,
-        });
-      }
+    // Log all 401 errors with details
+    if (response?.status === 401) {
+      console.warn("[auth] 401 unauthorized", { url });
+    }
+
+    // Don't redirect on 401 for auth endpoints (including session checks)
+    if (response?.status === 401 && isAuthEndpoint(url)) {
       return Promise.reject(error);
     }
 
-    const requestUrl = originalRequest.url;
-    console.warn("[auth] received 401", {
-      url: requestUrl,
-      retry: Boolean(originalRequest._retry),
-    });
-
-    if (isAuthEndpoint(requestUrl) || originalRequest._retry) {
-      return Promise.reject(error);
-    }
-
-    originalRequest._retry = true;
-
-    if (isRefreshing) {
-      return new Promise((resolve, reject) => {
-        pendingQueue.push({ resolve, reject });
-      })
-        .then(() => apiClient(originalRequest))
-        .catch((err) => Promise.reject(err));
-    }
-
-    isRefreshing = true;
-
-    try {
-      await refreshAccessToken();
-      resolvePendingQueue(null);
-      return apiClient(originalRequest);
-    } catch (refreshError) {
-      resolvePendingQueue(refreshError);
+    // Redirect on 401 only for protected API endpoints
+    if (response?.status === 401 && !isAuthEndpoint(url)) {
+      console.warn("[auth] session expired, redirecting to login", { url });
       notifyLogout();
-      return Promise.reject(refreshError);
-    } finally {
-      isRefreshing = false;
+      return Promise.reject(error);
     }
+
+    if (response?.status && response.status >= 400) {
+      console.error("[auth] request error", {
+        url,
+        status: response.status,
+        message: error.message,
+      });
+    }
+
+    return Promise.reject(error);
   }
 );
 
 export default apiClient;
+

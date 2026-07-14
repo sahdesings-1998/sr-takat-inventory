@@ -5,34 +5,48 @@ const AuthContext = createContext(undefined);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // true while we check for an existing session
+  const [loading, setLoading] = useState(true);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
-  // On first mount, ask the server who (if anyone) the current cookies
-  // belong to. This is what lets a page refresh keep the user logged in.
+  // Check if user is logged in on app load (run only once)
   useEffect(() => {
+    if (sessionChecked) return;
+
     let isMounted = true;
+
+    console.info("[auth] checking session on app load");
 
     authApi
       .getMe()
       .then((res) => {
-        if (isMounted) setUser(res.data.user);
+        if (isMounted) {
+          console.info("[auth] session found", { user: res.data.user?.fullName });
+          setUser(res.data.user);
+        }
       })
-      .catch(() => {
-        if (isMounted) setUser(null);
+      .catch((error) => {
+        if (isMounted) {
+          console.info("[auth] no active session", { status: error?.response?.status });
+          setUser(null);
+        }
       })
       .finally(() => {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setSessionChecked(true);
+          setLoading(false);
+        }
       });
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [sessionChecked]);
 
+  // Listen for logout events from failed auth requests
   useEffect(() => {
     const handleAuthLogout = () => {
+      console.info("[auth] logout event received");
       setUser(null);
-      setLoading(false);
     };
 
     window.addEventListener("sr-takat:auth-logout", handleAuthLogout);
@@ -40,28 +54,27 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = useCallback(async (credentials) => {
+    console.info("[auth] login attempt", { email: credentials.email });
     const res = await authApi.login(credentials);
+    console.info("[auth] login success");
     setUser(res.data.user);
     return res.data.user;
   }, []);
 
   const register = useCallback(async (payload) => {
+    console.info("[auth] register attempt", { email: payload.email });
     const res = await authApi.register(payload);
+    console.info("[auth] register success");
     return res.data.user;
   }, []);
 
   const logout = useCallback(async () => {
+    console.info("[auth] logout");
     try {
       await authApi.logout();
     } finally {
       setUser(null);
     }
-  }, []);
-
-  const refreshUser = useCallback(async () => {
-    const res = await authApi.getMe();
-    setUser(res.data.user);
-    return res.data.user;
   }, []);
 
   const value = useMemo(
@@ -73,9 +86,8 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
-      refreshUser,
     }),
-    [user, loading, login, register, logout, refreshUser]
+    [user, loading, login, register, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

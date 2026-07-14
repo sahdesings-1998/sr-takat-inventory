@@ -15,9 +15,28 @@ const apiClient = axios.create({
   },
 });
 
-// --- 401 handling: refresh the access token once, then retry the original request ---
+const refreshClient = axios.create({
+  baseURL: BASE_URL,
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+const AUTH_ENDPOINTS = [
+  "/auth/login",
+  "/auth/register",
+  "/auth/logout",
+  "/auth/refresh-token",
+];
+
+function isAuthEndpoint(url) {
+  return AUTH_ENDPOINTS.some((endpoint) => url?.includes(endpoint));
+}
+
 let isRefreshing = false;
 let pendingQueue = [];
+let refreshPromise = null;
 
 function resolvePendingQueue(error) {
   pendingQueue.forEach(({ resolve, reject }) => {
@@ -27,24 +46,50 @@ function resolvePendingQueue(error) {
   pendingQueue = [];
 }
 
+function notifyLogout() {
+  if (typeof window !== "undefined") {
+    refreshClient.post("/auth/logout").catch(() => {
+      // best-effort cookie cleanup on the server
+    });
+    window.dispatchEvent(new CustomEvent("sr-takat:auth-logout"));
+    window.location.href = "/login";
+  }
+}
+
+function refreshAccessToken() {
+  if (!refreshPromise) {
+    refreshPromise = refreshClient
+      .post("/auth/refresh-token")
+      .then((response) => {
+        refreshPromise = null;
+        return response;
+      })
+      .catch((error) => {
+        refreshPromise = null;
+        throw error;
+      });
+  }
+  return refreshPromise;
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const { response, config: originalRequest } = error;
+    const response = error.response;
+    const originalRequest = error.config;
 
-    const isAuthEndpoint =
-      originalRequest?.url?.includes("/auth/login") ||
-      originalRequest?.url?.includes("/auth/register") ||
-      originalRequest?.url?.includes("/auth/refresh-token");
+    if (!response || response.status !== 401 || !originalRequest) {
+      return Promise.reject(error);
+    }
 
-    if (response?.status !== 401 || isAuthEndpoint || originalRequest?._retry) {
+    const requestUrl = originalRequest.url;
+    if (isAuthEndpoint(requestUrl) || originalRequest._retry) {
       return Promise.reject(error);
     }
 
     originalRequest._retry = true;
 
     if (isRefreshing) {
-      // Another request already triggered a refresh — wait for it, then retry.
       return new Promise((resolve, reject) => {
         pendingQueue.push({ resolve, reject });
       })
@@ -55,19 +100,12 @@ apiClient.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      await apiClient.post("/auth/refresh-token");
+      await refreshAccessToken();
       resolvePendingQueue(null);
       return apiClient(originalRequest);
     } catch (refreshError) {
       resolvePendingQueue(refreshError);
-      // If refresh failed, force a clean logout/redirect to login so the app
-      // doesn't keep retrying and the user can re-authenticate.
-      try {
-        // best-effort: navigate to login page in the browser
-        if (typeof window !== "undefined") window.location.href = "/login";
-      } catch (e) {
-        // noop
-      }
+      notifyLogout();
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

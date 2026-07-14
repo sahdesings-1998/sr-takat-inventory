@@ -29,6 +29,16 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      setUser(null);
+      setLoading(false);
+    };
+
+    window.addEventListener("sr-takat:auth-logout", handleAuthLogout);
+    return () => window.removeEventListener("sr-takat:auth-logout", handleAuthLogout);
+  }, []);
+
   const login = useCallback(async (credentials) => {
     const res = await authApi.login(credentials);
     setUser(res.data.user);

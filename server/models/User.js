@@ -80,6 +80,9 @@ userSchema.methods.toSafeObject = function toSafeObject() {
   delete obj.resetPasswordTokenHash;
   delete obj.resetPasswordExpires;
   delete obj.__v;
+  // Provide a derived `isVerified` flag for frontend compatibility.
+  // In this project, `status: 'active'` indicates a verified/active account.
+  obj.isVerified = obj.status === "active";
   return obj;
 };
 

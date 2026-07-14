@@ -21,7 +21,14 @@ export function AuthProvider({ children }) {
       .then((res) => {
         if (isMounted) {
           console.info("[auth] session found", { user: res.data.user?.fullName });
-          setUser(res.data.user);
+          // Only restore session for verified accounts
+          const fetchedUser = res.data.user;
+          if (fetchedUser && fetchedUser.isVerified) {
+            setUser(fetchedUser);
+          } else {
+            console.info("[auth] session ignored - account not verified", { user: fetchedUser?.email });
+            setUser(null);
+          }
         }
       })
       .catch((error) => {
@@ -56,9 +63,24 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (credentials) => {
     console.info("[auth] login attempt", { email: credentials.email });
     const res = await authApi.login(credentials);
+    const loggedUser = res.data.user;
+    console.info("[auth] login response", { user: loggedUser?.email });
+
+    // Require verified account to complete login
+    if (!loggedUser?.isVerified) {
+      console.warn("[auth] login blocked - account not verified", { email: loggedUser?.email });
+      // Ensure server-side cookies are cleared if any
+      try {
+        await authApi.logout();
+      } catch (e) {
+        console.info("[auth] logout after unverified login attempt failed", { error: e?.message });
+      }
+      throw new Error("Account not verified. Please verify your email before logging in.");
+    }
+
     console.info("[auth] login success");
-    setUser(res.data.user);
-    return res.data.user;
+    setUser(loggedUser);
+    return loggedUser;
   }, []);
 
   const register = useCallback(async (payload) => {

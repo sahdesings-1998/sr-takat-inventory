@@ -117,7 +117,7 @@ export function IncomeManagement() {
         isLoading={incomeStatsLoading || expenseStatsLoading}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_0.6fr] gap-4">
         <div className="space-y-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end justify-between bg-white p-4 rounded-[20px] border border-gray-100 shadow-[0_4px_26px_rgba(0,0,0,0.05)]">
             <SearchInput

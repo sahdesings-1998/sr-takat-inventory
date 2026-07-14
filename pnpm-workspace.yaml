@@ -1,0 +1,9 @@
+packages:
+  - "client"
+  - "server"
+allowBuilds:
+  bcrypt: false
+  esbuild: false
+onlyBuiltDependencies:
+  - bcrypt
+  - esbuild

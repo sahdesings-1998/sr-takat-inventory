@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+dist/
+build/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# Logs and local/system files
+*.log
+.DS_Store
+
+# Uploads (keep placeholder)
+uploads/*
+!uploads/.gitkeep

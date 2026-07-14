@@ -41,6 +41,7 @@ const AUTH_ENDPOINTS = [
   "/auth/register",
   "/auth/logout",
   "/auth/refresh-token",
+  "/auth/me",
 ];
 
 function isAuthEndpoint(url) {
@@ -61,11 +62,13 @@ function resolvePendingQueue(error) {
 
 function notifyLogout() {
   if (typeof window !== "undefined") {
-    refreshClient.post("/auth/logout").catch(() => {
-      // best-effort cookie cleanup on the server
-    });
+    if (window.__srTakatAuthRedirected) {
+      return;
+    }
+    window.__srTakatAuthRedirected = true;
+
     window.dispatchEvent(new CustomEvent("sr-takat:auth-logout"));
-    window.location.href = "/login";
+    window.location.assign("/login");
   }
 }
 

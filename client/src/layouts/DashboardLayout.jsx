@@ -12,6 +12,8 @@ import {
   Calculator,
   FileText,
   Receipt,
+  TrendingUp,
+  TrendingDown,
   FileSpreadsheet,
   BarChart3,
   Search,
@@ -52,6 +54,8 @@ const NAV_GROUPS = [
     items: [
       { to: "/costing", icon: Calculator, label: "Costing Engine" },
       { to: "/memos", icon: FileText, label: "Memos / Consignment" },
+      { to: "/incomes", icon: TrendingUp, label: "Income" },
+      { to: "/expenses", icon: TrendingDown, label: "Expenses" },
       { to: "/sales", icon: Receipt, label: "Sales" },
     ],
   },
@@ -162,6 +166,8 @@ function usePageMeta() {
     "/reports": { title: "Reports", sub: "Analytics & business insights" },
     "/settings": { title: "Settings", sub: "System configuration" },
     "/audit": { title: "Audit Log", sub: "Activity history & traceability" },
+    "/incomes": { title: "Income", sub: "Manage incoming funds and revenue" },
+    "/expenses": { title: "Expenses", sub: "Manage business expenditures" },
   };
   const base = "/" + pathname.split("/")[1];
   return map[base] || { title: "SR TAKAT", sub: "" };

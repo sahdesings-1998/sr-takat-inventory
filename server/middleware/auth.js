@@ -62,4 +62,5 @@ const auth = catchAsync(async (req, res, next) => {
   next();
 });
 
+export const verifyJWT = auth;
 export default auth;

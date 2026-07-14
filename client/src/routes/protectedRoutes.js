@@ -14,6 +14,7 @@ import memoRoutes from "@/modules/memo/routes.jsx";
 import salesRoutes from "@/modules/sales/routes.jsx";
 import reportsRoutes from "@/modules/reports/routes.jsx";
 import auditRoutes from "@/modules/audit/routes.jsx";
+import incomeExpenseRoutes from "@/modules/incomeExpense/routes.jsx";
 
 /**
  * Level 2 of the 3-level route protection (Section 4): Authenticated.
@@ -39,6 +40,7 @@ const protectedRoutes = [
           ...salesRoutes,
           ...reportsRoutes,
           ...auditRoutes,
+          ...incomeExpenseRoutes,
         ],
       },
     ],

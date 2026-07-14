@@ -23,6 +23,8 @@ import saleRoutes from "./routes/saleRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import auditLogRoutes from "./routes/auditLogRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
+import incomeRoutes from "./routes/incomeRoutes.js";
+import expenseRoutes from "./routes/expenseRoutes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import ApiError from "./utils/ApiError.js";
 
@@ -85,6 +87,8 @@ app.use("/api/v1/sales", saleRoutes);
 app.use("/api/v1/reports", reportRoutes);
 app.use("/api/v1/audit", auditLogRoutes);
 app.use("/api/v1/upload", uploadRoutes);
+app.use("/api/v1/incomes", incomeRoutes);
+app.use("/api/v1/expenses", expenseRoutes);
 
 // 404 handler for unmatched API routes
 app.use("/api", (req, res, next) => {

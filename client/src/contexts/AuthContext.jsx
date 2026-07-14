@@ -18,11 +18,11 @@ export function AuthProvider({ children }) {
 
     authApi
       .getMe()
-      .then((res) => {
+      .then((payload) => {
         if (isMounted) {
-          console.info("[auth] session found", { user: res.data.user?.fullName });
+          const fetchedUser = payload?.user;
+          console.info("[auth] session found", { user: fetchedUser?.fullName });
           // Only restore session for verified accounts
-          const fetchedUser = res.data.user;
           if (fetchedUser && fetchedUser.isVerified) {
             setUser(fetchedUser);
           } else {
@@ -62,8 +62,8 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (credentials) => {
     console.info("[auth] login attempt", { email: credentials.email });
-    const res = await authApi.login(credentials);
-    const loggedUser = res.data.user;
+    const payload = await authApi.login(credentials);
+    const loggedUser = payload?.user;
     console.info("[auth] login response", { user: loggedUser?.email });
 
     // Require verified account to complete login
@@ -85,9 +85,9 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (payload) => {
     console.info("[auth] register attempt", { email: payload.email });
-    const res = await authApi.register(payload);
+    const response = await authApi.register(payload);
     console.info("[auth] register success");
-    return res.data.user;
+    return response?.user;
   }, []);
 
   const logout = useCallback(async () => {

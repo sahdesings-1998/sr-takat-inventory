@@ -36,8 +36,8 @@ export function useUsers() {
   });
 
   return {
-    users: usersQuery.data?.data || [],
-    roles: rolesQuery.data?.data || [],
+    users: Array.isArray(usersQuery.data?.data) ? usersQuery.data.data : usersQuery.data || [],
+    roles: Array.isArray(rolesQuery.data) ? rolesQuery.data : rolesQuery.data?.data || [],
     isLoading: usersQuery.isLoading || rolesQuery.isLoading,
     isError: usersQuery.isError || rolesQuery.isError,
     createUser: createMutation.mutateAsync,

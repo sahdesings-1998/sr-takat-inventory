@@ -6,6 +6,7 @@ import { useSettings } from "../hooks/useSettings";
 import { useUsers } from "../hooks/useUsers";
 import { settingsSchema } from "../validation/settingsSchema";
 import { useToast } from "@/contexts/ToastContext";
+import { useAuth } from "@/contexts/AuthContext";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Card, { CardHeader, CardBody } from "@/components/ui/Card";
@@ -20,8 +21,16 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState("system"); // "system" or "users"
   const { settings, isLoading: isSettingsLoading, isError: isSettingsError, updateSettings, isUpdating } = useSettings();
   const { users, roles, isLoading: isUsersLoading, isError: isUsersError, createUser, updateUser, deleteUser, isMutating } = useUsers();
+  const { user: authUser } = useAuth();
 
   const { showSuccess, showError } = useToast();
+  
+  // Consistent role options from Create Account page
+  const ROLE_OPTIONS = [
+    { value: "Workshop-Staff", label: "Workshop Staff (Default)" },
+    { value: "Manager", label: "Manager" },
+    { value: "Admin", label: "Admin" },
+  ];
   
   // Labs Configuration State
   const [labInput, setLabInput] = useState("");
@@ -123,10 +132,38 @@ export default function Settings() {
       email: "",
       password: "",
       phone: "",
-      roleId: roles[0]?._id || "",
+      roleId: "Workshop-Staff",
       status: "active",
     });
     setUserModalOpen(true);
+  };
+
+  const resolveRoleId = (roleLike) => {
+    if (!roleLike) return "Workshop-Staff";
+    if (typeof roleLike === "string") return roleLike;
+    if (typeof roleLike === "object" && (roleLike._id || roleLike.id)) {
+      const roleId = roleLike._id || roleLike.id;
+      // Map backend IDs to role names for consistency
+      const matchingRole = roles.find((r) => r._id === roleId || r.id === roleId);
+      return matchingRole?.name || roleLike.name || "Workshop-Staff";
+    }
+    return "Workshop-Staff";
+  };
+
+  const getUserRoleId = (user) => {
+    if (!user) return "Workshop-Staff";
+    
+    const roleName = user.roleName || user.roleId?.name || user.roleId || "";
+    if (typeof roleName === "string" && ROLE_OPTIONS.some((r) => r.value === roleName)) {
+      return roleName;
+    }
+    
+    if (typeof user.roleId === "object") {
+      const name = user.roleId?.name || "";
+      if (ROLE_OPTIONS.some((r) => r.value === name)) return name;
+    }
+    
+    return "Workshop-Staff";
   };
 
   const handleOpenEditUser = (user) => {
@@ -136,7 +173,7 @@ export default function Settings() {
       email: user.email || "",
       password: "", // Leave password blank on edit
       phone: user.phone || "",
-      roleId: user.roleId?._id || user.roleId || "",
+      roleId: getUserRoleId(user),
       status: user.status || "active",
     });
     setUserModalOpen(true);
@@ -180,6 +217,19 @@ export default function Settings() {
       setDeleteConfirm((prev) => ({ ...prev, isLoading: false }));
     }
   };
+
+  const currentUserRoleName = authUser?.roleName || authUser?.roleId?.name || "";
+  const isCurrentUserAdmin = currentUserRoleName.toLowerCase() === "admin";
+  const currentUserId = authUser?._id;
+  const visibleUsers = users.filter((u) => u._id !== currentUserId);
+  const currentAdminProfile = isCurrentUserAdmin ? users.find((u) => u._id === currentUserId) : null;
+
+  useEffect(() => {
+    if (!userModalOpen || !editingUser) return;
+
+    const nextRoleId = getUserRoleId(editingUser);
+    setUserForm((prev) => ({ ...prev, roleId: nextRoleId }));
+  }, [userModalOpen, editingUser]);
 
   const getStatusVariant = (status) => {
     switch (status) {
@@ -387,9 +437,30 @@ export default function Settings() {
             </Button>
           </div>
 
+          {currentAdminProfile && (
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-semibold text-gray-900">{currentAdminProfile.fullName}</h3>
+                    <Badge variant="success">Admin</Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-gray-600">{currentAdminProfile.email}</p>
+                  <p className="mt-1 text-sm text-gray-500">{currentAdminProfile.phone || "—"}</p>
+                  <p className="mt-2 text-sm text-gray-500">Role: {currentAdminProfile.roleId?.name || "No Role"}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" className="w-fit" onClick={() => handleOpenEditUser(currentAdminProfile)}>
+                    <Edit2 className="h-4 w-4" /> Edit Profile
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <DataTable
             headers={["Full Name", "Email", "Phone", "Role", "Status", "Actions"]}
-            data={users}
+            data={visibleUsers}
             isLoading={isUsersLoading}
             emptyMessage="No system users created."
             renderRow={(u) => (
@@ -410,13 +481,15 @@ export default function Settings() {
                     >
                       <Edit2 className="h-4 w-4" />
                     </button>
-                    <button
-                      onClick={() => handleDeleteUser(u._id)}
-                      className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer"
-                      title="Delete User"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {u._id !== currentUserId && (
+                      <button
+                        onClick={() => handleDeleteUser(u._id)}
+                        className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer"
+                        title="Delete User"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -453,9 +526,9 @@ export default function Settings() {
               />
               <Select
                 label="Security Role *"
-                value={userForm.roleId}
+                value={userForm.roleId || "Workshop-Staff"}
                 onChange={(e) => setUserForm({ ...userForm, roleId: e.target.value })}
-                options={roles.map((r) => ({ value: r._id, label: r.name }))}
+                options={ROLE_OPTIONS}
                 required
               />
               <Select
@@ -486,12 +559,12 @@ export default function Settings() {
         isOpen={deleteConfirm.open}
         onClose={() => setDeleteConfirm({ open: false, id: null, isLoading: false })}
         onConfirm={handleConfirmDeleteUser}
-        title="Deactivate User"
-        message="This user account will be deactivated and they will no longer be able to log in. All records created by this user will be preserved."
-        confirmLabel="Deactivate"
+        title="Delete User"
+        message="This user account will be permanently deleted. All records created by this user will be lost."
+        confirmLabel="Delete"
         cancelLabel="Cancel"
         isLoading={deleteConfirm.isLoading}
-        variant="warning"
+        variant="danger"
       />
     </div>
   );

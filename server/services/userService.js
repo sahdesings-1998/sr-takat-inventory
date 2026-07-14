@@ -2,12 +2,12 @@ import User from "../models/User.js";
 import ApiError from "../utils/ApiError.js";
 
 async function getAllUsers() {
-  // Return all non-hard-deleted users (active, inactive, suspended all visible)
-  return User.find({}).populate("roleId").sort({ createdAt: -1 });
+  // Only return users that are not soft-deleted.
+  return User.find({ isDeleted: false }).populate("roleId").sort({ createdAt: -1 });
 }
 
 async function getUserById(id) {
-  const user = await User.findById(id).populate("roleId");
+  const user = await User.findOne({ _id: id, isDeleted: false }).populate("roleId");
   if (!user) throw new ApiError(404, "User not found");
   return user;
 }
@@ -21,7 +21,7 @@ async function createUser(data) {
 }
 
 async function updateUser(id, data) {
-  const user = await User.findById(id);
+  const user = await User.findOne({ _id: id, isDeleted: false });
   if (!user) throw new ApiError(404, "User not found");
 
   if (data.email && data.email.toLowerCase() !== user.email) {
@@ -41,13 +41,15 @@ async function updateUser(id, data) {
  * The User record is preserved in the database for audit trail and referential integrity.
  */
 async function deleteUser(id) {
-  const user = await User.findById(id);
+  const user = await User.findOne({ _id: id, isDeleted: false });
   if (!user) throw new ApiError(404, "User not found");
 
   user.status = "inactive";
+  user.isDeleted = true;
+  user.deletedAt = new Date();
   await user.save();
 
-  return getUserById(user._id);
+  return user.toSafeObject();
 }
 
 export default {

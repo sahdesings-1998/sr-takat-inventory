@@ -43,6 +43,14 @@ const userSchema = new Schema(
       type: Date,
       default: null,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
     // Password reset flow (not part of core schema in Section 5, additive for forgot/reset-password)
     resetPasswordTokenHash: {
       type: String,

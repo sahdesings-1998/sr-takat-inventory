@@ -8,7 +8,11 @@ export const usersApi = {
 };
 
 export const rolesApi = {
-  getAll: () => apiClient.get("/roles").then((res) => res.data),
+  getAll: () =>
+    apiClient.get("/roles").then((res) => {
+      const payload = res.data;
+      return Array.isArray(payload?.data) ? payload.data : payload;
+    }),
 };
 
 export default { usersApi, rolesApi };

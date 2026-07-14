@@ -55,6 +55,14 @@ apiClient.interceptors.response.use(
       return apiClient(originalRequest);
     } catch (refreshError) {
       resolvePendingQueue(refreshError);
+      // If refresh failed, force a clean logout/redirect to login so the app
+      // doesn't keep retrying and the user can re-authenticate.
+      try {
+        // best-effort: navigate to login page in the browser
+        if (typeof window !== "undefined") window.location.href = "/login";
+      } catch (e) {
+        // noop
+      }
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

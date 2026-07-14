@@ -12,8 +12,9 @@ const REFRESH_TOKEN_MAX_AGE_MS =
 function cookieOptions(maxAge) {
   return {
     httpOnly: true,
+    // Cookies must be Secure and SameSite=None for cross-site usage in production
     secure: isProduction,
-    sameSite: isProduction ? "strict" : "lax",
+    sameSite: isProduction ? "none" : "lax",
     maxAge,
     path: "/",
   };
@@ -25,8 +26,9 @@ function setAuthCookies(res, { accessToken, refreshToken }) {
 }
 
 function clearAuthCookies(res) {
-  res.clearCookie("accessToken", { path: "/" });
-  res.clearCookie("refreshToken", { path: "/" });
+  // Clear cookies using the same attributes so the browser removes them correctly
+  res.clearCookie("accessToken", cookieOptions(0));
+  res.clearCookie("refreshToken", cookieOptions(0));
 }
 
 /* POST /api/v1/auth/register */

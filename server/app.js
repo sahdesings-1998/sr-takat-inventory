@@ -34,10 +34,19 @@ import ApiError from "./utils/ApiError.js";
 
 const app = express();
 
+// CORS configuration:
+// - In production, only allow the CLIENT_URL (set in env) to send credentials.
+// - In development, allow any origin to ease local testing.
+const clientUrl = process.env.CLIENT_URL;
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Dynamically allow any origin making the request (essential for credentials + local hosts)
+      if (process.env.NODE_ENV === "production") {
+        // Only allow the configured client URL in production
+        const allowed = !!clientUrl && origin === clientUrl;
+        return callback(null, allowed);
+      }
+      // Development: allow any origin (useful for localhost and preview URLs)
       callback(null, true);
     },
     credentials: true,

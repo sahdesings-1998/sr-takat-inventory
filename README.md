@@ -93,6 +93,15 @@ client/dist
 
 5. Add any required environment variables for the frontend if needed.
 
+Required environment variables (Vercel / Render):
+
+- `VITE_API_URL` — the backend API base URL, e.g. `https://your-render-service.com/api/v1`
+- `CLIENT_URL` — the frontend origin, e.g. `https://your-vercel-app.vercel.app`
+
+Set `VITE_API_URL` in the Vercel project settings so the frontend sends API
+requests to your Render-hosted backend. Set `CLIENT_URL` in the Render service
+env so the backend's CORS allows the deployed frontend to send credentials.
+
 > Note: The backend server is not deployed by this Vercel configuration.
 > Use a separate Node/Mongo host for the API, then point the frontend to that API.
 

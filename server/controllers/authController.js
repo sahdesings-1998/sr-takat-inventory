@@ -73,20 +73,32 @@ export const refreshToken = catchAsync(async (req, res) => {
   const rawToken = req.cookies?.refreshToken;
   const ip = req.ip;
 
-  if (!rawToken) throw new ApiError(401, "No refresh token provided");
+  if (!rawToken) {
+    clearAuthCookies(res);
+    throw new ApiError(401, "No refresh token provided");
+  }
 
-  const {
-    user,
-    accessToken,
-    refreshToken: newRefreshToken,
-  } = await authService.rotateRefreshToken(rawToken, ip);
+  try {
+    const {
+      user,
+      accessToken,
+      refreshToken: newRefreshToken,
+    } = await authService.rotateRefreshToken(rawToken, ip);
 
-  setAuthCookies(res, { accessToken, refreshToken: newRefreshToken });
+    setAuthCookies(res, { accessToken, refreshToken: newRefreshToken });
 
-  sendSuccess(res, {
-    message: "Token refreshed",
-    data: { user: user.toSafeObject(), accessToken },
-  });
+    sendSuccess(res, {
+      message: "Token refreshed",
+      data: { user: user.toSafeObject(), accessToken },
+    });
+  } catch (error) {
+    clearAuthCookies(res);
+    console.error("[auth] refresh failed", {
+      message: error.message,
+      ip,
+    });
+    throw error;
+  }
 });
 
 /* GET /api/v1/auth/me */

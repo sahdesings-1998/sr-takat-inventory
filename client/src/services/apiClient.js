@@ -1,11 +1,24 @@
 import axios from "axios";
 
 const DEFAULT_API_URL = "http://localhost:5000/api/v1";
-const BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  (typeof window !== "undefined"
-    ? `${window.location.origin}/api/v1`
-    : DEFAULT_API_URL);
+
+function normalizeApiBaseUrl(value) {
+  if (!value) return "/api/v1";
+
+  const trimmed = value.trim();
+  if (!trimmed) return "/api/v1";
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    const withoutSlash = trimmed.replace(/\/$/, "");
+    return withoutSlash.endsWith("/api/v1") ? withoutSlash : `${withoutSlash}/api/v1`;
+  }
+
+  return trimmed.replace(/\/$/, "");
+}
+
+const BASE_URL = normalizeApiBaseUrl(
+  import.meta.env.VITE_API_URL || (typeof window !== "undefined" ? "/api/v1" : DEFAULT_API_URL)
+);
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -58,13 +71,19 @@ function notifyLogout() {
 
 function refreshAccessToken() {
   if (!refreshPromise) {
+    console.info("[auth] refreshing session");
     refreshPromise = refreshClient
       .post("/auth/refresh-token")
       .then((response) => {
+        console.info("[auth] refresh success");
         refreshPromise = null;
         return response;
       })
       .catch((error) => {
+        console.error("[auth] refresh failed", {
+          status: error?.response?.status,
+          message: error?.message,
+        });
         refreshPromise = null;
         throw error;
       });
@@ -79,10 +98,22 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config;
 
     if (!response || response.status !== 401 || !originalRequest) {
+      if (response?.status && response.status >= 400) {
+        console.error("[auth] request failed", {
+          url: originalRequest?.url,
+          status: response.status,
+          message: error.message,
+        });
+      }
       return Promise.reject(error);
     }
 
     const requestUrl = originalRequest.url;
+    console.warn("[auth] received 401", {
+      url: requestUrl,
+      retry: Boolean(originalRequest._retry),
+    });
+
     if (isAuthEndpoint(requestUrl) || originalRequest._retry) {
       return Promise.reject(error);
     }

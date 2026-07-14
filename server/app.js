@@ -35,15 +35,21 @@ import ApiError from "./utils/ApiError.js";
 const app = express();
 
 // CORS configuration:
-// - In production, only allow the CLIENT_URL (set in env) to send credentials.
+// - In production, only allow the configured client URL(s) to send credentials.
 // - In development, allow any origin to ease local testing.
-const clientUrl = process.env.CLIENT_URL;
+const clientUrls = [process.env.CLIENT_URL, process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`]
+  .filter(Boolean)
+  .concat((process.env.ALLOWED_ORIGINS || "").split(",").map((value) => value.trim()).filter(Boolean));
+
 app.use(
   cors({
     origin: (origin, callback) => {
       if (process.env.NODE_ENV === "production") {
-        // Only allow the configured client URL in production
-        const allowed = !!clientUrl && origin === clientUrl;
+        const allowed =
+          !origin ||
+          clientUrls.includes(origin) ||
+          origin.endsWith(".vercel.app") ||
+          origin.endsWith(".vercel.app/");
         return callback(null, allowed);
       }
       // Development: allow any origin (useful for localhost and preview URLs)

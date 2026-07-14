@@ -5,6 +5,19 @@ import catchAsync from "../utils/catchAsync.js";
 
 const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET || "dev_access_secret_change_me";
 
+function clearAuthCookies(res) {
+  const isProduction = process.env.NODE_ENV === "production";
+  const cookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
+  };
+
+  res.clearCookie("accessToken", cookieOptions);
+  res.clearCookie("refreshToken", cookieOptions);
+}
+
 /**
  * Verifies the access token (from the httpOnly `accessToken` cookie, or an
  * `Authorization: Bearer <token>` header as a fallback for non-browser
@@ -19,6 +32,8 @@ const auth = catchAsync(async (req, res, next) => {
   }
 
   if (!token) {
+    clearAuthCookies(res);
+    console.warn("[auth] missing access token", { path: req.originalUrl, ip: req.ip });
     throw new ApiError(401, "Not authenticated. Please log in.");
   }
 
@@ -26,6 +41,12 @@ const auth = catchAsync(async (req, res, next) => {
   try {
     payload = jwt.verify(token, ACCESS_TOKEN_SECRET);
   } catch (err) {
+    clearAuthCookies(res);
+    console.warn("[auth] invalid access token", {
+      path: req.originalUrl,
+      ip: req.ip,
+      reason: err.name,
+    });
     if (err.name === "TokenExpiredError") {
       throw new ApiError(401, "Access token expired");
     }

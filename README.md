@@ -71,6 +71,31 @@ Build only the client for production:
 pnpm build
 ```
 
+## Vercel deployment
+
+This repository is configured to deploy the frontend from the `client/`
+package as a static Vite app. Vercel will run the root `vercel-build`
+script and serve the `client/dist` output.
+
+1. Create a new Vercel project from this repository.
+2. In Vercel project settings, select `pnpm` as the package manager.
+3. Set the build command to:
+
+```bash
+pnpm vercel-build
+```
+
+4. Set the output directory to:
+
+```bash
+client/dist
+```
+
+5. Add any required environment variables for the frontend if needed.
+
+> Note: The backend server is not deployed by this Vercel configuration.
+> Use a separate Node/Mongo host for the API, then point the frontend to that API.
+
 ## Server scripts
 
 Available server commands:
@@ -90,8 +115,4 @@ pnpm run seed:data
 - Documentation assets are available under `docs/`.
 - Keep secrets out of Git: do not commit `.env` files or credential files.
 
-## Additional resources
 
-- `docs/SR_TAKAT_Antigravity_Prompt.md`
-- `docs/SR_TAKAT_PRD.docx`
-- `docs/SR_TAKAT_ERD.png`

@@ -1,36 +1,97 @@
 # SR TAKAT — Gem & Jewellery Management System
 
-Folder structure scaffolded per `docs/SR_TAKAT_Antigravity_Prompt.md`.
-Full requirements: `docs/SR_TAKAT_PRD.docx`. Data model diagram: `docs/SR_TAKAT_ERD.png`.
+A MERN-style inventory and business management application for gemstones,
+jewellery, costing, sales, and production workflows.
 
-## Setup
+## Project structure
+
+- `client/` — React + Vite frontend
+- `server/` — Express + MongoDB backend
+- `docs/` — project requirements and architecture reference
+- `.gitignore` — security-safe ignore rules
+
+## Prerequisites
+
+- Node.js 20 or later
+- pnpm
+- MongoDB connection URI
+- Cloudinary account credentials (optional, for image upload/storage)
+
+## Install
+
+From the repository root:
 
 ```bash
 pnpm install
+```
 
-# server
+## Configure environment variables
+
+Copy the example env files and fill in the required values.
+
+```bash
 cp server/.env.example server/.env
-# fill in MONGO_URI, JWT secrets, Cloudinary keys
+cp client/.env.example client/.env
+```
 
-# run both client + server
+Edit `server/.env` and set:
+
+- `MONGO_URI`
+- `JWT_SECRET`
+- `JWT_REFRESH_SECRET`
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+
+If present, also update `client/.env` with frontend-specific variables.
+
+## Run the application
+
+Start both the frontend and backend in parallel from the repository root:
+
+```bash
 pnpm dev
 ```
 
-Client: http://localhost:5173
-Server: http://localhost:5000/api/v1/health
+- Frontend: `http://localhost:5173`
+- Backend health check: `http://localhost:5000/api/v1/health`
 
-## What's here vs. what's next
+### Run individual services
 
-This scaffold creates the full folder structure (client modules, shared
-components, server models/controllers/routes/services) as empty files with
-correct naming — matching `docs/SR_TAKAT_Antigravity_Prompt.md` exactly.
+```bash
+pnpm run dev:client
+pnpm run dev:server
+```
 
-Nothing is implemented yet. Next step: open this folder in Claude Code and
-build module by module, e.g.:
+## Build
 
-> "Read docs/SR_TAKAT_Antigravity_Prompt.md, then implement the auth module
-> end-to-end: User + Role models, authController, authService, authRoutes,
-> JWT + refresh token flow, and the client auth module (login page, AuthLayout,
-> authApi, useAuth hook)."
+Build only the client for production:
 
-Then repeat for inventory, products, production, costing, memo, sales, reports.
+```bash
+pnpm build
+```
+
+## Server scripts
+
+Available server commands:
+
+```bash
+cd server
+pnpm run dev
+pnpm run start
+pnpm run seed:roles
+pnpm run seed:data
+```
+
+## Notes
+
+- The repository uses a pnpm workspace with separate `client` and `server`
+  packages.
+- Documentation assets are available under `docs/`.
+- Keep secrets out of Git: do not commit `.env` files or credential files.
+
+## Additional resources
+
+- `docs/SR_TAKAT_Antigravity_Prompt.md`
+- `docs/SR_TAKAT_PRD.docx`
+- `docs/SR_TAKAT_ERD.png`

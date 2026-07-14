@@ -3,6 +3,10 @@ node_modules/
 dist/
 build/
 
+# Editor directories and files
+.vscode/
+docs/
+
 # Environment variables and secrets
 .env
 .env.*

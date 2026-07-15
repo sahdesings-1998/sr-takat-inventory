@@ -61,7 +61,6 @@ const certificateSchema = new Schema(
 );
 
 // Indexes
-certificateSchema.index({ certificateNo: 1 }, { unique: true });
 certificateSchema.index({ entityType: 1, entityId: 1 });
 
 const Certificate = mongoose.model("Certificate", certificateSchema);

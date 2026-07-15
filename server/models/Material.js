@@ -55,7 +55,6 @@ const materialSchema = new Schema(
 );
 
 // Indexes
-materialSchema.index({ materialCode: 1 }, { unique: true });
 materialSchema.index({ category: 1 });
 materialSchema.index({ status: 1 });
 

@@ -56,7 +56,6 @@ const gemstoneLotSchema = new Schema(
 );
 
 // Indexes
-gemstoneLotSchema.index({ lotId: 1 }, { unique: true });
 gemstoneLotSchema.index({ status: 1 });
 gemstoneLotSchema.index({ supplierId: 1 });
 gemstoneLotSchema.index({ location: 1 });

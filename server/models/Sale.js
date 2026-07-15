@@ -81,7 +81,6 @@ const saleSchema = new Schema(
 );
 
 // Indexes
-saleSchema.index({ invoiceNo: 1 }, { unique: true });
 saleSchema.index({ customerId: 1 });
 saleSchema.index({ paymentStatus: 1 });
 saleSchema.index({ customerId: 1, createdAt: 1 }); // compound

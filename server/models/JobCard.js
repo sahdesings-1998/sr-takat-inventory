@@ -128,7 +128,6 @@ const jobCardSchema = new Schema(
 );
 
 // Indexes
-jobCardSchema.index({ jobNo: 1 }, { unique: true });
 jobCardSchema.index({ status: 1 });
 jobCardSchema.index({ assignedTo: 1 });
 jobCardSchema.index({ productId: 1 });

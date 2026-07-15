@@ -123,7 +123,6 @@ const gemstoneSchema = new Schema(
 );
 
 // Indexes
-gemstoneSchema.index({ stoneId: 1 }, { unique: true });
 gemstoneSchema.index({ stockNo: 1 });
 gemstoneSchema.index({ status: 1 });
 gemstoneSchema.index({ supplierId: 1 });

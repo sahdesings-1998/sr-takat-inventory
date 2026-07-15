@@ -87,7 +87,6 @@ const memoSchema = new Schema(
 );
 
 // Indexes
-memoSchema.index({ memoNo: 1 }, { unique: true });
 memoSchema.index({ status: 1 });
 memoSchema.index({ customerId: 1 });
 memoSchema.index({ status: 1, expectedReturn: 1 }); // compound

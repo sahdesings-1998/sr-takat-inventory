@@ -122,7 +122,6 @@ const productSchema = new Schema(
 );
 
 // Indexes
-productSchema.index({ productCode: 1 }, { unique: true });
 productSchema.index({ stockNo: 1 });
 productSchema.index({ status: 1 });
 productSchema.index({ category: 1 });

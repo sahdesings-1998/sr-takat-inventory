@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle, Trash2, CheckCircle, X } from "lucide-react";
 import { cn } from "@/utils/cn";
@@ -24,20 +25,6 @@ const VARIANT_CONFIG = {
   },
 };
 
-/**
- * ConfirmDialog — reusable themed confirmation modal.
- *
- * Props:
- *   isOpen        {boolean}  — whether the dialog is visible
- *   onClose       {fn}       — called when user cancels or clicks backdrop
- *   onConfirm     {fn}       — called when user clicks the confirm button
- *   title         {string}   — dialog title
- *   message       {string}   — descriptive message body
- *   confirmLabel  {string}   — text for the confirm button (default: "Confirm")
- *   cancelLabel   {string}   — text for the cancel button (default: "Cancel")
- *   variant       {string}   — "danger" | "warning" | "default"
- *   isLoading     {boolean}  — disables buttons and shows spinner on confirm btn
- */
 export function ConfirmDialog({
   isOpen,
   onClose,
@@ -49,34 +36,79 @@ export function ConfirmDialog({
   variant = "danger",
   isLoading = false,
 }) {
-  if (!isOpen) return null;
+  const [shouldRender, setShouldRender] = useState(isOpen);
+  const [animate, setAnimate] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      const raf = requestAnimationFrame(() => {
+        setAnimate(true);
+      });
+      return () => cancelAnimationFrame(raf);
+    } else {
+      setAnimate(false);
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", handleEscape);
+    }
+
+    return () => {
+      document.body.style.overflow = "unset";
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen, onClose]);
+
+  if (!shouldRender) return null;
 
   const { icon: Icon, iconBg, iconColor, confirmVariant } = VARIANT_CONFIG[variant] ?? VARIANT_CONFIG.danger;
 
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) onClose();
-  };
-
   return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={handleBackdropClick}
-    >
+    <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center p-0 md:p-4">
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-gray-900/30 backdrop-blur-[6px] transition-opacity" />
+      <div
+        className={cn(
+          "fixed inset-0 bg-gray-900/40 backdrop-blur-[4px] transition-opacity duration-300 ease-out",
+          animate ? "opacity-100" : "opacity-0"
+        )}
+        onClick={onClose}
+      />
 
       {/* Dialog Card */}
       <div
         className={cn(
-          "relative z-10 w-full max-w-sm overflow-hidden rounded-[24px] bg-white",
-          "shadow-[0_32px_64px_rgba(0,0,0,0.14)] border border-gray-100/60",
-          "animate-in fade-in-0 zoom-in-95 duration-200"
+          // Mobile Bottom Sheet styles
+          "relative z-10 w-full bg-white rounded-t-[28px] border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] flex flex-col transition-all duration-300 ease-out pb-safe",
+          // Desktop centered dialog override
+          "md:bottom-auto md:rounded-[24px] md:border md:shadow-[0_32px_64px_rgba(0,0,0,0.14)] md:max-w-sm",
+          // State transition classes
+          animate
+            ? "translate-y-0 opacity-100 md:scale-100"
+            : "translate-y-full opacity-0 md:translate-y-0 md:scale-95 md:opacity-0"
         )}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-message"
       >
+        {/* Drag handle for mobile bottom sheet */}
+        <div 
+          onClick={onClose}
+          className="md:hidden w-12 h-1.5 bg-gray-200/80 rounded-full mx-auto my-3 cursor-pointer shrink-0 hover:bg-gray-300 transition-colors" 
+        />
+
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -87,7 +119,7 @@ export function ConfirmDialog({
           <X className="h-4 w-4" />
         </button>
 
-        <div className="flex flex-col items-center gap-4 px-7 pb-7 pt-8 text-center">
+        <div className="flex flex-col items-center gap-4 px-6 pb-6 pt-5 md:px-7 md:pb-7 md:pt-8 text-center">
           {/* Icon */}
           <div className={cn("flex h-14 w-14 items-center justify-center rounded-2xl", iconBg)}>
             <Icon className={cn("h-7 w-7", iconColor)} strokeWidth={1.75} />
@@ -113,7 +145,7 @@ export function ConfirmDialog({
           <div className="flex w-full gap-3 mt-1">
             <Button
               variant="outline"
-              className="flex-1"
+              className="flex-1 text-sm py-2.5 h-11"
               onClick={onClose}
               disabled={isLoading}
             >
@@ -121,7 +153,7 @@ export function ConfirmDialog({
             </Button>
             <Button
               variant={confirmVariant}
-              className="flex-1"
+              className="flex-1 text-sm py-2.5 h-11"
               onClick={onConfirm}
               isLoading={isLoading}
               disabled={isLoading}

@@ -298,7 +298,7 @@ export default function ProductDetails() {
       </div>
 
       {/* Financial Overview Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 font-sans">
         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">
             Selling Price
@@ -329,7 +329,7 @@ export default function ProductDetails() {
             ${(product.charityAmount || 0).toLocaleString()}
           </p>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm col-span-2 lg:col-span-1">
+        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm sm:col-span-2 lg:col-span-1">
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Net Profit</p>
           <p className="mt-1 text-lg font-bold text-emerald-600">
             ${(product.netProfit || 0).toLocaleString()}
@@ -391,13 +391,13 @@ export default function ProductDetails() {
       {/* ── Detailed Costing Engine (PRD §3.6 requirements) ────────────────── */}
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center w-full">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 w-full">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 font-display">Costing Engine Calculations</h3>
               <p className="text-xs text-gray-500 mt-1">Material Cost → Production Cost → Other Cost → Total Cost → Selling Price → Gross Profit</p>
             </div>
             {!isWorkshop && (
-              <Button onClick={handleSaveCosting} className="w-fit">
+              <Button onClick={handleSaveCosting} className="w-fit shrink-0">
                 <Save className="h-4 w-4" /> Calculate & Save Costing
               </Button>
             )}
@@ -612,7 +612,7 @@ export default function ProductDetails() {
               <h4 className="font-bold text-sm text-primary uppercase tracking-wider">Percentage-based Line Items</h4>
               
               {!isWorkshop && (
-                <div className="grid grid-cols-3 gap-2 items-end">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                   <Input
                     label="Item Name"
                     value={newPercentItem.name}
@@ -636,7 +636,7 @@ export default function ProductDetails() {
                       { value: "Gross Profit", label: "Gross Profit" }
                     ]}
                   />
-                  <Button type="button" variant="outline" className="col-span-3 mt-2" onClick={handleAddPercentItem}>
+                  <Button type="button" variant="outline" className="sm:col-span-3 mt-2" onClick={handleAddPercentItem}>
                     <Plus className="h-4 w-4" /> Add Line Item
                   </Button>
                 </div>

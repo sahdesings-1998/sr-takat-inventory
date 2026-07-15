@@ -3,6 +3,7 @@ import { Upload, X, Loader2 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import apiClient from "@/services/apiClient";
 import { useToast } from "@/contexts/ToastContext";
+import Modal from "./Modal";
 
 export default function ImageUploader({
   label,
@@ -13,6 +14,7 @@ export default function ImageUploader({
   containerClassName,
 }) {
   const [isUploading, setIsUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
   const { showError, showSuccess } = useToast();
 
   const handleFileChange = async (e) => {
@@ -119,7 +121,8 @@ export default function ImageUploader({
                 <img
                   src={url}
                   alt={`Upload ${idx + 1}`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover cursor-pointer hover:opacity-85 transition-opacity"
+                  onClick={() => setPreviewImage(url)}
                 />
                 <button
                   type="button"
@@ -135,6 +138,21 @@ export default function ImageUploader({
       </div>
 
       {error && <p className="text-xs text-danger font-medium">{error}</p>}
+
+      {/* Image Preview Modal */}
+      <Modal
+        isOpen={Boolean(previewImage)}
+        onClose={() => setPreviewImage(null)}
+        title="Image Preview"
+      >
+        <div className="flex items-center justify-center w-full max-h-[70vh] md:max-h-[60vh] overflow-auto">
+          <img
+            src={previewImage}
+            alt="Preview"
+            className="max-w-full max-h-full object-contain rounded-xl shadow-md border border-gray-100"
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

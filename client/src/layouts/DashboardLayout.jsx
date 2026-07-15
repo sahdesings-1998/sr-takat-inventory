@@ -27,6 +27,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/modules/notifications/hooks/useNotifications";
 import Avatar from "@/components/ui/Avatar";
+import { cn } from "@/utils/cn";
 
 // ─── Navigation Config ────────────────────────────────────────────────────────
 
@@ -216,35 +217,46 @@ export default function DashboardLayout() {
       </aside>
 
       {/* ── Mobile Drawer Overlay ─────────────────────────────────────── */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
+      <div
+        className={cn(
+          "fixed inset-0 z-40 md:hidden transition-all duration-300",
+          mobileOpen ? "visible pointer-events-auto" : "invisible pointer-events-none"
+        )}
+      >
+        {/* Backdrop */}
+        <div
+          className={cn(
+            "absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity duration-300",
+            mobileOpen ? "opacity-100" : "opacity-0"
+          )}
+          onClick={() => setMobileOpen(false)}
+        />
+        {/* Drawer panel */}
+        <aside
+          className={cn(
+            "absolute left-0 top-0 bottom-0 w-[260px] flex flex-col bg-[#0d3545] shadow-2xl z-50 transition-transform duration-300 ease-out",
+            mobileOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <button
             onClick={() => setMobileOpen(false)}
+            className="absolute top-4 right-4 p-1.5 rounded-xl text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <SidebarContent
+            unreadCount={unreadCount}
+            isAdmin={isAdmin}
+            onNavClick={() => setMobileOpen(false)}
           />
-          {/* Drawer panel */}
-          <aside className="absolute left-0 top-0 bottom-0 w-[260px] flex flex-col bg-[#0d3545] shadow-2xl z-50">
-            <button
-              onClick={() => setMobileOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-xl text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <SidebarContent
-              unreadCount={unreadCount}
-              isAdmin={isAdmin}
-              onNavClick={() => setMobileOpen(false)}
-            />
-          </aside>
-        </div>
-      )}
+        </aside>
+      </div>
 
       {/* ── Main Column ───────────────────────────────────────────────── */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
 
         {/* ── Sticky Header ─────────────────────────────────────────── */}
-        <header className="sticky top-0 z-30 flex items-center gap-4 bg-[#f3f4f8]/95 backdrop-blur-md px-6 py-4 ">
+        <header className="sticky top-0 z-30 flex items-center gap-4 bg-[#f3f4f8]/95 backdrop-blur-md px-4 py-3 md:px-6 md:py-4 ">
 
           {/* Mobile menu toggle */}
           <button
@@ -332,7 +344,7 @@ export default function DashboardLayout() {
 
         {/* ── Page Content ──────────────────────────────────────────── */}
         <main className="flex-1 overflow-y-auto">
-          <div className="max-w-[1440px] mx-auto px-6 py-7 w-full">
+          <div className="max-w-[1440px] mx-auto px-4 py-5 md:px-6 md:py-7 w-full">
             <Outlet />
           </div>
         </main>

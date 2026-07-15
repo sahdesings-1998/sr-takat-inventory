@@ -45,7 +45,7 @@ function fmtMoney(n) {
 function StatCard({ title, value, subtitle, icon: Icon, iconBg, trend, trendUp, featured, onClick }) {
   if (featured) {
     return (
-      <div 
+      <div
         onClick={onClick}
         className={`relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[#0d3545] to-primary p-5 shadow-[0_8px_30px_rgba(10,73,88,0.22)] flex flex-col justify-between min-h-[145px] ${onClick ? "cursor-pointer" : ""}`}
       >
@@ -54,11 +54,11 @@ function StatCard({ title, value, subtitle, icon: Icon, iconBg, trend, trendUp, 
 
         <div className="flex items-start justify-between gap-4 relative">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/60 mb-1">
+            <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.08em] text-white/60 mb-1 truncate">
               {title}
             </p>
-            <p className="text-2xl font-bold text-white tracking-[-0.03em]">{value}</p>
-            <p className="mt-1 text-[12px] text-white/60 font-medium">{subtitle}</p>
+            <p className="text-xl sm:text-2xl font-bold text-white tracking-[-0.03em]">{value}</p>
+            <p className="mt-1 text-[11px] sm:text-[12px] text-white/60 font-medium leading-tight">{subtitle}</p>
           </div>
           <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-white/15 shrink-0">
             <Icon className="h-5 w-5 text-white" />
@@ -79,17 +79,17 @@ function StatCard({ title, value, subtitle, icon: Icon, iconBg, trend, trendUp, 
   }
 
   return (
-    <div 
+    <div
       onClick={onClick}
       className={`group relative overflow-hidden rounded-[24px] bg-white border border-gray-100/80 p-5 shadow-[0_8px_30px_rgba(0,0,0,0.015)] transition-all duration-300 hover:shadow-[0_16px_40px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 flex flex-col justify-between min-h-[145px] ${onClick ? "cursor-pointer" : ""}`}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-400 mb-1">
+          <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-400 mb-1 truncate">
             {title}
           </p>
-          <p className="text-xl font-bold text-gray-900 tracking-[-0.03em]">{value}</p>
-          <p className="mt-1 text-[12px] text-gray-500 font-medium leading-snug">{subtitle}</p>
+          <p className="text-lg sm:text-xl font-bold text-gray-900 tracking-[-0.03em]">{value}</p>
+          <p className="mt-1 text-[11px] sm:text-[12px] text-gray-500 font-medium leading-snug">{subtitle}</p>
         </div>
         <div className={`flex h-10 w-10 items-center justify-center rounded-[12px] shrink-0 ${iconBg}`}>
           <Icon className="h-5 w-5" />
@@ -99,9 +99,8 @@ function StatCard({ title, value, subtitle, icon: Icon, iconBg, trend, trendUp, 
       {trend && (
         <div className="mt-2 flex items-center gap-2">
           <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-              trendUp ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
-            }`}
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${trendUp ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+              }`}
           >
             {trend}
           </span>
@@ -282,8 +281,8 @@ export default function Dashboard() {
       {/* ── Welcome Banner ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 tracking-[-0.03em]">
-            Good {getGreeting()}, {user?.fullName?.split(" ")[0] || "there"} 👋
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-[-0.03em]">
+            Good {getGreeting()}, {user?.fullName?.split(" ")[0] || "there"}
           </h2>
           <p className="mt-1 text-[13px] text-gray-400 font-medium">
             Logged in as{" "}
@@ -538,13 +537,12 @@ export default function Dashboard() {
             >
               <div className="flex items-center gap-3.5 min-w-0">
                 <div
-                  className={`h-9 w-9 rounded-[12px] flex items-center justify-center shrink-0 text-xs font-bold ${
-                    log.action === "delete"
+                  className={`h-9 w-9 rounded-[12px] flex items-center justify-center shrink-0 text-xs font-bold ${log.action === "delete"
                       ? "bg-danger/10 text-danger"
                       : log.action === "create"
-                      ? "bg-success/10 text-success"
-                      : "bg-info/10 text-info"
-                  }`}
+                        ? "bg-success/10 text-success"
+                        : "bg-info/10 text-info"
+                    }`}
                 >
                   {log.action?.[0]?.toUpperCase()}
                 </div>
@@ -566,8 +564,8 @@ export default function Dashboard() {
                   log.action === "delete"
                     ? "danger"
                     : log.action === "create"
-                    ? "success"
-                    : "info"
+                      ? "success"
+                      : "info"
                 }
               >
                 {log.action}

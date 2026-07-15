@@ -43,6 +43,7 @@ export default function GemstoneList() {
   const [statusValue, setStatusValue] = useState("");
   const [statusRemarks, setStatusRemarks] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, isLoading: false });
+  const [previewImage, setPreviewImage] = useState(null);
 
   useEffect(() => {
     if (isError) {
@@ -271,7 +272,11 @@ export default function GemstoneList() {
                   <img
                     src={stone.images[0]}
                     alt={stone.stoneId}
-                    className="w-10 h-10 object-cover rounded-lg bg-gray-50 border border-gray-100"
+                    className="w-10 h-10 object-cover rounded-lg bg-gray-50 border border-gray-100 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewImage(stone.images[0]);
+                    }}
                   />
                 ) : (
                   <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-100 text-gray-400">
@@ -480,6 +485,21 @@ export default function GemstoneList() {
         isLoading={deleteConfirm.isLoading}
         variant="danger"
       />
+
+      {/* Image Preview Modal */}
+      <Modal
+        isOpen={Boolean(previewImage)}
+        onClose={() => setPreviewImage(null)}
+        title="Image Preview"
+      >
+        <div className="flex items-center justify-center w-full max-h-[70vh] md:max-h-[60vh] overflow-auto">
+          <img
+            src={previewImage}
+            alt="Preview"
+            className="max-w-full max-h-full object-contain rounded-xl shadow-md border border-gray-100"
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

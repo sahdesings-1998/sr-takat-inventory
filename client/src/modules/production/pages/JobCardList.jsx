@@ -107,13 +107,13 @@ export default function JobCardList() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900 font-display">Production Job Cards</h1>
           <p className="text-sm text-gray-500">Full production workflow: Design → Materials Issued → Manufacturing → Stone Setting → Polishing → QC → Completed</p>
         </div>
         <Button onClick={handleOpenAdd} className="w-fit">
-          <Plus className="h-4 w-4" /> Create Job Card
+          <Plus className="h-4 w-4" /> Add Job Card
         </Button>
       </div>
 

@@ -7,6 +7,19 @@ import generateId from "../utils/generateId.js";
 import auditLogService from "./auditLogService.js";
 import ApiError from "../utils/ApiError.js";
 
+function buildProfitMetrics(data, productDoc = null) {
+  const settings = Settings.getSettings ? Settings.getSettings() : Promise.resolve({ charityPercentage: 2.0 });
+  return settings.then?.(async (settingsData) => {
+    const charityPct = settingsData.charityPercentage || 2.0;
+    const selling = Number(data.sellingPrice ?? productDoc?.sellingPrice ?? 0);
+    const cost = Number(data.costPrice ?? productDoc?.costPrice ?? 0);
+    const grossProfit = Math.max(0, selling - cost);
+    const charityAmount = grossProfit * (charityPct / 100);
+    const netProfit = Math.max(0, grossProfit - charityAmount);
+    return { grossProfit, charityAmount, netProfit };
+  });
+}
+
 async function getAllProducts({ category, status, search } = {}) {
   const query = {};
   if (category) query.category = category;
@@ -38,7 +51,6 @@ async function createProduct(data, userId, ipAddress = "") {
 
   const settings = await Settings.getSettings();
   const charityPct = settings.charityPercentage || 2.0;
-
   const selling = Number(data.sellingPrice || 0);
   const cost = Number(data.costPrice || 0);
   const grossProfit = Math.max(0, selling - cost);
@@ -51,6 +63,15 @@ async function createProduct(data, userId, ipAddress = "") {
     grossProfit,
     charityAmount,
     netProfit,
+    tags: Array.isArray(data.tags) ? data.tags : [],
+    components: Array.isArray(data.components) ? data.components : [],
+    history: [
+      {
+        date: new Date(),
+        action: "Product created",
+        user: userId?.toString() || "System",
+      },
+    ],
   });
 
   await auditLogService.logAction({
@@ -85,6 +106,23 @@ async function updateProduct(id, data, userId, ipAddress = "") {
     data.charityAmount = charityAmount;
     data.netProfit = netProfit;
   }
+
+  if (data.tags === undefined) {
+    data.tags = productDoc.tags || [];
+  }
+  if (data.components === undefined) {
+    data.components = productDoc.components || [];
+  }
+  if (Array.isArray(data.tags)) {
+    data.tags = data.tags.filter(Boolean);
+  }
+
+  const historyEntry = {
+    date: new Date(),
+    action: "Product updated",
+    user: userId?.toString() || "System",
+  };
+  data.history = [...(productDoc.history || []), historyEntry];
 
   Object.assign(productDoc, data);
   await productDoc.save();

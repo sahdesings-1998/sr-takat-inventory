@@ -297,6 +297,91 @@ export default function ProductDetails() {
         </div>
       </div>
 
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div className="p-5 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-900">Product Profile</h3>
+          <p className="text-xs text-gray-500">Dynamic fields for the selected product category</p>
+        </div>
+        <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-gray-500">Category</p>
+            <p className="font-semibold text-gray-900">{product.category}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wider text-gray-500">Status</p>
+            <p className="font-semibold text-gray-900">{product.status}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wider text-gray-500">SKU</p>
+            <p className="font-semibold text-gray-900">{product.sku || "—"}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wider text-gray-500">Currency</p>
+            <p className="font-semibold text-gray-900">{product.currency || "USD"}</p>
+          </div>
+          {product.material && (
+            <div>
+              <p className="text-xs uppercase tracking-wider text-gray-500">Material</p>
+              <p className="font-semibold text-gray-900">{product.material}</p>
+            </div>
+          )}
+          {product.metalType && (
+            <div>
+              <p className="text-xs uppercase tracking-wider text-gray-500">Metal Type</p>
+              <p className="font-semibold text-gray-900">{product.metalType}</p>
+            </div>
+          )}
+          {product.gemstoneType && (
+            <div>
+              <p className="text-xs uppercase tracking-wider text-gray-500">Gemstone Type</p>
+              <p className="font-semibold text-gray-900">{product.gemstoneType}</p>
+            </div>
+          )}
+          {product.origin && (
+            <div>
+              <p className="text-xs uppercase tracking-wider text-gray-500">Origin</p>
+              <p className="font-semibold text-gray-900">{product.origin}</p>
+            </div>
+          )}
+          {product.supplier && (
+            <div>
+              <p className="text-xs uppercase tracking-wider text-gray-500">Supplier</p>
+              <p className="font-semibold text-gray-900">{product.supplier}</p>
+            </div>
+          )}
+          {product.internalNotes && (
+            <div className="md:col-span-2">
+              <p className="text-xs uppercase tracking-wider text-gray-500">Internal Notes</p>
+              <p className="font-semibold text-gray-900">{product.internalNotes}</p>
+            </div>
+          )}
+          {Array.isArray(product.tags) && product.tags.length > 0 && (
+            <div className="md:col-span-2">
+              <p className="text-xs uppercase tracking-wider text-gray-500">Tags</p>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {product.tags.map((tag) => (
+                  <span key={tag} className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {Array.isArray(product.history) && product.history.length > 0 && (
+            <div className="md:col-span-2">
+              <p className="text-xs uppercase tracking-wider text-gray-500">History</p>
+              <ul className="mt-2 space-y-2">
+                {product.history.slice(-4).reverse().map((entry, index) => (
+                  <li key={`${entry.action}-${index}`} className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                    <span className="font-semibold text-gray-900">{entry.action}</span> · {new Date(entry.date).toLocaleDateString()} · {entry.user}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Financial Overview Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 font-sans">
         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">

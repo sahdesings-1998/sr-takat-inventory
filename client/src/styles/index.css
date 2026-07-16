@@ -9,9 +9,22 @@
   --color-info: #2563EB;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: #f3f4f8;
+  overflow-x: hidden;
   @apply text-gray-900 antialiased font-sans;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 .premium-card {

@@ -1,10 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema } from "../validation/authSchema";
 import authApi from "../api/authApi";
 import { useToast } from "@/contexts/ToastContext";
 import Input from "@/components/ui/Input";
+import PhoneInput from "@/components/ui/PhoneInput";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
 
@@ -15,6 +16,7 @@ export default function Register() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(registerSchema),
@@ -69,13 +71,20 @@ export default function Register() {
             error={errors.email?.message}
             {...register("email")}
           />
-          <Input
-            label="Phone (optional)"
-            type="tel"
-            autoComplete="tel"
-            placeholder="+91 98765 43210"
-            error={errors.phone?.message}
-            {...register("phone")}
+          <Controller
+            name="phone"
+            control={control}
+            render={({ field }) => (
+              <PhoneInput
+                label="Phone (optional)"
+                autoComplete="tel"
+                placeholder="98765 43210"
+                error={errors.phone?.message}
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+              />
+            )}
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input

@@ -58,7 +58,7 @@ export function Modal({ isOpen, onClose, title, children, className }) {
           // Mobile Bottom Sheet styles
           "relative z-10 w-full max-h-[90vh] bg-white rounded-t-[28px] border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] flex flex-col transition-all duration-300 ease-out pb-safe",
           // Desktop centered layout overrides
-          "md:bottom-auto md:rounded-[28px] md:border md:shadow-[0_32px_64px_rgba(0,0,0,0.12)] md:max-w-lg md:max-h-[85vh]",
+          "md:bottom-auto md:rounded-[28px] md:border md:shadow-[0_32px_64px_rgba(0,0,0,0.12)] md:max-w-[min(100vw-2rem,900px)] md:max-h-[85vh]",
           // State transition classes
           animate
             ? "translate-y-0 opacity-100 md:scale-100"

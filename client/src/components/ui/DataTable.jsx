@@ -3,13 +3,13 @@ import Spinner from "./Spinner";
 export function DataTable({ headers, data, isLoading, emptyMessage = "No items found", renderRow }) {
   return (
     <div className="w-full overflow-x-auto rounded-[20px] border border-gray-100/80 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
-      <table className="w-full text-left text-sm text-gray-900 border-collapse">
+      <table className="w-full min-w-0 table-auto border-collapse text-left text-sm text-gray-900">
         <thead className="border-b border-gray-100">
           <tr>
             {headers.map((header, idx) => (
               <th
                 key={idx}
-                className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-gray-400 whitespace-nowrap"
+                className="px-4 py-4 text-[11px] font-bold uppercase tracking-widest text-gray-400 whitespace-nowrap sm:px-6"
               >
                 {header}
               </th>
@@ -19,7 +19,7 @@ export function DataTable({ headers, data, isLoading, emptyMessage = "No items f
         <tbody className="divide-y divide-gray-50">
           {isLoading ? (
             <tr>
-              <td colSpan={headers.length} className="px-6 py-16 text-center">
+              <td colSpan={headers.length} className="px-4 py-16 text-center sm:px-6">
                 <div className="flex justify-center items-center gap-3">
                   <Spinner className="h-6 w-6 text-primary" />
                   <span className="text-sm text-gray-400 font-medium">Loading data...</span>
@@ -28,7 +28,7 @@ export function DataTable({ headers, data, isLoading, emptyMessage = "No items f
             </tr>
           ) : data.length === 0 ? (
             <tr>
-              <td colSpan={headers.length} className="px-6 py-16 text-center text-sm text-gray-400 font-medium">
+              <td colSpan={headers.length} className="px-4 py-16 text-center text-sm font-medium text-gray-400 sm:px-6">
                 {emptyMessage}
               </td>
             </tr>

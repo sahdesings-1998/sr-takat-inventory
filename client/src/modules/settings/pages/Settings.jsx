@@ -9,6 +9,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import PhoneInput from "@/components/ui/PhoneInput";
 import Card, { CardHeader, CardBody } from "@/components/ui/Card";
 import Spinner from "@/components/ui/Spinner";
 import Select from "@/components/ui/Select";
@@ -66,6 +67,7 @@ export default function Settings() {
     handleSubmit: handleSettingsSubmit,
     reset: resetSettings,
     setValue: setSettingsValue,
+    watch,
     formState: { errors: settingsErrors },
   } = useForm({
     resolver: zodResolver(settingsSchema),
@@ -351,7 +353,7 @@ export default function Settings() {
               <CardHeader>
                 <h2 className="text-lg font-semibold text-gray-900">ID Prefix Configuration</h2>
               </CardHeader>
-              <CardBody className="grid grid-cols-2 gap-4">
+              <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
                   label="Gemstone"
                   error={settingsErrors.prefixes?.gemstone?.message}
@@ -402,10 +404,11 @@ export default function Settings() {
                   error={settingsErrors.companyInfo?.email?.message}
                   {...registerSettings("companyInfo.email")}
                 />
-                <Input
+                <PhoneInput
                   label="Company Phone"
                   error={settingsErrors.companyInfo?.phone?.message}
-                  {...registerSettings("companyInfo.phone")}
+                  value={watch("companyInfo.phone") || ""}
+                  onChange={(e) => setSettingsValue("companyInfo.phone", e.target.value)}
                 />
                 <Input
                   label="Company Website"
@@ -519,7 +522,7 @@ export default function Settings() {
                 onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
                 required={!editingUser}
               />
-              <Input
+              <PhoneInput
                 label="Phone Number"
                 value={userForm.phone}
                 onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}

@@ -205,7 +205,7 @@ export default function DashboardLayout() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-[#f3f4f8] overflow-hidden">
+    <div className="flex h-screen bg-[#f3f4f8] overflow-x-hidden overflow-y-hidden">
 
       {/* ── Desktop Sidebar ───────────────────────────────────────────── */}
       <aside className="hidden rounded-xl m-3 md:flex w-[260px] shrink-0 flex-col bg-[#0d3545] border-r border-white/5">
@@ -256,7 +256,7 @@ export default function DashboardLayout() {
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
 
         {/* ── Sticky Header ─────────────────────────────────────────── */}
-        <header className="sticky top-0 z-30 flex items-center gap-4 bg-[#f3f4f8]/95 backdrop-blur-md px-4 py-3 md:px-6 md:py-4 ">
+        <header className="sticky top-0 z-30 flex items-center gap-3 bg-[#f3f4f8]/95 backdrop-blur-md px-3 py-3 sm:px-4 md:px-6 md:py-4">
 
           {/* Mobile menu toggle */}
           <button
@@ -343,8 +343,8 @@ export default function DashboardLayout() {
         </header>
 
         {/* ── Page Content ──────────────────────────────────────────── */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-[1440px] mx-auto px-4 py-5 md:px-6 md:py-7 w-full">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-7">
             <Outlet />
           </div>
         </main>

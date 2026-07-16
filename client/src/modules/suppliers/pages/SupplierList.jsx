@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { useSuppliers } from "../hooks/useSuppliers";
@@ -8,6 +8,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import PhoneInput from "@/components/ui/PhoneInput";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import Modal from "@/components/ui/Modal";
@@ -37,6 +38,7 @@ export default function SupplierList() {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(supplierSchema),
@@ -196,10 +198,18 @@ export default function SupplierList() {
             error={errors.contactName?.message}
             {...register("contactName")}
           />
-          <Input
-            label="Phone *"
-            error={errors.phone?.message}
-            {...register("phone")}
+          <Controller
+            name="phone"
+            control={control}
+            render={({ field }) => (
+              <PhoneInput
+                label="Phone *"
+                error={errors.phone?.message}
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+              />
+            )}
           />
           <Input
             label="Email"

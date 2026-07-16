@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Edit2, Trash2, Eye } from "lucide-react";
 import { useCustomers } from "../hooks/useCustomers";
@@ -9,6 +9,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import PhoneInput from "@/components/ui/PhoneInput";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import Modal from "@/components/ui/Modal";
@@ -38,6 +39,7 @@ export default function CustomerList() {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(customerSchema),
@@ -212,19 +214,35 @@ export default function CustomerList() {
             error={errors.companyName?.message}
             {...register("companyName")}
           />
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Phone *"
-              error={errors.phone?.message}
-              {...register("phone")}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Controller
+              name="phone"
+              control={control}
+              render={({ field }) => (
+                <PhoneInput
+                  label="Phone *"
+                  error={errors.phone?.message}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              )}
             />
-            <Input
-              label="WhatsApp"
-              error={errors.whatsApp?.message}
-              {...register("whatsApp")}
+            <Controller
+              name="whatsApp"
+              control={control}
+              render={({ field }) => (
+                <PhoneInput
+                  label="WhatsApp"
+                  error={errors.whatsApp?.message}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              )}
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Input
               label="Email"
               type="email"

@@ -155,38 +155,38 @@ export default function CustomerList() {
         emptyMessage="No customers found"
         renderRow={(customer) => (
           <tr key={customer._id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100">
-            <td className="px-6 py-4 font-semibold text-primary">
-              <Link to={`/customers/${customer._id}`} className="hover:underline">
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary text-xs sm:text-sm">
+              <Link to={`/customers/${customer._id}`} className="hover:underline truncate block">
                 {customer.fullName}
               </Link>
             </td>
-            <td className="px-6 py-4 text-gray-600">{customer.companyName || "—"}</td>
-            <td className="px-6 py-4 text-gray-600">{customer.phone}</td>
-            <td className="px-6 py-4 text-gray-600">{customer.email || "—"}</td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{customer.companyName || "—"}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm break-all">{customer.phone}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{customer.email || "—"}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-xs sm:text-sm">
               <Badge variant={customer.status === "active" ? "success" : "neutral"}>
                 {customer.status}
               </Badge>
             </td>
-            <td className="px-6 py-4 whitespace-nowrap">
-              <div className="flex items-center gap-2 flex-nowrap">
+            <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
+              <div className="flex items-center gap-1 sm:gap-2 flex-nowrap">
                 <Link
                   to={`/customers/${customer._id}`}
-                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                   title="View Details"
                 >
                   <Eye className="h-4 w-4" />
                 </Link>
                 <button
                   onClick={(e) => handleOpenEdit(customer, e)}
-                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                   title="Edit"
                 >
                   <Edit2 className="h-4 w-4" />
                 </button>
                 <button
                   onClick={(e) => handleDelete(customer._id, e)}
-                  className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                   title="Delete"
                 >
                   <Trash2 className="h-4 w-4" />

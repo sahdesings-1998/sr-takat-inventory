@@ -73,13 +73,13 @@ export function Modal({ isOpen, onClose, title, children, className }) {
         />
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 md:px-7 md:py-5 shrink-0">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 md:px-7 md:py-5 shrink-0 gap-3">
           {title && (
-            <h3 className="text-base font-bold text-gray-900 tracking-[-0.02em]">{title}</h3>
+            <h3 className="text-base font-bold text-gray-900 tracking-[-0.02em] break-words line-clamp-2">{title}</h3>
           )}
           <button
             onClick={onClose}
-            className="rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-all duration-200 ml-auto"
+            className="rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-all duration-200 ml-auto flex-shrink-0"
             aria-label="Close modal"
           >
             <X className="h-4 w-4" />

@@ -153,24 +153,24 @@ export default function JobCardList() {
         renderRow={(job) => (
           <tr
             key={job._id}
-            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-sm"
+            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-xs sm:text-sm"
           >
-            <td className="px-6 py-4 font-semibold text-primary">{job.jobNo}</td>
-            <td className="px-6 py-4 font-medium text-gray-900">
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary text-xs sm:text-sm">{job.jobNo}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-gray-900 truncate text-xs sm:text-sm" title={job.productId ? `${job.productId.productCode} - ${job.productId.name}` : ""}>
               {job.productId ? `${job.productId.productCode} - ${job.productId.name}` : "—"}
             </td>
-            <td className="px-6 py-4 text-gray-600">
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
               {job.targetDueDate ? new Date(job.targetDueDate).toLocaleDateString() : "—"}
             </td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-xs sm:text-sm">
               <Badge variant={getStatusVariant(job.status)}>{job.status}</Badge>
             </td>
-            <td className="px-6 py-4 whitespace-nowrap">
+            <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
               <Link
                 to={`/production/${job._id}`}
-                className="inline-flex items-center gap-1.5 text-accent hover:underline font-medium"
+                className="inline-flex items-center gap-1.5 text-accent hover:underline font-medium text-xs sm:text-sm"
               >
-                <Eye className="h-4 w-4" /> View Stages
+                <Eye className="h-4 w-4 flex-shrink-0" /> <span className="hidden sm:inline">View Stages</span><span className="sm:hidden">View</span>
               </Link>
             </td>
           </tr>

@@ -147,32 +147,32 @@ export default function MemoDetails() {
           headers={["Type", "Item Details", "Qty", "Status", "Actions"]}
           data={memo.items || []}
           renderRow={(item) => (
-            <tr key={item._id} className="border-b border-gray-100 text-sm">
-              <td className="px-6 py-4 font-semibold text-gray-900">{item.inventoryType}</td>
-              <td className="px-6 py-4 text-gray-600">
+            <tr key={item._id} className="border-b border-gray-100 text-xs sm:text-sm">
+              <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 truncate text-xs sm:text-sm">{item.inventoryType}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 break-words min-w-0 text-xs sm:text-sm">
                 {item.inventoryId
                   ? item.inventoryType === "Product"
                     ? `${item.inventoryId.productCode} - ${item.inventoryId.name}`
                     : `${item.inventoryId.stoneId} - ${item.inventoryId.gemstone}`
                   : "Linked Item Deleted"}
               </td>
-              <td className="px-6 py-4 text-gray-900">{item.quantity}</td>
-              <td className="px-6 py-4">
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 whitespace-nowrap text-xs sm:text-sm">{item.quantity}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6">
                 <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
               </td>
-              <td className="px-6 py-4">
+              <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
                 {item.status === "On Memo" && (
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleReturn(item._id)}
-                      className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                       title="Return Item to Stock"
                     >
                       <RefreshCw className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleOpenSale(item._id)}
-                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                       title="Convert to Sale"
                     >
                       <ShoppingCart className="h-4 w-4" />

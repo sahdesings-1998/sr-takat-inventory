@@ -134,16 +134,16 @@ export default function CustomerDetails() {
               renderRow={(sale) => (
                 <tr
                   key={sale._id}
-                  className="border-b border-gray-100 text-sm hover:bg-gray-50/50 transition-colors"
+                  className="border-b border-gray-100 text-xs sm:text-sm hover:bg-gray-50/50 transition-colors"
                 >
-                  <td className="px-6 py-4 font-semibold text-primary">{sale.invoiceNo}</td>
-                  <td className="px-6 py-4 text-gray-600">
+                  <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary text-xs sm:text-sm">{sale.invoiceNo}</td>
+                  <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
                     {new Date(sale.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 text-gray-900 font-semibold">
+                  <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 font-semibold whitespace-nowrap text-xs sm:text-sm">
                     ${sale.total.toLocaleString()}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-4 sm:px-4 md:px-6">
                     <Badge
                       variant={
                         sale.paymentStatus === "Paid"
@@ -173,16 +173,16 @@ export default function CustomerDetails() {
               renderRow={(memo) => (
                 <tr
                   key={memo._id}
-                  className="border-b border-gray-100 text-sm hover:bg-gray-50/50 transition-colors"
+                  className="border-b border-gray-100 text-xs sm:text-sm hover:bg-gray-50/50 transition-colors"
                 >
-                  <td className="px-6 py-4 font-semibold text-primary">{memo.memoNo}</td>
-                  <td className="px-6 py-4 text-gray-600">
+                  <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary text-xs sm:text-sm">{memo.memoNo}</td>
+                  <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
                     {new Date(memo.issueDate).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 text-gray-600">
+                  <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
                     {new Date(memo.expectedReturn).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-4 sm:px-4 md:px-6">
                     <Badge
                       variant={
                         memo.status === "With Client"

@@ -198,14 +198,14 @@ export default function JobCardDetails() {
             data={jobCard.materialsIssued || []}
             emptyMessage="No metals/settings issued yet."
             renderRow={(row, idx) => (
-              <tr key={idx} className="border-b border-gray-100 text-sm">
-                <td className="px-6 py-4 font-semibold text-gray-900">
+              <tr key={idx} className="border-b border-gray-100 text-xs sm:text-sm">
+                <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 break-words min-w-0 text-xs sm:text-sm">
                   {row.materialId
                     ? `${row.materialId.materialCode} - ${row.materialId.materialName}`
                     : "—"}
                 </td>
-                <td className="px-6 py-4 text-gray-900">{row.quantity}</td>
-                <td className="px-6 py-4 text-gray-600">
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 whitespace-nowrap text-xs sm:text-sm">{row.quantity}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
                   {row.issuedAt ? new Date(row.issuedAt).toLocaleDateString() : "—"}
                 </td>
               </tr>
@@ -223,19 +223,19 @@ export default function JobCardDetails() {
             data={jobCard.materialsReturned || []}
             emptyMessage="No metal/scrap returned yet."
             renderRow={(row, idx) => (
-              <tr key={idx} className="border-b border-gray-100 text-sm">
-                <td className="px-6 py-4 font-semibold text-gray-900">
+              <tr key={idx} className="border-b border-gray-100 text-xs sm:text-sm">
+                <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 break-words min-w-0 text-xs sm:text-sm">
                   {row.materialId
                     ? `${row.materialId.materialCode} - ${row.materialId.materialName}`
                     : "—"}
                 </td>
-                <td className="px-6 py-4 text-gray-900">{row.quantity}</td>
-                <td className="px-6 py-4 text-gray-600">
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 whitespace-nowrap text-xs sm:text-sm">{row.quantity}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">
                   <Badge variant={row.wastageType === "writeOff" ? "danger" : row.wastageType === "scrapRecovery" ? "warning" : "success"}>
                     {row.wastageType}
                   </Badge>
                 </td>
-                <td className="px-6 py-4 text-gray-600">
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
                   {row.returnedAt ? new Date(row.returnedAt).toLocaleDateString() : "—"}
                 </td>
               </tr>

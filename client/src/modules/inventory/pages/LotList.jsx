@@ -159,24 +159,24 @@ export default function LotList() {
         renderRow={(lot) => (
           <tr
             key={lot._id}
-            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-sm"
+            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-xs sm:text-sm"
           >
-            <td className="px-6 py-4 font-semibold text-primary">{lot.lotId}</td>
-            <td className="px-6 py-4 font-medium text-gray-900">{lot.gemstone}</td>
-            <td className="px-6 py-4 text-gray-600">{lot.totalCarat} ct</td>
-            <td className="px-6 py-4 font-semibold text-gray-900">{lot.remainingCarat} ct</td>
-            <td className="px-6 py-4 text-gray-600">{lot.estimatedPieces}</td>
-            <td className="px-6 py-4 text-gray-600">${lot.purchaseCost.toLocaleString()}</td>
-            <td className="px-6 py-4 text-gray-600">{lot.location}</td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary truncate text-xs sm:text-sm">{lot.lotId}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-gray-900 truncate text-xs sm:text-sm">{lot.gemstone}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{lot.totalCarat} ct</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 whitespace-nowrap text-xs sm:text-sm">{lot.remainingCarat} ct</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{lot.estimatedPieces}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">${lot.purchaseCost.toLocaleString()}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{lot.location}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6">
               <Badge variant={getStatusVariant(lot.status)}>{lot.status}</Badge>
             </td>
-            <td className="px-6 py-4 whitespace-nowrap">
+            <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
               <div className="flex items-center gap-2 flex-nowrap">
                 {lot.status !== "Depleted" && (
                   <button
                     onClick={() => handleOpenIssue(lot)}
-                    className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                    className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                     title="Issue Carat"
                   >
                     <ArrowDown className="h-4 w-4" />
@@ -184,7 +184,7 @@ export default function LotList() {
                 )}
                 <button
                   onClick={() => handleOpenEdit(lot)}
-                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                   title="Edit"
                 >
                   <Edit2 className="h-4 w-4" />

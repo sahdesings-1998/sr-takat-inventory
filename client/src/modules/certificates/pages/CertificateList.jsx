@@ -132,22 +132,22 @@ export default function CertificateList() {
           isLoading={isLoading}
           emptyMessage="No certificates registered in the system."
           renderRow={(cert) => (
-            <tr key={cert._id} className="border-b border-gray-100 text-sm hover:bg-gray-50/50">
-              <td className="px-6 py-4 font-semibold text-gray-950 flex items-center gap-2">
-                <Award className="h-4 w-4 text-accent" /> {cert.certificateNo}
+            <tr key={cert._id} className="border-b border-gray-100 text-xs sm:text-sm hover:bg-gray-50/50">
+              <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-950 flex items-center gap-2">
+                <Award className="h-4 w-4 text-accent flex-shrink-0" /> {cert.certificateNo}
               </td>
-              <td className="px-6 py-4 font-bold text-primary">{cert.lab}</td>
-              <td className="px-6 py-4 text-gray-600">{cert.reportType}</td>
-              <td className="px-6 py-4 text-gray-600">
+              <td className="px-3 py-4 sm:px-4 md:px-6 font-bold text-primary">{cert.lab}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600">{cert.reportType}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap">
                 {cert.issueDate ? new Date(cert.issueDate).toLocaleDateString() : "—"}
               </td>
-              <td className="px-6 py-4">
+              <td className="px-3 py-4 sm:px-4 md:px-6">
                 <Badge variant={cert.entityType === "Gemstone" ? "info" : "success"}>
                   {cert.entityType}
                 </Badge>
-                <span className="text-xs text-gray-500 ml-2">ID: {cert.entityId?.stoneId || cert.entityId?.productCode || cert.entityId || "—"}</span>
+                <span className="text-xs text-gray-500 ml-2 block break-all">ID: {cert.entityId?.stoneId || cert.entityId?.productCode || cert.entityId || "—"}</span>
               </td>
-              <td className="px-6 py-4">
+              <td className="px-3 py-4 sm:px-4 md:px-6">
                 {cert.fileUrl ? (
                   <a
                     href={cert.fileUrl}
@@ -161,10 +161,10 @@ export default function CertificateList() {
                   <span className="text-xs text-gray-400">No File</span>
                 )}
               </td>
-              <td className="px-6 py-4">
+              <td className="px-3 py-4 sm:px-4 md:px-6">
                 <button
                   onClick={() => handleDelete(cert._id)}
-                  className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                   title="Delete Certificate"
                 >
                   <Trash2 className="h-4 w-4" />

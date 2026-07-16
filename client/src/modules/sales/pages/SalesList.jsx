@@ -208,23 +208,23 @@ export default function SalesList() {
         renderRow={(sale) => (
           <tr
             key={sale._id}
-            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-sm"
+            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-xs sm:text-sm"
           >
-            <td className="px-6 py-4 font-semibold text-primary">{sale.invoiceNo}</td>
-            <td className="px-6 py-4 font-medium text-gray-900">{sale.customerId?.fullName || "—"}</td>
-            <td className="px-6 py-4 text-gray-600">${sale.subtotal.toLocaleString()}</td>
-            <td className="px-6 py-4 text-gray-900 font-bold">${sale.total.toLocaleString()}</td>
-            <td className="px-6 py-4 text-amber-600 font-semibold">
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary text-xs sm:text-sm">{sale.invoiceNo}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-gray-900 truncate text-xs sm:text-sm">{sale.customerId?.fullName || "—"}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">${sale.subtotal.toLocaleString()}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 font-bold text-xs sm:text-sm">${sale.total.toLocaleString()}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-amber-600 font-semibold text-xs sm:text-sm">
               ${(sale.charityAmount || 0).toLocaleString()}
             </td>
-            <td className="px-6 py-4 text-gray-600">{sale.paymentMethod}</td>
-            <td className="px-6 py-4 text-gray-600">{new Date(sale.createdAt).toLocaleDateString()}</td>
-            <td className="px-6 py-4 whitespace-nowrap">
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">{sale.paymentMethod}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{new Date(sale.createdAt).toLocaleDateString()}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
               <Link
                 to={`/sales/${sale._id}`}
-                className="inline-flex items-center gap-1.5 text-accent hover:underline font-semibold"
+                className="inline-flex items-center gap-1.5 text-accent hover:underline font-semibold text-xs sm:text-sm"
               >
-                <Eye className="h-4 w-4" /> Invoice details
+                <Eye className="h-4 w-4 flex-shrink-0" /> <span className="hidden sm:inline">Invoice details</span><span className="sm:hidden">View</span>
               </Link>
             </td>
           </tr>

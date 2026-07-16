@@ -203,24 +203,24 @@ export default function MemoList() {
         renderRow={(memo) => (
           <tr
             key={memo._id}
-            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-sm"
+            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-xs sm:text-sm"
           >
-            <td className="px-6 py-4 font-semibold text-primary">{memo.memoNo}</td>
-            <td className="px-6 py-4 font-medium text-gray-900">
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary text-xs sm:text-sm">{memo.memoNo}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-gray-900 truncate text-xs sm:text-sm">
               {memo.customerId?.fullName || "—"}
             </td>
-            <td className="px-6 py-4 text-gray-600">
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
               {memo.expectedReturn ? new Date(memo.expectedReturn).toLocaleDateString() : "—"}
             </td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-xs sm:text-sm">
               <Badge variant={getStatusVariant(memo.status)}>{memo.status}</Badge>
             </td>
-            <td className="px-6 py-4 whitespace-nowrap">
+            <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
               <Link
                 to={`/memos/${memo._id}`}
-                className="inline-flex items-center gap-1.5 text-accent hover:underline font-semibold"
+                className="inline-flex items-center gap-1.5 text-accent hover:underline font-semibold text-xs sm:text-sm"
               >
-                <Eye className="h-4 w-4" /> View Details
+                <Eye className="h-4 w-4 flex-shrink-0" /> <span className="hidden sm:inline">View Details</span><span className="sm:hidden">View</span>
               </Link>
             </td>
           </tr>

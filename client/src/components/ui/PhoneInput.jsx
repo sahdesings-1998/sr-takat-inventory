@@ -198,7 +198,7 @@ const PhoneInput = forwardRef(function PhoneInput(
               type="button"
               onClick={() => handleCountrySelect(country)}
               className={cn(
-                "flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left transition-all duration-200",
+                "flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left transition-all duration-200 gap-2 min-w-0",
                 isSelected
                   ? "bg-primary/10 text-primary shadow-sm"
                   : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
@@ -206,16 +206,16 @@ const PhoneInput = forwardRef(function PhoneInput(
               role="option"
               aria-selected={isSelected}
             >
-              <span className="flex items-center gap-3">
-                <span className="text-lg">{country.flag}</span>
-                <span className="flex flex-col">
-                  <span className="text-sm font-semibold">{country.label}</span>
+              <span className="flex items-center gap-3 flex-1 min-w-0">
+                <span className="text-lg flex-shrink-0">{country.flag}</span>
+                <span className="flex flex-col min-w-0 flex-1">
+                  <span className="text-sm font-semibold truncate">{country.label}</span>
                   <span className="text-xs text-gray-500">{country.code}</span>
                 </span>
               </span>
-              <span className="flex items-center gap-2 text-sm font-semibold">
+              <span className="flex items-center gap-2 text-sm font-semibold flex-shrink-0">
                 {isSelected && <Check className="h-4 w-4" />}
-                <span>{country.dialCode}</span>
+                <span className="whitespace-nowrap">{country.dialCode}</span>
               </span>
             </button>
           );

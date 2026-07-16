@@ -150,27 +150,27 @@ export default function SupplierList() {
         emptyMessage="No suppliers found"
         renderRow={(supplier) => (
           <tr key={supplier._id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100">
-            <td className="px-6 py-4 font-semibold text-primary">{supplier.companyName}</td>
-            <td className="px-6 py-4 text-gray-600">{supplier.contactName || "—"}</td>
-            <td className="px-6 py-4 text-gray-600">{supplier.phone}</td>
-            <td className="px-6 py-4 text-gray-600">{supplier.email || "—"}</td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary truncate text-xs sm:text-sm">{supplier.companyName}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{supplier.contactName || "—"}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm break-all">{supplier.phone}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{supplier.email || "—"}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-xs sm:text-sm">
               <Badge variant={supplier.status === "active" ? "success" : "neutral"}>
                 {supplier.status}
               </Badge>
             </td>
-            <td className="px-6 py-4 whitespace-nowrap">
-              <div className="flex items-center gap-2 flex-nowrap">
+            <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
+              <div className="flex items-center gap-1 sm:gap-2 flex-nowrap">
                 <button
                   onClick={() => handleOpenEdit(supplier)}
-                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                   title="Edit"
                 >
                   <Edit2 className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => handleDelete(supplier._id)}
-                  className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                   title="Delete"
                 >
                   <Trash2 className="h-4 w-4" />

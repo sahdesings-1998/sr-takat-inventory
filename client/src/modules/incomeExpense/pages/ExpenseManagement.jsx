@@ -147,19 +147,19 @@ export function ExpenseManagement() {
             isLoading={isLoading}
             emptyMessage="No expense records found"
             renderRow={(expense) => (
-              <tr key={expense._id} className="hover:bg-gray-50/70 transition-colors border-b border-gray-100">
-                <td className="px-6 py-4 text-gray-700">{formatDate(expense.date)}</td>
-                <td className="px-6 py-4 text-gray-700">{expense.category}</td>
-                <td className="px-6 py-4 text-gray-600 max-w-[250px] truncate">{expense.description}</td>
-                <td className="px-6 py-4 text-gray-700">{expense.vendor || "—"}</td>
-                <td className="px-6 py-4 text-red-600 font-semibold">{formatCurrency(expense.amount)}</td>
-                <td className="px-6 py-4 text-gray-700">{expense.paymentMethod}</td>
-                <td className="px-6 py-4">
+              <tr key={expense._id} className="hover:bg-gray-50/70 transition-colors border-b border-gray-100 text-xs sm:text-sm">
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 whitespace-nowrap">{formatDate(expense.date)}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate">{expense.category}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 break-words min-w-0">{expense.description}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate">{expense.vendor || "—"}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-red-600 font-semibold whitespace-nowrap">{formatCurrency(expense.amount)}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate">{expense.paymentMethod}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6">
                   <Badge variant={expense.status === "Completed" ? "success" : expense.status === "Pending" ? "warning" : "danger"}>
                     {expense.status}
                   </Badge>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
                   <div className="flex items-center gap-2 justify-end">
                     <button
                       type="button"

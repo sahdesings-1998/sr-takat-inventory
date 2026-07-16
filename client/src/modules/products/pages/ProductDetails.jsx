@@ -443,9 +443,9 @@ export default function ProductDetails() {
           data={components}
           emptyMessage="No components linked to this product recipe yet."
           renderRow={(comp) => (
-            <tr key={comp._id} className="border-b border-gray-100 text-sm">
-              <td className="px-6 py-4 font-semibold text-gray-900">{comp.sourceType}</td>
-              <td className="px-6 py-4 text-gray-600">
+            <tr key={comp._id} className="border-b border-gray-100 text-xs sm:text-sm">
+              <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 truncate text-xs sm:text-sm">{comp.sourceType}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 break-words min-w-0 text-xs sm:text-sm">
                 {comp.sourceId
                   ? comp.sourceType === "Material"
                     ? `${comp.sourceId.materialCode} - ${comp.sourceId.materialName}`
@@ -454,15 +454,15 @@ export default function ProductDetails() {
                     : `${comp.sourceId.lotId} - ${comp.sourceId.gemstone}`
                   : "Linked Item Deleted"}
               </td>
-              <td className="px-6 py-4 text-gray-900">{comp.quantity}</td>
-              <td className="px-6 py-4 text-gray-900 font-medium">
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 whitespace-nowrap text-xs sm:text-sm">{comp.quantity}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 font-medium whitespace-nowrap text-xs sm:text-sm">
                 {comp.weight > 0 ? `${comp.weight} ct` : "—"}
               </td>
-              <td className="px-6 py-4 text-gray-500">{comp.remarks || "—"}</td>
-              <td className="px-6 py-4">
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-500 break-words text-xs sm:text-sm">{comp.remarks || "—"}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
                 <button
                   onClick={() => onDeleteComp(comp._id)}
-                  className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                   title="Remove Component"
                 >
                   <Trash2 className="h-4 w-4" />

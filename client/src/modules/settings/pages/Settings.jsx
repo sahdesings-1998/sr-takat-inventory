@@ -467,19 +467,19 @@ export default function Settings() {
             isLoading={isUsersLoading}
             emptyMessage="No system users created."
             renderRow={(u) => (
-              <tr key={u._id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-sm">
-                <td className="px-6 py-4 font-semibold text-gray-950">{u.fullName}</td>
-                <td className="px-6 py-4 text-gray-600">{u.email}</td>
-                <td className="px-6 py-4 text-gray-600">{u.phone || "—"}</td>
-                <td className="px-6 py-4 font-medium text-primary">{u.roleId?.name || "No Role"}</td>
-                <td className="px-6 py-4">
+              <tr key={u._id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-xs sm:text-sm">
+                <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-950 truncate text-xs sm:text-sm">{u.fullName}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 break-all text-xs sm:text-sm">{u.email}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 break-all text-xs sm:text-sm">{u.phone || "—"}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-primary truncate text-xs sm:text-sm">{u.roleId?.name || "No Role"}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6">
                   <Badge variant={getStatusVariant(u.status)}>{u.status}</Badge>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleOpenEditUser(u)}
-                      className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                       title="Edit User"
                     >
                       <Edit2 className="h-4 w-4" />
@@ -487,7 +487,7 @@ export default function Settings() {
                     {u._id !== currentUserId && (
                       <button
                         onClick={() => handleDeleteUser(u._id)}
-                        className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                         title="Delete User"
                       >
                         <Trash2 className="h-4 w-4" />

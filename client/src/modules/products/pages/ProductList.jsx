@@ -16,6 +16,7 @@ import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import SearchInput from "@/components/ui/SearchInput";
 import ImageUploader from "@/components/ui/ImageUploader";
+import FileUploader from "@/components/ui/FileUploader";
 
 const tabs = [
   { key: "general", label: "General" },
@@ -321,7 +322,20 @@ export default function ProductList() {
       case "images":
         return (
           <div className="md:col-span-2 space-y-4">
-            <Input label="Video URL" {...register("videos")} />
+            <Controller
+              control={control}
+              name="videos"
+              render={({ field }) => (
+                <FileUploader
+                  label="Attach Video"
+                  buttonLabel="Attach Video"
+                  accept="video/*"
+                  helperText="MP4, MOV, or WebM files"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
             <Controller
               control={control}
               name="imageUrls"
@@ -334,7 +348,20 @@ export default function ProductList() {
                 />
               )}
             />
-            <Input label="Documents / Attachments" {...register("documents")} />
+            <Controller
+              control={control}
+              name="documents"
+              render={({ field }) => (
+                <FileUploader
+                  label="Attach Document"
+                  buttonLabel="Attach Document"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  helperText="PDF, Word, Excel, or other document files"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
           </div>
         );
       case "pricing":
@@ -350,7 +377,7 @@ export default function ProductList() {
             <Select label="Currency" options={[{ value: "USD", label: "USD" }, { value: "AED", label: "AED" }, { value: "EUR", label: "EUR" }]} {...register("currency")} />
             <Select label="Discount Allowed" options={[{ value: "true", label: "Yes" }, { value: "false", label: "No" }]} {...register("discountAllowed")} />
             <Input label="Profit" type="number" step="0.01" {...register("profit")} />
-            <Input label="Margin %" type="number" step="0.01" {...register("margin")} />
+            <Input label="Margin" type="number" step="0.01" {...register("margin")} />
           </>
         );
       case "specifications":
@@ -451,7 +478,20 @@ export default function ProductList() {
             <Input label="Supplier" {...register("supplier")} />
             <Input label="Supplier Reference" {...register("supplierReference")} />
             <Input label="Purchase Date" type="date" {...register("purchaseDate")} />
-            <Input label="Purchase Invoice" {...register("purchaseInvoice")} />
+            <Controller
+              control={control}
+              name="purchaseInvoice"
+              render={({ field }) => (
+                <FileUploader
+                  label="Attach Purchase Invoice"
+                  buttonLabel="Attach Invoice"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/gif"
+                  helperText="PDF, Word, or Image file"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
             <Input label="Payment Status" {...register("paymentStatus")} />
             <Input label="Outstanding Amount" type="number" step="0.01" {...register("outstandingAmount")} />
             <Textarea label="Supplier Notes" className="md:col-span-2" {...register("supplierNotes")} />
@@ -477,18 +517,96 @@ export default function ProductList() {
             <Input label="Certificate Number" {...register("certificateNumber")} />
             <Input label="Certificate Date" type="date" {...register("certificateDate")} />
             <Input label="Certificate Cost" type="number" step="0.01" {...register("certificateCost")} />
-            <Input label="Certificate PDF" {...register("certificatePdf")} />
-            <Input label="Certificate Images" {...register("certificateImages")} />
+            <Controller
+              control={control}
+              name="certificatePdf"
+              render={({ field }) => (
+                <FileUploader
+                  label="Attach PDF"
+                  buttonLabel="Attach PDF"
+                  accept=".pdf,application/pdf"
+                  helperText="Upload a certificate or report PDF"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="certificateImages"
+              render={({ field }) => (
+                <FileUploader
+                  label="Attach Image"
+                  buttonLabel="Attach Image"
+                  accept="image/*"
+                  helperText="JPG, PNG, or WEBP image files"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
             <Textarea label="Certificate Notes" className="md:col-span-2" {...register("certificateNotes")} />
           </>
         );
       case "documents":
         return (
           <>
-            <Input label="Warranty" {...register("warranty")} />
-            <Input label="CAD Files" {...register("cadFiles")} />
-            <Input label="Videos" {...register("videos")} />
-            <Input label="Documents" {...register("documents")} />
+            <Controller
+              control={control}
+              name="warranty"
+              render={({ field }) => (
+                <FileUploader
+                  label="Attach Warranty Document"
+                  buttonLabel="Attach Warranty"
+                  accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  helperText="PDF, Word, or Text file"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="cadFiles"
+              render={({ field }) => (
+                <FileUploader
+                  label="Attach CAD / 3D File"
+                  buttonLabel="Attach CAD / 3D File"
+                  accept=".step,.stp,.dwg,.dxf,.obj,.zip,.pdf,application/pdf,application/octet-stream"
+                  helperText="STEP, DWG, OBJ, ZIP, or PDF files"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="videos"
+              render={({ field }) => (
+                <FileUploader
+                  label="Attach Video"
+                  buttonLabel="Attach Video"
+                  accept="video/*"
+                  helperText="MP4, MOV, or WebM files"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="documents"
+              render={({ field }) => (
+                <FileUploader
+                  label="Attach Document"
+                  buttonLabel="Attach Document"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  helperText="PDF, Word, Excel, or other document files"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
           </>
         );
       case "notes":
@@ -508,13 +626,13 @@ export default function ProductList() {
             <Select label="Category *" error={errors.category?.message} options={categoryOptions} {...register("category")} />
             <Input label="Product Name *" containerClassName="md:col-span-2" error={errors.name?.message} {...register("name")} />
             <Input label="SKU" {...register("sku")} />
-            <Input label="Barcode / QR Code" {...register("barcode")} />
+            <Input label="Barcode" {...register("barcode")} />
+            <Input label="QR Code" {...register("qrCode")} />
             <Input label="Sub Category" {...register("subCategory")} />
             <Input label="Collection" {...register("collection")} />
             <Input label="Brand" {...register("brand")} />
             <Input label="Model / Series" {...register("model")} />
             <Select label="Status" error={errors.status?.message} options={statusOptions} {...register("status")} />
-            <Input label="QR Code" {...register("qrCode")} />
             <Textarea label="Description" containerClassName="md:col-span-2" error={errors.description?.message} {...register("description")} />
             <Textarea label="Short Description" containerClassName="md:col-span-2" {...register("shortDescription")} />
           </>
@@ -573,41 +691,41 @@ export default function ProductList() {
         emptyMessage="No products found"
         renderRow={(prod) => (
           <tr key={prod._id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-sm">
-            <td className="px-6 py-4 font-semibold text-primary">
-              <div className="flex items-center gap-3">
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary min-w-0">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 {prod.imageUrls && prod.imageUrls[0] ? (
                   <img
                     src={prod.imageUrls[0]}
                     alt={prod.productCode}
-                    className="w-10 h-10 object-cover rounded-lg bg-gray-50 border border-gray-100 cursor-pointer hover:opacity-80 transition-opacity"
+                    className="w-10 h-10 object-cover rounded-lg bg-gray-50 border border-gray-100 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       setPreviewImage(prod.imageUrls[0]);
                     }}
                   />
                 ) : (
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-100 text-gray-400">
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-100 text-gray-400 flex-shrink-0">
                     <ImageIcon className="h-4.5 w-4.5" />
                   </div>
                 )}
-                <span>{prod.productCode}</span>
+                <span className="truncate text-xs sm:text-sm">{prod.productCode}</span>
               </div>
             </td>
-            <td className="px-6 py-4 text-gray-600">{prod.stockNo}</td>
-            <td className="px-6 py-4 font-medium text-gray-900">{prod.name}</td>
-            <td className="px-6 py-4 text-gray-600">{prod.category}</td>
-            <td className="px-6 py-4 text-gray-600">${(prod.costPrice || 0).toLocaleString()}</td>
-            <td className="px-6 py-4 text-gray-900 font-semibold">${(prod.sellingPrice || 0).toLocaleString()}</td>
-            <td className="px-6 py-4 font-semibold text-emerald-600">${(prod.netProfit || 0).toLocaleString()}</td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{prod.stockNo}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-gray-900 truncate text-xs sm:text-sm">{prod.name}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">{prod.category}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">${(prod.costPrice || 0).toLocaleString()}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 font-semibold text-xs sm:text-sm">${(prod.sellingPrice || 0).toLocaleString()}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-emerald-600 text-xs sm:text-sm">${(prod.netProfit || 0).toLocaleString()}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6">
               <Badge variant={getStatusVariant(prod.status)}>{prod.status}</Badge>
             </td>
-            <td className="px-6 py-4 whitespace-nowrap">
+            <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
               <div className="flex items-center gap-2 flex-nowrap">
-                <Link to={`/products/${prod._id}`} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors" title="View Details">
+                <Link to={`/products/${prod._id}`} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0" title="View Details">
                   <Eye className="h-4 w-4" />
                 </Link>
-                <button onClick={() => handleOpenEdit(prod)} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="Edit">
+                <button onClick={() => handleOpenEdit(prod)} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0" title="Edit">
                   <Edit2 className="h-4 w-4" />
                 </button>
               </div>

@@ -178,30 +178,30 @@ export default function MaterialList() {
         renderRow={(mat) => (
           <tr
             key={mat._id}
-            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-sm"
+            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-xs sm:text-sm"
           >
-            <td className="px-6 py-4 font-semibold text-primary">{mat.materialCode}</td>
-            <td className="px-6 py-4 text-gray-600">{mat.category}</td>
-            <td className="px-6 py-4 font-medium text-gray-900">{mat.materialName}</td>
-            <td className="px-6 py-4 font-semibold text-gray-900">{mat.quantity}</td>
-            <td className="px-6 py-4 text-gray-600">{mat.unit}</td>
-            <td className="px-6 py-4 text-gray-600">${mat.cost.toFixed(2)}</td>
-            <td className="px-6 py-4 text-gray-600">{mat.location}</td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary truncate text-xs sm:text-sm">{mat.materialCode}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{mat.category}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-gray-900 truncate text-xs sm:text-sm">{mat.materialName}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 whitespace-nowrap text-xs sm:text-sm">{mat.quantity}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{mat.unit}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">${mat.cost.toFixed(2)}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{mat.location}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6">
               <Badge variant={mat.status === "active" ? "success" : "neutral"}>{mat.status}</Badge>
             </td>
-            <td className="px-6 py-4 whitespace-nowrap">
+            <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
               <div className="flex items-center gap-2 flex-nowrap">
                 <button
                   onClick={() => handleOpenAdjust(mat)}
-                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                   title="Adjust Stock"
                 >
                   <ArrowRightLeft className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => handleOpenEdit(mat)}
-                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                   title="Edit"
                 >
                   <Edit2 className="h-4 w-4" />

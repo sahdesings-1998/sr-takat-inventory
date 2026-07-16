@@ -264,58 +264,58 @@ export default function GemstoneList() {
         renderRow={(stone) => (
           <tr
             key={stone._id}
-            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-sm"
+            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-xs sm:text-sm"
           >
-            <td className="px-6 py-4 font-semibold text-primary">
-              <div className="flex items-center gap-3">
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary text-xs sm:text-sm">
+              <div className="flex items-center gap-2 min-w-0">
                 {stone.images && stone.images[0] ? (
                   <img
                     src={stone.images[0]}
                     alt={stone.stoneId}
-                    className="w-10 h-10 object-cover rounded-lg bg-gray-50 border border-gray-100 cursor-pointer hover:opacity-80 transition-opacity"
+                    className="w-10 h-10 object-cover rounded-lg bg-gray-50 border border-gray-100 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       setPreviewImage(stone.images[0]);
                     }}
                   />
                 ) : (
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-100 text-gray-400">
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-100 text-gray-400 flex-shrink-0">
                     <ImageIcon className="h-4.5 w-4.5" />
                   </div>
                 )}
-                <span>{stone.stoneId}</span>
+                <span className="truncate">{stone.stoneId}</span>
               </div>
             </td>
-            <td className="px-6 py-4 text-gray-600">{stone.stockNo}</td>
-            <td className="px-6 py-4 font-medium text-gray-900">
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{stone.stockNo}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-gray-900 truncate text-xs sm:text-sm">
               {stone.gemstone} {stone.variety ? `(${stone.variety})` : ""}
             </td>
-            <td className="px-6 py-4 text-gray-600">{stone.shape || "—"}</td>
-            <td className="px-6 py-4 text-gray-900 font-semibold">
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{stone.shape || "—"}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 font-semibold whitespace-nowrap text-xs sm:text-sm">
               {stone.carat} ct ({stone.pieces} pc)
             </td>
-            <td className="px-6 py-4 text-gray-600">
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
               ${stone.costPerCarat ? stone.costPerCarat.toFixed(2) : "0.00"}
             </td>
-            <td className="px-6 py-4 font-semibold text-gray-900">
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 whitespace-nowrap text-xs sm:text-sm">
               ${stone.purchasePrice.toLocaleString()}
             </td>
-            <td className="px-6 py-4 text-gray-600">{stone.location}</td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{stone.location}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6">
               <Badge variant={getStatusVariant(stone.status)}>{stone.status}</Badge>
             </td>
-            <td className="px-6 py-4 whitespace-nowrap">
+            <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
               <div className="flex items-center gap-2 flex-nowrap">
                 <button
                   onClick={() => handleOpenStatus(stone)}
-                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                   title="Adjust Status"
                 >
                   <ArrowRightLeft className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => handleOpenEdit(stone)}
-                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                   title="Edit"
                 >
                   <Edit2 className="h-4 w-4" />

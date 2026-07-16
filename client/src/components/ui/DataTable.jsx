@@ -9,7 +9,7 @@ export function DataTable({ headers, data, isLoading, emptyMessage = "No items f
             {headers.map((header, idx) => (
               <th
                 key={idx}
-                className="px-4 py-4 text-[11px] font-bold uppercase tracking-widest text-gray-400 whitespace-nowrap sm:px-6"
+                className="px-3 py-4 sm:px-4 md:px-6 text-[11px] font-bold uppercase tracking-widest text-gray-400 whitespace-normal break-words min-w-0"
               >
                 {header}
               </th>

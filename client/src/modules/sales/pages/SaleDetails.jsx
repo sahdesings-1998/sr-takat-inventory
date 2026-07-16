@@ -100,15 +100,15 @@ export default function SaleDetails() {
             headers={["Item details", "Unit Price", "Qty", "Total"]}
             data={items}
             renderRow={(row, idx) => (
-              <tr key={idx} className="border-b border-gray-100 text-sm">
-                <td className="px-6 py-4 font-semibold text-gray-950">
+              <tr key={idx} className="border-b border-gray-100 text-xs sm:text-sm">
+                <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-950 truncate text-xs sm:text-sm">
                   {row.inventoryType === "Product"
                     ? row.inventoryId?.name || "Product Item"
                     : row.inventoryId?.gemstone || "Gemstone Item"}
                 </td>
-                <td className="px-6 py-4 text-gray-600">${row.sellingPrice.toLocaleString()}</td>
-                <td className="px-6 py-4 text-gray-900 font-medium">{row.quantity}</td>
-                <td className="px-6 py-4 text-gray-950 font-bold">
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">${row.sellingPrice.toLocaleString()}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 font-medium whitespace-nowrap text-xs sm:text-sm">{row.quantity}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-950 font-bold whitespace-nowrap text-xs sm:text-sm">
                   ${(row.sellingPrice * row.quantity).toLocaleString()}
                 </td>
               </tr>

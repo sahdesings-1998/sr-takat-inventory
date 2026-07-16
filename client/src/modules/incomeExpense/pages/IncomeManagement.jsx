@@ -147,18 +147,18 @@ export function IncomeManagement() {
             isLoading={isLoading}
             emptyMessage="No income records found"
             renderRow={(income) => (
-              <tr key={income._id} className="hover:bg-gray-50/70 transition-colors border-b border-gray-100">
-                <td className="px-6 py-4 text-gray-700">{formatDate(income.date)}</td>
-                <td className="px-6 py-4 text-gray-700">{income.category}</td>
-                <td className="px-6 py-4 text-gray-600 max-w-[250px] truncate">{income.description}</td>
-                <td className="px-6 py-4 text-green-600 font-semibold">{formatCurrency(income.amount)}</td>
-                <td className="px-6 py-4 text-gray-700">{income.paymentMethod}</td>
-                <td className="px-6 py-4">
+              <tr key={income._id} className="hover:bg-gray-50/70 transition-colors border-b border-gray-100 text-xs sm:text-sm">
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 whitespace-nowrap">{formatDate(income.date)}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate">{income.category}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 break-words min-w-0">{income.description}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-green-600 font-semibold whitespace-nowrap">{formatCurrency(income.amount)}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate">{income.paymentMethod}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6">
                   <Badge variant={income.status === "Completed" ? "success" : income.status === "Pending" ? "warning" : "danger"}>
                     {income.status}
                   </Badge>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
                   <div className="flex items-center gap-2 justify-end">
                     <button
                       type="button"

@@ -63,27 +63,27 @@ export default function CostingList() {
         renderRow={(prod) => (
           <tr
             key={prod._id}
-            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-sm"
+            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-xs sm:text-sm"
           >
-            <td className="px-6 py-4 font-semibold text-primary">{prod.productCode}</td>
-            <td className="px-6 py-4 font-medium text-gray-900">{prod.name}</td>
-            <td className="px-6 py-4 text-gray-600">{prod.category}</td>
-            <td className="px-6 py-4 font-semibold text-gray-900">
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary truncate text-xs sm:text-sm">{prod.productCode}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-gray-900 truncate text-xs sm:text-sm">{prod.name}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{prod.category}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 whitespace-nowrap text-xs sm:text-sm">
               ${prod.costPrice.toLocaleString()}
             </td>
-            <td className="px-6 py-4 font-semibold text-gray-900">
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 whitespace-nowrap text-xs sm:text-sm">
               ${prod.sellingPrice.toLocaleString()}
             </td>
-            <td className="px-6 py-4 text-gray-600">${(prod.grossProfit || 0).toLocaleString()}</td>
-            <td className="px-6 py-4 font-semibold text-emerald-600">
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">${(prod.grossProfit || 0).toLocaleString()}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-emerald-600 whitespace-nowrap text-xs sm:text-sm">
               ${(prod.netProfit || 0).toLocaleString()}
             </td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
               <Link
                 to={`/products/${prod._id}`}
-                className="text-accent hover:underline font-semibold"
+                className="inline-flex items-center gap-1 text-accent hover:underline font-semibold text-xs sm:text-sm"
               >
-                Open Costing
+                <span className="hidden sm:inline">Open Costing</span><span className="sm:hidden">Details</span>
               </Link>
             </td>
           </tr>

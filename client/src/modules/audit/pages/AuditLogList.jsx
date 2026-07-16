@@ -34,19 +34,19 @@ export default function AuditLogList() {
         renderRow={(log) => (
           <tr
             key={log._id}
-            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-sm"
+            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-xs sm:text-sm"
           >
-            <td className="px-6 py-4 text-gray-600">
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
               {new Date(log.timestamp).toLocaleString()}
             </td>
-            <td className="px-6 py-4 font-semibold text-gray-950">
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-950 truncate text-xs sm:text-sm">
               {log.userId?.fullName || "System Admin"}
             </td>
-            <td className="px-6 py-4 font-medium text-gray-900">
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-gray-900 text-xs sm:text-sm min-w-0">
               {log.entity} / <span className="text-primary font-bold">{log.action}</span>
             </td>
-            <td className="px-6 py-4 text-gray-600 font-mono text-xs">{log.entityId}</td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 font-mono text-[10px] sm:text-xs break-all">{log.entityId}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6">
               <Badge
                 variant={
                   log.action === "delete"

@@ -40,6 +40,11 @@ function fmtMoney(n) {
   return `$${n.toLocaleString()}`;
 }
 
+function fmtNumber(n) {
+  if (n == null || Number.isNaN(Number(n))) return "0";
+  return Number(n).toLocaleString();
+}
+
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
 function StatCard({ title, value, subtitle, icon: Icon, iconBg, trend, trendUp, featured, onClick }) {
@@ -229,8 +234,8 @@ export default function Dashboard() {
     },
     {
       title: "On Memo Consign",
-      value: fmtMoney(kpis.memoOnTime + kpis.memoOverdue),
-      subtitle: `On Time: ${fmtMoney(kpis.memoOnTime)} | Overdue: ${fmtMoney(kpis.memoOverdue)}`,
+      value: `${fmtNumber(kpis.memoOnTime + kpis.memoOverdue)} Items`,
+      subtitle: `${fmtNumber(kpis.memoOnTime)} On Time · ${fmtNumber(kpis.memoOverdue)} Overdue`,
       icon: Clock,
       iconBg: kpis.memoOverdue > 0 ? "bg-rose-50 text-rose-500 font-semibold" : "bg-gray-50 text-gray-500",
       trend: kpis.memoOverdue > 0 ? "OVERDUE DETECTED" : "All clean",
@@ -400,7 +405,7 @@ export default function Dashboard() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-gray-950">{fmtMoney(memo.value)}</p>
+                  <p className="font-bold text-gray-950">{fmtNumber(memo.value)} items</p>
                   <Link to={`/memos`} className="text-xs text-accent hover:underline font-semibold block mt-1">Open</Link>
                 </div>
               </div>
@@ -464,17 +469,17 @@ export default function Dashboard() {
         {/* 4. Missing Certificates / Low Stock */}
         <div className="rounded-[24px] bg-white border border-gray-100/80 shadow-[0_8px_30px_rgba(0,0,0,0.015)] overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-100">
-            <h3 className="text-[14px] font-bold text-gray-900 tracking-[-0.02em]">Missing Certificates</h3>
-            <p className="text-[11px] text-gray-400 mt-0.5">Stones in stock without a certificate record</p>
+            <h3 className="text-[14px] font-bold text-gray-900 tracking-[-0.02em]">Missing Certificates / Low Stock</h3>
+            <p className="text-[11px] text-gray-400 mt-0.5">Stones missing certificates or with low inventory counts</p>
           </div>
           <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
             {widgets.lowStockOrMissingCert.map((stone) => (
               <div key={stone._id} className="p-4 hover:bg-gray-50/50 transition-colors flex items-center justify-between text-sm">
                 <div>
                   <p className="font-semibold text-gray-950">{stone.gemstone}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">ID: {stone.stoneId} | Weight: {stone.carat} ct</p>
-                  <p className="text-xs text-amber-600 font-semibold mt-0.5 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" /> Certificate missing
+                  <p className="text-xs text-gray-500 mt-0.5">ID: {stone.stoneId} | Weight: {stone.carat} ct | Pieces: {stone.pieces ?? 1}</p>
+                  <p className={`text-xs font-semibold mt-0.5 flex items-center gap-1 ${stone.reason === "Low stock" ? "text-amber-600" : "text-rose-600"}`}>
+                    <AlertTriangle className="h-3 w-3" /> {stone.reason || "Missing certificate"}
                   </p>
                 </div>
                 <div className="text-right">

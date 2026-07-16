@@ -30,7 +30,7 @@ async function createJobCard(data, userId, ipAddress = "") {
     jobNo,
     status: "Assigned",
     productionStages: [
-      { stageName: "Designing", status: "Pending", notes: "Designing stage initialized" },
+      { stageName: "Design", status: "Pending", notes: "Design stage initialized" },
     ],
   });
 

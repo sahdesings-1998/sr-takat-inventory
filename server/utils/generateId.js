@@ -1,5 +1,9 @@
 import Settings from "../models/Settings.js";
 
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /**
  * Generates a unique sequential identifier for a given model and field.
  * Example format: GEM-00001, JOB-00104, etc.
@@ -12,20 +16,19 @@ import Settings from "../models/Settings.js";
 export async function generateId(model, fieldName, prefixType, padding = 5) {
   const settings = await Settings.getSettings();
   const prefix = settings.prefixes[prefixType] || "SYS";
+  const prefixPattern = new RegExp(`^${escapeRegExp(prefix)}-(\\d+)$`);
 
-  // Find the document with the highest value for this field
-  const lastDoc = await model.findOne({}, { [fieldName]: 1 })
-    .sort({ [fieldName]: -1 })
-    .lean();
+  const docs = await model.find(
+    { [fieldName]: { $regex: prefixPattern } },
+    { [fieldName]: 1 }
+  ).lean();
 
   let nextNum = 1;
-
-  if (lastDoc && lastDoc[fieldName]) {
-    const val = lastDoc[fieldName];
-    // Match the number at the end of the ID
-    const match = val.match(/\d+$/);
+  for (const doc of docs) {
+    const value = doc[fieldName];
+    const match = value.match(prefixPattern);
     if (match) {
-      nextNum = parseInt(match[0], 10) + 1;
+      nextNum = Math.max(nextNum, parseInt(match[1], 10) + 1);
     }
   }
 

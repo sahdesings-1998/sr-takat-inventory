@@ -59,14 +59,12 @@ export default function CertificateList() {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    if (!form.certificateNo || !form.lab || !form.entityId) {
-      showError("Validation Error", "Please fill in all required fields.");
+    if (!form.certificateNo || !form.lab || !form.entityId || !form.fileUrl) {
+      showError("Validation Error", "Please fill in all required fields, including certificate file.");
       return;
     }
 
     try {
-      let finalFileUrl = form.fileUrl || "https://res.cloudinary.com/demo/image/upload/sample.pdf";
-      
       const payload = {
         certificateNo: form.certificateNo,
         lab: form.lab,
@@ -74,7 +72,7 @@ export default function CertificateList() {
         reportType: form.reportType,
         entityType: form.entityType,
         entityId: form.entityId,
-        fileUrl: finalFileUrl,
+        fileUrl: form.fileUrl,
         publicId: form.publicId || "",
       };
 

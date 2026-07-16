@@ -5,7 +5,8 @@ build/
 
 # Editor directories and files
 .vscode/
-docs/
+docs
+docs
 
 # Environment variables and secrets
 .env
@@ -28,3 +29,6 @@ docs/
 # Uploads (keep placeholder)
 uploads/*
 !uploads/.gitkeep
+
+md files
+

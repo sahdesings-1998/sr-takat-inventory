@@ -109,8 +109,8 @@ async function createDirectSale(data, userId, ipAddress = "") {
       action: "Sale",
       toLocation: "Sold",
       quantity: itemData.quantity,
-      referenceType: "Customer",
-      referenceId: sale.customerId,
+      referenceType: "Sale",
+      referenceId: sale._id,
       userId,
       remarks: `Direct purchase invoice: ${sale.invoiceNo}`,
     });

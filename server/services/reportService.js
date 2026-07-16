@@ -6,6 +6,7 @@ import Memo from "../models/Memo.js";
 import JobCard from "../models/JobCard.js";
 import InventoryMovement from "../models/InventoryMovement.js";
 import Supplier from "../models/Supplier.js";
+import Settings from "../models/Settings.js";
 
 async function getStockValuation() {
   const stones = await Gemstone.find({
@@ -31,11 +32,13 @@ async function getStockValuation() {
 
 async function getRevenuesSummary() {
   const sales = await Sale.find({});
+  const settings = await Settings.getSettings();
+  const charityPercentage = Number(settings?.charityPercentage ?? 20);
 
   const totalRevenue = sales.reduce((acc, curr) => acc + (curr.total || 0), 0);
-  const totalCharity = sales.reduce((acc, curr) => acc + (curr.charityAmount || 0), 0);
   const totalGrossProfit = sales.reduce((acc, curr) => acc + (curr.grossProfit || 0), 0);
-  const totalNetProfit = sales.reduce((acc, curr) => acc + (curr.netProfit || 0), 0);
+  const totalCharity = totalGrossProfit * (charityPercentage / 100);
+  const totalNetProfit = totalGrossProfit - totalCharity;
 
   return {
     totalRevenue,
@@ -52,9 +55,11 @@ async function getDashboardSummary() {
 
   const activeStones = await Gemstone.find({
     status: { $in: ["In Stock", "Reserved", "In Production", "On Memo"] },
+    isDeleted: { $ne: true },
   });
   const activeProducts = await Product.find({
     status: { $in: ["In Stock", "Reserved", "On Memo"] },
+    isDeleted: { $ne: true },
   });
 
   const totalGemstonesCount = activeStones.reduce((acc, curr) => acc + (curr.pieces || 1), 0);
@@ -71,49 +76,47 @@ async function getDashboardSummary() {
     .populate("customerId")
     .populate("items.inventoryId");
 
-  let onTimeValue = 0;
-  let overdueValue = 0;
+  let memoOnTimeCount = 0;
+  let memoOverdueCount = 0;
   const now = new Date();
   const overdueMemosList = [];
 
   for (const memo of activeMemos) {
     const isOverdue = now > new Date(memo.expectedReturn);
-    let memoValue = 0;
-    for (const item of memo.items) {
+    let memoItemCount = 0;
+    for (const item of memo.items || []) {
       if (item.status === "On Memo" && item.inventoryId) {
-        if (item.inventoryType === "Gemstone") {
-          memoValue += (item.inventoryId.purchasePrice || 0) * 1.25 * item.quantity;
-        } else if (item.inventoryType === "Product") {
-          memoValue += (item.inventoryId.sellingPrice || 0) * item.quantity;
-        }
+        memoItemCount += Number(item.quantity || 1);
       }
     }
 
     if (isOverdue) {
-      overdueValue += memoValue;
+      memoOverdueCount += memoItemCount;
       overdueMemosList.push({
         _id: memo._id,
         memoNo: memo.memoNo,
         customerName: memo.customerId?.fullName || "Unknown",
         expectedReturn: memo.expectedReturn,
-        value: memoValue,
+        value: memoItemCount,
       });
     } else {
-      onTimeValue += memoValue;
+      memoOnTimeCount += memoItemCount;
     }
   }
 
-  // Widget feeds
   const recentStones = await Gemstone.find({ status: "In Stock" }).sort({ createdAt: -1 }).limit(5);
   const recentProducts = await Product.find({ status: "In Stock" }).sort({ createdAt: -1 }).limit(5);
-  
-  const missingCertificateStones = await Gemstone.find({
+
+  const lowStockOrMissingCert = await Gemstone.find({
     status: "In Stock",
-    certificateId: null,
+    $or: [{ certificateId: null }, { pieces: { $lte: 1 } }],
   }).limit(5);
 
-  const recentSales = await Sale.find({}).populate("customerId").sort({ createdAt: -1 }).limit(5);
-  
+  const recentSales = await Sale.find({ paymentStatus: "Paid" })
+    .populate("customerId")
+    .sort({ createdAt: -1 })
+    .limit(5);
+
   const pendingProduction = await JobCard.find({
     status: { $in: ["Assigned", "In Progress", "On Hold"] },
   })
@@ -128,8 +131,8 @@ async function getDashboardSummary() {
       watchStock: watchStockCount,
       inventoryCost: valuation.totalValue,
       sellingValue,
-      memoOnTime: onTimeValue,
-      memoOverdue: overdueValue,
+      memoOnTime: memoOnTimeCount,
+      memoOverdue: memoOverdueCount,
       grossProfit: revenues.totalGrossProfit,
       charityAllocation: revenues.totalCharity,
       netProfit: revenues.totalNetProfit,
@@ -138,10 +141,29 @@ async function getDashboardSummary() {
     },
     widgets: {
       recentStock: [
-        ...recentStones.map((s) => ({ type: "Gemstone", code: s.stoneId, name: s.gemstone, cost: s.purchasePrice })),
-        ...recentProducts.map((p) => ({ type: "Product", code: p.productCode, name: p.name, cost: p.costPrice })),
-      ].slice(0, 5),
-      lowStockOrMissingCert: missingCertificateStones,
+        ...recentStones.map((s) => ({
+          _id: s._id,
+          type: "Gemstone",
+          code: s.stoneId,
+          name: s.gemstone,
+          cost: s.purchasePrice,
+          createdAt: s.createdAt,
+        })),
+        ...recentProducts.map((p) => ({
+          _id: p._id,
+          type: "Product",
+          code: p.productCode,
+          name: p.name,
+          cost: p.costPrice,
+          createdAt: p.createdAt,
+        })),
+      ]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5),
+      lowStockOrMissingCert: lowStockOrMissingCert.map((stone) => ({
+        ...stone.toObject ? stone.toObject() : stone,
+        reason: stone.certificateId ? "Low stock" : "Missing certificate",
+      })),
       overdueMemos: overdueMemosList,
       recentSales,
       pendingProduction,

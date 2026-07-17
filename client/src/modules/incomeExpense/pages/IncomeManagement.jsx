@@ -9,6 +9,7 @@ import DataTable from "@/components/ui/DataTable";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
+import DatePicker from "@/components/ui/DatePicker";
 import { useIncomes, useCreateIncome, useUpdateIncome, useDeleteIncome, useIncomeStats } from "../hooks/useIncomes.js";
 import { useExpenseStats } from "../hooks/useExpenses.js";
 import IncomeModal from "../components/IncomeModal.jsx";
@@ -117,105 +118,111 @@ export function IncomeManagement() {
         isLoading={incomeStatsLoading || expenseStatsLoading}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_0.6fr] gap-4">
-        <div className="space-y-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end justify-between bg-white p-4 rounded-[20px] border border-gray-100 shadow-[0_4px_26px_rgba(0,0,0,0.05)]">
-            <SearchInput
-              placeholder="Search description or reference..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onClear={() => setSearchInput("")}
-              containerClassName="w-full"
-            />
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              label="From"
-            />
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              label="To"
-            />
-          </div>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 rounded-[20px] border border-gray-100 bg-white p-4 shadow-[0_4px_26px_rgba(0,0,0,0.05)]">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-end">
+            <div className="min-w-[240px] flex-1">
+              <SearchInput
+                placeholder="Search description or reference..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onClear={() => setSearchInput("")}
+                containerClassName="w-full"
+              />
+            </div>
 
-          <DataTable
-            headers={["Date", "Category", "Description", "Amount", "Payment", "Status", "Actions"]}
-            data={incomes}
-            isLoading={isLoading}
-            emptyMessage="No income records found"
-            renderRow={(income) => (
-              <tr key={income._id} className="hover:bg-gray-50/70 transition-colors border-b border-gray-100 text-xs sm:text-sm">
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 whitespace-nowrap">{formatDate(income.date)}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate">{income.category}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 break-words min-w-0">{income.description}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-green-600 font-semibold whitespace-nowrap">{formatCurrency(income.amount)}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate">{income.paymentMethod}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6">
-                  <Badge variant={income.status === "Completed" ? "success" : income.status === "Pending" ? "warning" : "danger"}>
-                    {income.status}
-                  </Badge>
-                </td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
-                  <div className="flex items-center gap-2 justify-end">
-                    <button
-                      type="button"
-                      onClick={() => handleEditIncome(income)}
-                      className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 transition-colors"
-                      title="Edit income"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteIncome(income._id)}
-                      className="rounded-lg p-2 text-red-600 hover:bg-red-50 transition-colors"
-                      title="Delete income"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            )}
-          />
-        </div>
-
-        <div className="bg-white p-4 rounded-[20px] border border-gray-100 shadow-[0_4px_26px_rgba(0,0,0,0.05)]">
-          <div className="flex items-center justify-between mb-4 gap-4">
-            <div>
-              <p className="text-sm font-semibold text-gray-500">Filters</p>
-              <p className="text-xs text-gray-400">Apply quick filters to narrow income records.</p>
+            <div className="flex flex-1 flex-wrap gap-3">
+              <div className="min-w-[150px] flex-1 md:flex-initial">
+                <DatePicker
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  label="From"
+                />
+              </div>
+              <div className="min-w-[150px] flex-1 md:flex-initial">
+                <DatePicker
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  label="To"
+                />
+              </div>
+              <div className="min-w-[180px] flex-1 md:flex-initial">
+                <Select
+                  label="Category"
+                  placeholder="All categories"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  options={[{ value: "", label: "All Categories" }, ...INCOME_CATEGORIES]}
+                />
+              </div>
+              <div className="min-w-[180px] flex-1 md:flex-initial">
+                <Select
+                  label="Status"
+                  placeholder="All statuses"
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  options={[{ value: "", label: "All Statuses" }, ...STATUS_OPTIONS]}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchInput("");
+                    setSelectedCategory("");
+                    setSelectedStatus("");
+                    setStartDate("");
+                    setEndDate("");
+                  }}
+                  className="h-11 shrink-0"
+                >
+                  Clear
+                </Button>
+              </div>
             </div>
           </div>
-          <div className="space-y-4">
-            <Select
-              label="Category"
-              placeholder="All categories"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              options={[{ value: "", label: "All Categories" }, ...INCOME_CATEGORIES]}
-            />
-            <Select
-              label="Status"
-              placeholder="All statuses"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              options={[{ value: "", label: "All Statuses" }, ...STATUS_OPTIONS]}
-            />
-            <Button variant="outline" onClick={() => {
-              setSearchInput("");
-              setSelectedCategory("");
-              setSelectedStatus("");
-              setStartDate("");
-              setEndDate("");
-            }}>
-              Clear Filters
-            </Button>
-          </div>
         </div>
+
+        <DataTable
+          headers={["Date", "Category", "Description", "Amount", "Payment", "Status", "Actions"]}
+          data={incomes}
+          isLoading={isLoading}
+          emptyMessage="No income records found"
+          renderRow={(income) => (
+            <tr key={income._id} className="hover:bg-gray-50/70 transition-colors border-b border-gray-100 text-xs sm:text-sm">
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 whitespace-nowrap">{formatDate(income.date)}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate">{income.category}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 break-words min-w-0">{income.description}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-green-600 font-semibold whitespace-nowrap">{formatCurrency(income.amount)}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate">{income.paymentMethod}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6">
+                <Badge variant={income.status === "Completed" ? "success" : income.status === "Pending" ? "warning" : "danger"}>
+                  {income.status}
+                </Badge>
+              </td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
+                <div className="flex items-center gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => handleEditIncome(income)}
+                    className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 transition-colors"
+                    title="Edit income"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteIncome(income._id)}
+                    className="rounded-lg p-2 text-red-600 hover:bg-red-50 transition-colors"
+                    title="Delete income"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          )}
+        />
       </div>
 
       <IncomeModal

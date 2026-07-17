@@ -9,6 +9,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import DatePicker from "@/components/ui/DatePicker";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import Modal from "@/components/ui/Modal";
@@ -390,7 +391,7 @@ export default function ProductList() {
             {showMetalFields ? <Input label="Gold Purity" {...register("goldPurity")} /> : null}
             <Input label="Country of Origin" {...register("countryOfOrigin")} />
             <Input label="Manufactured By" {...register("manufacturedBy")} />
-            <Input label="Manufactured Date" type="date" {...register("manufacturedDate")} />
+            <DatePicker label="Manufactured Date" {...register("manufacturedDate")} />
           </>
         );
       case "gemstones":
@@ -477,7 +478,7 @@ export default function ProductList() {
           <>
             <Input label="Supplier" {...register("supplier")} />
             <Input label="Supplier Reference" {...register("supplierReference")} />
-            <Input label="Purchase Date" type="date" {...register("purchaseDate")} />
+            <DatePicker label="Purchase Date" {...register("purchaseDate")} />
             <Controller
               control={control}
               name="purchaseInvoice"
@@ -504,7 +505,7 @@ export default function ProductList() {
             <Input label="Last Selling Price" type="number" step="0.01" {...register("lastSellingPrice")} />
             <Input label="Customer" {...register("customer")} />
             <Input label="Salesperson" {...register("salesperson")} />
-            <Input label="Last Sold Date" type="date" {...register("lastSoldDate")} />
+            <DatePicker label="Last Sold Date" {...register("lastSoldDate")} />
             <Input label="Payment Status" {...register("salesPaymentStatus")} />
             <Input label="Consignment Status" {...register("consignmentStatus")} />
           </>
@@ -515,7 +516,7 @@ export default function ProductList() {
             <Select label="Certificate Available" options={[{ value: "true", label: "Yes" }, { value: "false", label: "No" }]} {...register("certificateAvailable")} />
             <Select label="Laboratory" options={[{ value: "GIA", label: "GIA" }, { value: "GRS", label: "GRS" }, { value: "SSEF", label: "SSEF" }, { value: "Gübelin", label: "Gübelin" }, { value: "IGI", label: "IGI" }, { value: "Other", label: "Other" }]} {...register("laboratory")} />
             <Input label="Certificate Number" {...register("certificateNumber")} />
-            <Input label="Certificate Date" type="date" {...register("certificateDate")} />
+            <DatePicker label="Certificate Date" {...register("certificateDate")} />
             <Input label="Certificate Cost" type="number" step="0.01" {...register("certificateCost")} />
             <Controller
               control={control}

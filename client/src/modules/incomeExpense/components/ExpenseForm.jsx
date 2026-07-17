@@ -3,6 +3,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import DatePicker from "@/components/ui/DatePicker";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import { expenseValidationSchema } from "../validation/schemas.js";
@@ -58,9 +59,8 @@ export function ExpenseForm({ initialData, onSubmit, isLoading }) {
           name="date"
           control={control}
           render={({ field }) => (
-            <Input
+            <DatePicker
               {...field}
-              type="date"
               label="Date"
               error={errors.date?.message}
             />

@@ -9,6 +9,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import DatePicker from "@/components/ui/DatePicker";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import Modal from "@/components/ui/Modal";
@@ -244,9 +245,8 @@ export default function MemoList() {
               onChange={(e) => setCustomerId(e.target.value)}
               required
             />
-            <Input
+            <DatePicker
               label="Expected Return Date *"
-              type="date"
               value={expectedReturn}
               onChange={(e) => setExpectedReturn(e.target.value)}
               required

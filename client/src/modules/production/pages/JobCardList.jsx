@@ -192,7 +192,7 @@ export default function JobCardList() {
             {...register("assignedToName")}
             placeholder="e.g. Workshop A"
           />
-          <Input label="Due Date *" type="date" {...register("targetDueDate")} required />
+          <DatePicker label="Due Date *" {...register("targetDueDate")} required />
           <Textarea label="Special Notes" {...register("notes")} />
 
           <div className="flex justify-end gap-3 mt-2">

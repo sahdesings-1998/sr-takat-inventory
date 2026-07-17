@@ -4,6 +4,7 @@ import { ArrowLeft, RefreshCw, ShoppingCart } from "lucide-react";
 import { useMemo } from "../hooks/useMemo";
 import { useToast } from "@/contexts/ToastContext";
 import Button from "@/components/ui/Button";
+import DatePicker from "@/components/ui/DatePicker";
 import Select from "@/components/ui/Select";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -213,9 +214,8 @@ export default function MemoDetails() {
       {/* Extend Memo Modal */}
       <Modal isOpen={extendOpen} onClose={() => setExtendOpen(false)} title="Extend Memo Return Date">
         <form onSubmit={handleExtendSubmit} className="flex flex-col gap-4">
-          <Input
+          <DatePicker
             label="New Expected Return Date *"
-            type="date"
             value={newExpectedReturn}
             onChange={(e) => setNewExpectedReturn(e.target.value)}
             required

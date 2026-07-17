@@ -9,6 +9,7 @@ import DataTable from "@/components/ui/DataTable";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
+import DatePicker from "@/components/ui/DatePicker";
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, useExpenseStats } from "../hooks/useExpenses.js";
 import { useIncomeStats } from "../hooks/useIncomes.js";
 import ExpenseModal from "../components/ExpenseModal.jsx";
@@ -117,108 +118,112 @@ export function ExpenseManagement() {
         isLoading={expenseStatsLoading || incomeStatsLoading}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4">
-        <div className="space-y-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end justify-between bg-white p-4 rounded-[20px] border border-gray-100 shadow-[0_4px_26px_rgba(0,0,0,0.05)]">
-            <SearchInput
-              placeholder="Search description or reference..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onClear={() => setSearchInput("")}
-              containerClassName="w-full"
-            />
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              label="From"
-            />
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              label="To"
-            />
-          </div>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 rounded-[20px] border border-gray-100 bg-white p-4 shadow-[0_4px_26px_rgba(0,0,0,0.05)]">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-end">
+            <div className="min-w-[240px] flex-1">
+              <SearchInput
+                placeholder="Search description or reference..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onClear={() => setSearchInput("")}
+                containerClassName="w-full"
+              />
+            </div>
 
-          <DataTable
-            headers={["Date", "Category", "Description", "Vendor", "Amount", "Payment", "Status", "Actions"]}
-            data={expenses}
-            isLoading={isLoading}
-            emptyMessage="No expense records found"
-            renderRow={(expense) => (
-              <tr key={expense._id} className="hover:bg-gray-50/70 transition-colors border-b border-gray-100 text-xs sm:text-sm">
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 whitespace-nowrap">{formatDate(expense.date)}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate">{expense.category}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 break-words min-w-0">{expense.description}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate">{expense.vendor || "—"}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-red-600 font-semibold whitespace-nowrap">{formatCurrency(expense.amount)}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate">{expense.paymentMethod}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6">
-                  <Badge variant={expense.status === "Completed" ? "success" : expense.status === "Pending" ? "warning" : "danger"}>
-                    {expense.status}
-                  </Badge>
-                </td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
-                  <div className="flex items-center gap-2 justify-end">
-                    <button
-                      type="button"
-                      onClick={() => handleEditExpense(expense)}
-                      className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 transition-colors"
-                      title="Edit expense"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteExpense(expense._id)}
-                      className="rounded-lg p-2 text-red-600 hover:bg-red-50 transition-colors"
-                      title="Delete expense"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            )}
-          />
-        </div>
-
-        
-
-        <div className="bg-white p-4 rounded-[20px] border border-gray-100 shadow-[0_4px_26px_rgba(0,0,0,0.05)]">
-          <div className="flex items-center justify-between mb-4 gap-4">
-            <div>
-              <p className="text-sm font-semibold text-gray-500">Filters</p>
-              <p className="text-xs text-gray-400">Apply quick filters to narrow expense records.</p>
+            <div className="flex flex-1 flex-wrap gap-3">
+              <div className="min-w-[150px] flex-1 md:flex-initial">
+                <DatePicker
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  label="From"
+                />
+              </div>
+              <div className="min-w-[150px] flex-1 md:flex-initial">
+                <DatePicker
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  label="To"
+                />
+              </div>
+              <div className="min-w-[180px] flex-1 md:flex-initial">
+                <Select
+                  label="Category"
+                  placeholder="All categories"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  options={[{ value: "", label: "All Categories" }, ...EXPENSE_CATEGORIES]}
+                />
+              </div>
+              <div className="min-w-[180px] flex-1 md:flex-initial">
+                <Select
+                  label="Status"
+                  placeholder="All statuses"
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  options={[{ value: "", label: "All Statuses" }, ...STATUS_OPTIONS]}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchInput("");
+                    setSelectedCategory("");
+                    setSelectedStatus("");
+                    setStartDate("");
+                    setEndDate("");
+                  }}
+                  className="h-11 shrink-0"
+                >
+                  Clear
+                </Button>
+              </div>
             </div>
           </div>
-          <div className="space-y-4">
-            <Select
-              label="Category"
-              placeholder="All categories"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              options={[{ value: "", label: "All Categories" }, ...EXPENSE_CATEGORIES]}
-            />
-            <Select
-              label="Status"
-              placeholder="All statuses"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              options={[{ value: "", label: "All Statuses" }, ...STATUS_OPTIONS]}
-            />
-            <Button variant="outline" onClick={() => {
-              setSearchInput("");
-              setSelectedCategory("");
-              setSelectedStatus("");
-              setStartDate("");
-              setEndDate("");
-            }}>
-              Clear Filters
-            </Button>
-          </div>
         </div>
+
+        <DataTable
+          headers={["Date", "Category", "Description", "Vendor", "Amount", "Payment", "Status", "Actions"]}
+          data={expenses}
+          isLoading={isLoading}
+          emptyMessage="No expense records found"
+          renderRow={(expense) => (
+            <tr key={expense._id} className="hover:bg-gray-50/70 transition-colors border-b border-gray-100 text-xs sm:text-sm">
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 whitespace-nowrap">{formatDate(expense.date)}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate">{expense.category}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 break-words min-w-0">{expense.description}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate">{expense.vendor || "—"}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-red-600 font-semibold whitespace-nowrap">{formatCurrency(expense.amount)}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate">{expense.paymentMethod}</td>
+              <td className="px-3 py-4 sm:px-4 md:px-6">
+                <Badge variant={expense.status === "Completed" ? "success" : expense.status === "Pending" ? "warning" : "danger"}>
+                  {expense.status}
+                </Badge>
+              </td>
+              <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
+                <div className="flex items-center gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => handleEditExpense(expense)}
+                    className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 transition-colors"
+                    title="Edit expense"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteExpense(expense._id)}
+                    className="rounded-lg p-2 text-red-600 hover:bg-red-50 transition-colors"
+                    title="Delete expense"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          )}
+        />
       </div>
 
       <ExpenseModal

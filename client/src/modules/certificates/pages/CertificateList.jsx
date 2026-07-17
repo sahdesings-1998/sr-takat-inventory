@@ -7,6 +7,7 @@ import { useSettings } from "@/modules/settings/hooks/useSettings";
 import { useToast } from "@/contexts/ToastContext";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import DatePicker from "@/components/ui/DatePicker";
 import Select from "@/components/ui/Select";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -197,9 +198,8 @@ export default function CertificateList() {
             onChange={(e) => setForm({ ...form, reportType: e.target.value })}
             required
           />
-          <Input
+          <DatePicker
             label="Issue Date *"
-            type="date"
             value={form.issueDate}
             onChange={(e) => setForm({ ...form, issueDate: e.target.value })}
             required

@@ -14,6 +14,7 @@ export function SearchInput({
   onChange,
   onClear,
   placeholder = "Search...",
+  label,
   className,
   containerClassName,
   id,
@@ -36,9 +37,15 @@ export function SearchInput({
   const hasValue = Boolean(value);
 
   return (
-    <div className={cn("relative flex items-center", containerClassName)}>
-      {/* Left search icon */}
-      <Search className="pointer-events-none absolute left-3.5 h-4 w-4 text-gray-400 shrink-0" />
+    <div className={cn("flex flex-col gap-2", containerClassName)}>
+      {label && (
+        <label htmlFor={id || name} className="text-[13px] font-semibold text-gray-700 tracking-[-0.01em]">
+          {label}
+        </label>
+      )}
+      <div className="relative flex items-center">
+        {/* Left search icon */}
+        <Search className="pointer-events-none absolute left-3.5 h-4 w-4 text-gray-400 shrink-0" />
 
       <input
         ref={inputRef}
@@ -71,6 +78,7 @@ export function SearchInput({
           <X className="h-3 w-3" />
         </button>
       )}
+      </div>
     </div>
   );
 }

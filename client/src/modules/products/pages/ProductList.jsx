@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Edit2, Eye, Image as ImageIcon } from "lucide-react";
+import { Plus, Edit2, Eye, Image as ImageIcon, CheckCircle } from "lucide-react";
 import { useProducts } from "../hooks/useProducts";
+import { useAuditLogs } from "@/modules/dashboard/hooks/useReports";
 import { productSchema } from "../validation/productSchema";
 import { useToast } from "@/contexts/ToastContext";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -19,20 +20,24 @@ import SearchInput from "@/components/ui/SearchInput";
 import ImageUploader from "@/components/ui/ImageUploader";
 import FileUploader from "@/components/ui/FileUploader";
 
-const tabs = [
-  { key: "general", label: "General" },
-  { key: "images", label: "Images" },
-  { key: "pricing", label: "Pricing" },
-  { key: "specifications", label: "Specifications" },
-  { key: "gemstones", label: "Gemstones" },
-  { key: "components", label: "Components" },
-  { key: "costs", label: "Cost Summary" },
-  { key: "inventory", label: "Inventory" },
-  { key: "supplier", label: "Supplier" },
-  { key: "sales", label: "Sales" },
-  { key: "certificates", label: "Certificates" },
-  { key: "documents", label: "Documents" },
-  { key: "notes", label: "Notes" },
+const catalogTabs = [
+  { key: "catalog", label: "Product Catalog" },
+  { key: "history", label: "Product History / Audit" },
+];
+
+const formSteps = [
+  { key: "general", label: "Basic Details", fields: ["stockNo", "category", "name", "status", "description", "shortDescription", "brand", "model", "collection", "sku", "barcode", "qrCode", "subCategory"] },
+  { key: "pricing", label: "Pricing", fields: ["purchasePrice", "additionalCost", "totalCost", "costPrice", "sellingPrice", "minimumSellingPrice", "wholesalePrice", "retailPrice", "currency", "discountAllowed", "profit", "margin"] },
+  { key: "inventory", label: "Inventory", fields: ["warehouse", "location", "shelf", "quantity", "availableQuantity", "reservedQuantity", "minimumStock", "maximumStock", "reorderLevel"] },
+  { key: "images", label: "Media", fields: ["imageUrls", "videos", "documents", "certificatePdf", "certificateImages", "warranty", "cadFiles"] },
+  { key: "specifications", label: "Specifications", fields: ["weight", "dimensions", "material", "metalType", "goldPurity", "countryOfOrigin", "manufacturedBy", "manufacturedDate", "gemstoneType", "variety", "origin", "shape", "cut", "colour", "clarity", "treatment", "heatStatus", "oilLevel", "transparency", "qualityGrade", "naturalSynthetic", "pieces", "totalCarat", "averageCarat", "costPerCarat", "sellingPricePerCarat"] },
+  { key: "components", label: "Components", fields: ["components"] },
+  { key: "costs", label: "Cost Summary", fields: ["materialCost", "manufacturingCost", "packagingCost", "shippingCost", "insuranceCost", "otherCosts", "totalCostSummary"] },
+  { key: "supplier", label: "Purchase Info", fields: ["supplier", "supplierReference", "purchaseDate", "paymentStatus", "outstandingAmount", "supplierNotes"] },
+  { key: "sales", label: "Sales", fields: ["sellingStatus", "lastSellingPrice", "customer", "salesperson", "lastSoldDate", "salesPaymentStatus", "consignmentStatus"] },
+  { key: "certificates", label: "Certificate Info", fields: ["certificateAvailable", "laboratory", "certificateNumber", "certificateDate", "certificateCost", "certificatePdf", "certificateImages", "certificateNotes"] },
+  { key: "documents", label: "Documents", fields: ["warranty", "cadFiles", "videos", "documents"] },
+  { key: "notes", label: "Notes", fields: ["internalNotes", "customerNotes", "specialInstructions", "tagsInput"] },
 ];
 
 const categoryOptions = [
@@ -69,24 +74,37 @@ export default function ProductList() {
   const search = useDebounce(searchInput, 300);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [activeCatalogTab, setActiveCatalogTab] = useState("catalog");
+  const [activeTab, setActiveTab] = useState("general");
+  const [completedSteps, setCompletedSteps] = useState([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const { products, isLoading, isError, createProduct, updateProduct } = useProducts({
     search,
     category: categoryFilter,
     status: statusFilter,
   });
+  const { data: logsData, isLoading: isLogsLoading, isError: isLogsError } = useAuditLogs();
   const { showSuccess, showError } = useToast();
 
-  const [isOpen, setIsOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [previewImage, setPreviewImage] = useState(null);
-  const [activeTab, setActiveTab] = useState("general");
+  const logs = useMemo(() => logsData?.data || [], [logsData]);
+  const productLogs = useMemo(
+    () => logs.filter((log) => String(log.entity || "").toLowerCase().includes("product")),
+    [logs]
+  );
+  const filteredLogs = useMemo(
+    () =>
+      selectedProductId
+        ? productLogs.filter((log) => String(log.entityId) === selectedProductId)
+        : productLogs,
+    [productLogs, selectedProductId]
+  );
 
-  useEffect(() => {
-    if (isError) {
-      showError("Fetch Failed", "Failed to fetch products.");
-    }
-  }, [isError, showError]);
+  const stepKeys = useMemo(() => formSteps.map((step) => step.key), []);
+  const isCreateReady = stepKeys.every((key) => completedSteps.includes(key));
 
   const getDefaultValues = (product = null) => ({
     stockNo: product?.stockNo || "",
@@ -198,11 +216,44 @@ export default function ProductList() {
     control,
     watch,
     setValue,
+    trigger,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(productSchema),
     defaultValues: getDefaultValues(),
   });
+
+  const validateStep = async (stepKey) => {
+    const step = formSteps.find((item) => item.key === stepKey);
+    if (!step) return false;
+    const valid = await trigger(step.fields);
+    if (valid && !completedSteps.includes(stepKey)) {
+      setCompletedSteps((current) => [...current, stepKey]);
+    }
+    return valid;
+  };
+
+  const handleStepChange = async (stepKey) => {
+    const currentIndex = formSteps.findIndex((step) => step.key === activeTab);
+    const nextIndex = formSteps.findIndex((step) => step.key === stepKey);
+    if (nextIndex > currentIndex) {
+      const valid = await validateStep(activeTab);
+      if (!valid) return;
+    }
+    setActiveTab(stepKey);
+  };
+
+  useEffect(() => {
+    if (isError) {
+      showError("Fetch Failed", "Failed to fetch products.");
+    }
+  }, [isError, showError]);
+
+  useEffect(() => {
+    if (isLogsError) {
+      showError("Fetch Failed", "Failed to fetch product history.");
+    }
+  }, [isLogsError, showError]);
 
   const categoryValue = watch("category") || "Other";
   const showGemstoneFields = ["Gemstone", "Jewellery", "Watch"].includes(categoryValue);
@@ -213,6 +264,7 @@ export default function ProductList() {
   const handleOpenAdd = () => {
     setEditingProduct(null);
     setActiveTab("general");
+    setCompletedSteps([]);
     reset(getDefaultValues());
     setIsOpen(true);
   };
@@ -220,6 +272,7 @@ export default function ProductList() {
   const handleOpenEdit = (prod) => {
     setEditingProduct(prod);
     setActiveTab("general");
+    setCompletedSteps(stepKeys);
     reset(getDefaultValues(prod));
     setIsOpen(true);
   };
@@ -307,11 +360,10 @@ export default function ProductList() {
   };
 
   const headers = [
-    "Product Code",
-    "Stock No",
-    "Name",
+    "Product",
     "Category",
-    "Cost Price",
+    "Stock",
+    "Cost",
     "Selling Price",
     "Net Margin",
     "Status",
@@ -645,9 +697,9 @@ export default function ProductList() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Jewellery & Watch Products</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Product Catalog</h1>
           <p className="text-sm text-gray-500">
-            Finished items with full traceability back to source gemstones, lots, and raw materials
+            Browse, manage and update product inventory with clear pricing, stock, and product detail tabs.
           </p>
         </div>
         <Button onClick={handleOpenAdd} className="w-fit">
@@ -655,110 +707,200 @@ export default function ProductList() {
         </Button>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-4 rounded-[20px] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
-        <SearchInput
-          placeholder="Search by code, name, or description..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          onClear={() => setSearchInput("")}
-          containerClassName="flex-1 w-full"
-          id="products-search"
-        />
-        <Select
-          placeholder="All Categories"
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          containerClassName="w-full sm:w-48"
-          options={categoryOptions}
-        />
-        <Select
-          placeholder="All Statuses"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          containerClassName="w-full sm:w-48"
-          options={statusOptions}
-        />
-        {(search || categoryFilter || statusFilter) && (
-          <span className="text-xs text-gray-400 font-medium shrink-0">
-            {products.length} result{products.length !== 1 ? "s" : ""}
-          </span>
-        )}
+      <div className="flex border-b border-gray-200 overflow-x-auto">
+        {catalogTabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveCatalogTab(tab.key)}
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-all duration-150 whitespace-nowrap ${
+              activeCatalogTab === tab.key
+                ? "border-accent text-accent"
+                : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      <DataTable
-        headers={headers}
-        data={products}
-        isLoading={isLoading}
-        emptyMessage="No products found"
-        renderRow={(prod) => (
-          <tr key={prod._id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-sm">
-            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary min-w-0">
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                {prod.imageUrls && prod.imageUrls[0] ? (
-                  <img
-                    src={prod.imageUrls[0]}
-                    alt={prod.productCode}
-                    className="w-10 h-10 object-cover rounded-lg bg-gray-50 border border-gray-100 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPreviewImage(prod.imageUrls[0]);
-                    }}
-                  />
-                ) : (
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-100 text-gray-400 flex-shrink-0">
-                    <ImageIcon className="h-4.5 w-4.5" />
+      {activeCatalogTab === "catalog" ? (
+        <>
+          <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+            <SearchInput
+              placeholder="Search by code, name, or description..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onClear={() => setSearchInput("")}
+              containerClassName="flex-1 w-full"
+              id="products-search"
+            />
+            <Select
+              placeholder="All Categories"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              containerClassName="w-full sm:w-48"
+              options={categoryOptions}
+            />
+            <Select
+              placeholder="All Statuses"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              containerClassName="w-full sm:w-48"
+              options={statusOptions}
+            />
+            {(search || categoryFilter || statusFilter) && (
+              <span className="text-xs text-gray-400 font-medium shrink-0">
+                {products.length} result{products.length !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+
+          <DataTable
+            headers={headers}
+            data={products}
+            isLoading={isLoading}
+            emptyMessage="No products found"
+            renderRow={(prod) => (
+              <tr key={prod._id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-sm">
+                <td className="px-3 py-4 sm:px-4 md:px-6 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {prod.imageUrls && prod.imageUrls[0] ? (
+                      <img
+                        src={prod.imageUrls[0]}
+                        alt={prod.productCode || prod.name}
+                        className="w-10 h-10 object-cover rounded-lg bg-gray-50 border border-gray-100 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewImage(prod.imageUrls[0]);
+                        }}
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-100 text-gray-400 flex-shrink-0">
+                        <ImageIcon className="h-4.5 w-4.5" />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-gray-900 text-sm">{prod.name || prod.productCode}</p>
+                      <p className="truncate text-gray-500 text-xs">{prod.productCode || prod.stockNo}</p>
+                    </div>
                   </div>
-                )}
-                <span className="truncate text-xs sm:text-sm">{prod.productCode}</span>
-              </div>
-            </td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{prod.stockNo}</td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-gray-900 truncate text-xs sm:text-sm">{prod.name}</td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">{prod.category}</td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">${(prod.costPrice || 0).toLocaleString()}</td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 font-semibold text-xs sm:text-sm">${(prod.sellingPrice || 0).toLocaleString()}</td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-emerald-600 text-xs sm:text-sm">${(prod.netProfit || 0).toLocaleString()}</td>
-            <td className="px-3 py-4 sm:px-4 md:px-6">
-              <Badge variant={getStatusVariant(prod.status)}>{prod.status}</Badge>
-            </td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
-              <div className="flex items-center gap-2 flex-nowrap">
-                <Link to={`/products/${prod._id}`} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0" title="View Details">
-                  <Eye className="h-4 w-4" />
-                </Link>
-                <button onClick={() => handleOpenEdit(prod)} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0" title="Edit">
-                  <Edit2 className="h-4 w-4" />
-                </button>
-              </div>
-            </td>
-          </tr>
-        )}
-      />
+                </td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">{prod.category}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">{prod.stockNo || "—"}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">${(prod.costPrice || 0).toLocaleString()}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 font-semibold text-xs sm:text-sm">${(prod.sellingPrice || 0).toLocaleString()}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-emerald-600 text-xs sm:text-sm">${(prod.netProfit || 0).toLocaleString()}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6">
+                  <Badge variant={getStatusVariant(prod.status)}>{prod.status}</Badge>
+                </td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
+                  <div className="flex items-center gap-2 flex-nowrap">
+                    <Link to={`/products/${prod._id}`} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0" title="View Details">
+                      <Eye className="h-4 w-4" />
+                    </Link>
+                    <button onClick={() => handleOpenEdit(prod)} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0" title="Edit">
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )}
+          />
+        </>
+      ) : (
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Product History & Audit</h2>
+              <p className="text-sm text-gray-500">
+                Review every product creation, update, price change, stock adjustment, and status event.
+              </p>
+            </div>
+            <Select
+              placeholder="Filter by product"
+              value={selectedProductId}
+              onChange={(e) => setSelectedProductId(e.target.value)}
+              containerClassName="w-full sm:w-72"
+              options={[{ value: "", label: "All Products" }, ...products.map((prod) => ({ value: prod._id, label: prod.name || prod.productCode || prod.stockNo }))]}
+            />
+          </div>
+
+          <DataTable
+            headers={["Timestamp", "User", "Action", "Product", "Details"]}
+            data={filteredLogs}
+            isLoading={isLogsLoading}
+            emptyMessage="No product history entries recorded yet."
+            renderRow={(log) => (
+              <tr key={log._id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-sm">
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
+                  {new Date(log.timestamp).toLocaleString()}
+                </td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 truncate text-xs sm:text-sm">
+                  {log.userId?.fullName || log.user || "Unknown"}
+                </td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-primary font-semibold text-xs sm:text-sm">
+                  {log.action}
+                </td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-700 truncate text-xs sm:text-sm">
+                  {log.entity} {log.entityId ? `#${log.entityId.slice(-6)}` : ""}
+                </td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">
+                  {log.details || log.status || log.message || (log.action && `${log.action} recorded`)}
+                </td>
+              </tr>
+            )}
+          />
+        </div>
+      )}
+
 
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={editingProduct ? "Edit Product" : "Add Product"} className="max-w-5xl">
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-          <div className="flex flex-wrap gap-2 border-b border-gray-100 pb-3">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${activeTab === tab.key ? "bg-primary text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="sticky top-0 z-20 -mx-6 border-b border-gray-100 bg-white px-6 pb-3 pt-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-semibold text-gray-600">Step through each section to verify required product details.</p>
+              <span className="text-xs text-gray-500">Validated: {completedSteps.length}/{stepKeys.length}</span>
+            </div>
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
+              {formSteps.map((step, index) => (
+                <button
+                  key={step.key}
+                  type="button"
+                  onClick={() => handleStepChange(step.key)}
+                  className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition whitespace-nowrap ${
+                    activeTab === step.key
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-gray-200 bg-gray-100 text-gray-600 hover:border-gray-300 hover:bg-gray-200"
+                  }`}
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-gray-600 shadow-sm">
+                    {completedSteps.includes(step.key) ? <CheckCircle className="h-4 w-4 text-emerald-600" /> : index + 1}
+                  </span>
+                  {step.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{renderTabContent()}</div>
 
-          <div className="flex justify-end gap-3 md:col-span-2 mt-2">
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" isLoading={isSubmitting}>
-              {editingProduct ? "Save Changes" : "Create Product"}
-            </Button>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mt-2">
+            <div className="text-xs text-gray-500">
+              {editingProduct
+                ? "Save changes to update this product."
+                : !isCreateReady
+                ? "Please complete and validate every section before creating the product."
+                : "All sections are verified and ready to submit."}
+            </div>
+            <div className="flex justify-end gap-3 md:col-span-2">
+              <Button variant="outline" onClick={() => setIsOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" isLoading={isSubmitting} disabled={!editingProduct && !isCreateReady}>
+                {editingProduct ? "Save Changes" : "Create Product"}
+              </Button>
+            </div>
           </div>
         </form>
       </Modal>

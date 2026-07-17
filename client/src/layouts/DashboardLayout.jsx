@@ -45,7 +45,7 @@ const NAV_GROUPS = [
       { to: "/customers", icon: Users, label: "Customers" },
       { to: "/suppliers", icon: Truck, label: "Suppliers" },
       { to: "/inventory", icon: Gem, label: "Gemstones & Lots" },
-      { to: "/products", icon: FileSpreadsheet, label: "Jewellery & Watches" },
+      { to: "/products", icon: FileSpreadsheet, label: "Products" },
       { to: "/production", icon: Hammer, label: "Production" },
       { to: "/certificates", icon: Award, label: "Certificates" },
     ],

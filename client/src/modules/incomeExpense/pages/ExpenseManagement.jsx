@@ -8,7 +8,6 @@ import Select from "@/components/ui/Select";
 import DataTable from "@/components/ui/DataTable";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Badge from "@/components/ui/Badge";
-import Input from "@/components/ui/Input";
 import DatePicker from "@/components/ui/DatePicker";
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, useExpenseStats } from "../hooks/useExpenses.js";
 import { useIncomeStats } from "../hooks/useIncomes.js";
@@ -119,10 +118,31 @@ export function ExpenseManagement() {
       />
 
       <div className="space-y-4">
-        <div className="flex flex-col gap-3 rounded-[20px] border border-gray-100 bg-white p-4 shadow-[0_4px_26px_rgba(0,0,0,0.05)]">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-end">
-            <div className="min-w-[240px] flex-1">
+        <div className="rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-[0_12px_32px_rgba(15,23,42,0.05)] sm:p-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-primary">Quick filters</p>
+              <p className="text-sm text-slate-500">Refine expense records with search, date range, category, and status.</p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchInput("");
+                setSelectedCategory("");
+                setSelectedStatus("");
+                setStartDate("");
+                setEndDate("");
+              }}
+              className="h-11 w-full sm:w-auto"
+            >
+              Clear filters
+            </Button>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_repeat(4,minmax(0,1fr))_auto]">
+            <div className="min-w-0">
               <SearchInput
+                label="Search"
                 placeholder="Search description or reference..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
@@ -131,54 +151,41 @@ export function ExpenseManagement() {
               />
             </div>
 
-            <div className="flex flex-1 flex-wrap gap-3">
-              <div className="min-w-[150px] flex-1 md:flex-initial">
-                <DatePicker
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  label="From"
-                />
-              </div>
-              <div className="min-w-[150px] flex-1 md:flex-initial">
-                <DatePicker
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  label="To"
-                />
-              </div>
-              <div className="min-w-[180px] flex-1 md:flex-initial">
-                <Select
-                  label="Category"
-                  placeholder="All categories"
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  options={[{ value: "", label: "All Categories" }, ...EXPENSE_CATEGORIES]}
-                />
-              </div>
-              <div className="min-w-[180px] flex-1 md:flex-initial">
-                <Select
-                  label="Status"
-                  placeholder="All statuses"
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  options={[{ value: "", label: "All Statuses" }, ...STATUS_OPTIONS]}
-                />
-              </div>
-              <div className="flex items-end">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSearchInput("");
-                    setSelectedCategory("");
-                    setSelectedStatus("");
-                    setStartDate("");
-                    setEndDate("");
-                  }}
-                  className="h-11 shrink-0"
-                >
-                  Clear
-                </Button>
-              </div>
+            <div className="min-w-0">
+              <DatePicker
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                label="From"
+                containerClassName="w-full"
+              />
+            </div>
+            <div className="min-w-0">
+              <DatePicker
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                label="To"
+                containerClassName="w-full"
+              />
+            </div>
+            <div className="min-w-0">
+              <Select
+                label="Category"
+                placeholder="All categories"
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                options={[{ value: "", label: "All Categories" }, ...EXPENSE_CATEGORIES]}
+                containerClassName="w-full"
+              />
+            </div>
+            <div className="min-w-0">
+              <Select
+                label="Status"
+                placeholder="All statuses"
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                options={[{ value: "", label: "All Statuses" }, ...STATUS_OPTIONS]}
+                containerClassName="w-full"
+              />
             </div>
           </div>
         </div>

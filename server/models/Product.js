@@ -42,7 +42,7 @@ const productSchema = new Schema(
     barcode: { type: String, default: "" },
     qrCode: { type: String, default: "" },
     subCategory: { type: String, default: "" },
-    collection: { type: String, default: "" },
+    productCollection: { type: String, default: "" },
     brand: { type: String, default: "" },
     model: { type: String, default: "" },
     description: { type: String, default: "" },
@@ -242,6 +242,17 @@ productSchema.index({ stockNo: 1 });
 productSchema.index({ status: 1 });
 productSchema.index({ category: 1 });
 productSchema.index({ status: 1, category: 1 }); // compound
+
+productSchema.virtual("collection")
+  .get(function () {
+    return this.productCollection;
+  })
+  .set(function (value) {
+    this.productCollection = value;
+  });
+
+productSchema.set("toJSON", { virtuals: true });
+productSchema.set("toObject", { virtuals: true });
 
 const Product = mongoose.model("Product", productSchema);
 

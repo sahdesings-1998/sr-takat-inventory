@@ -1,5 +1,9 @@
+import { useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboard, useAuditLogs } from "../hooks/useReports";
+import { useIncomes } from "@/modules/incomeExpense/hooks/useIncomes";
+import { useExpenses } from "@/modules/incomeExpense/hooks/useExpenses";
+import { calculateFinancialForecast } from "../utils/financialForecast.js";
 import { Link } from "react-router-dom";
 import {
   DollarSign,
@@ -160,6 +164,19 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { data: dashData, isLoading: isDashLoading } = useDashboard();
   const { data: logsData } = useAuditLogs();
+  const { data: incomes = [], isLoading: isIncomesLoading } = useIncomes();
+  const { data: expenses = [], isLoading: isExpensesLoading } = useExpenses();
+
+  const forecastRecords = useMemo(
+    () => [
+      ...((Array.isArray(incomes) ? incomes : []) || []).map((record) => ({ ...record, type: "income" })),
+      ...((Array.isArray(expenses) ? expenses : []) || []).map((record) => ({ ...record, type: "expense" })),
+    ],
+    [incomes, expenses]
+  );
+
+  const forecastSummary = useMemo(() => calculateFinancialForecast(forecastRecords, new Date()), [forecastRecords]);
+  const isForecastLoading = isIncomesLoading || isExpensesLoading;
 
   const kpis = dashData?.data?.kpis || {
     totalGemstones: 0,
@@ -314,6 +331,50 @@ export default function Dashboard() {
         {kpiCards.map((kpi, idx) => (
           <StatCard key={idx} {...kpi} />
         ))}
+      </div>
+
+      {/* ── Financial Forecast ─────────────────────────────────────── */}
+      <div className="rounded-[24px] bg-white border border-gray-100/80 shadow-[0_8px_30px_rgba(0,0,0,0.015)] p-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-[15px] font-bold text-gray-900 tracking-[-0.02em]">Financial Forecast</h3>
+            <p className="text-[12px] text-gray-400 mt-0.5">
+              Pending income and expense records expected for {forecastSummary.monthLabel}
+            </p>
+          </div>
+          <div className="rounded-full border border-gray-100 bg-gray-50 px-3 py-1.5 text-[11px] font-semibold text-gray-600">
+            Forecasting {forecastSummary.monthLabel}
+          </div>
+        </div>
+
+        {isForecastLoading ? (
+          <div className="mt-6 flex justify-center py-8">
+            <Spinner size={36} />
+          </div>
+        ) : !forecastSummary.hasForecastData ? (
+          <div className="mt-6 rounded-[18px] border border-dashed border-gray-200 bg-gray-50/70 px-4 py-8 text-center text-[13px] text-gray-500">
+            No forecast data available
+          </div>
+        ) : (
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="rounded-[18px] border border-emerald-100 bg-emerald-50/70 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-700">Next Month Expected Income</p>
+              <p className="mt-2 text-2xl font-bold text-emerald-700">{fmtMoney(forecastSummary.expectedIncome)}</p>
+            </div>
+            <div className="rounded-[18px] border border-rose-100 bg-rose-50/70 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-rose-700">Next Month Expected Expenses</p>
+              <p className="mt-2 text-2xl font-bold text-rose-700">{fmtMoney(forecastSummary.expectedExpenses)}</p>
+            </div>
+            <div className={`rounded-[18px] border p-4 ${forecastSummary.balance >= 0 ? "border-success/20 bg-success/10" : "border-danger/20 bg-danger/10"}`}>
+              <p className={`text-[11px] font-semibold uppercase tracking-[0.08em] ${forecastSummary.balance >= 0 ? "text-success" : "text-danger"}`}>
+                Forecast Balance
+              </p>
+              <p className={`mt-2 text-2xl font-bold ${forecastSummary.balance >= 0 ? "text-success" : "text-danger"}`}>
+                {fmtMoney(forecastSummary.balance)}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Charts Section ──────────────────────────────────────────── */}

@@ -236,7 +236,7 @@ const DatePicker = forwardRef(function DatePicker(
             id={calendarId}
             role="dialog"
             aria-label="Choose date"
-            className="absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_16px_48px_rgba(15,23,42,0.16)] sm:w-80"
+            className="absolute inset-x-0 z-50 mb-2 overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_16px_48px_rgba(15,23,42,0.16)] sm:w-80"
           >
             <div className="mb-3 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">

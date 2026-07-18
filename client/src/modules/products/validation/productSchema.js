@@ -30,9 +30,9 @@ const statusEnum = [
 ];
 
 export const productSchema = z.object({
-  stockNo: z.string().trim().min(1, "Stock number is required"),
-  category: z.enum(categoryEnum).default("Other"),
-  name: z.string().trim().min(1, "Product name is required"),
+  stockNo: z.string().trim().optional().or(z.literal("")),
+  category: z.enum(categoryEnum).optional().default("Other"),
+  name: z.string().trim().optional().or(z.literal("")),
   sku: z.string().optional().or(z.literal("")),
   barcode: z.string().optional().or(z.literal("")),
   qrCode: z.string().optional().or(z.literal("")),
@@ -42,8 +42,8 @@ export const productSchema = z.object({
   model: z.string().optional().or(z.literal("")),
   description: z.string().trim().optional().or(z.literal("")),
   shortDescription: z.string().trim().optional().or(z.literal("")),
-  sellingPrice: z.coerce.number().min(0, "Selling price must be positive"),
-  costPrice: z.coerce.number().min(0, "Cost price must be positive"),
+  sellingPrice: z.preprocess((val) => (val === "" || val === null || val === undefined) ? 0 : val, z.coerce.number().min(0).optional().default(0)),
+  costPrice: z.preprocess((val) => (val === "" || val === null || val === undefined) ? 0 : val, z.coerce.number().min(0).optional().default(0)),
   purchasePrice: z.coerce.number().min(0).optional().default(0),
   additionalCost: z.coerce.number().min(0).optional().default(0),
   totalCost: z.coerce.number().min(0).optional().default(0),

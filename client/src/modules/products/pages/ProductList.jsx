@@ -261,6 +261,50 @@ export default function ProductList() {
   const showMetalFields = ["Jewellery", "Watch"].includes(categoryValue);
   const components = watch("components") || [];
 
+  // Live pricing auto-calculation
+  const watchedPurchasePrice = watch("purchasePrice");
+  const watchedAdditionalCost = watch("additionalCost");
+  const watchedSellingPrice = watch("sellingPrice");
+
+  useEffect(() => {
+    const purchase = Number(watchedPurchasePrice || 0);
+    const additional = Number(watchedAdditionalCost || 0);
+    const selling = Number(watchedSellingPrice || 0);
+
+    const totalCost = purchase + additional;
+    const profit = selling - totalCost;
+    const margin = selling > 0 ? (profit / selling) * 100 : 0;
+
+    setValue("totalCost", parseFloat(totalCost.toFixed(2)), { shouldDirty: true });
+    setValue("profit", parseFloat(profit.toFixed(2)), { shouldDirty: true });
+    setValue("margin", parseFloat(margin.toFixed(4)), { shouldDirty: true });
+  }, [watchedPurchasePrice, watchedAdditionalCost, watchedSellingPrice, setValue]);
+
+  // Live cost-summary auto-calculation
+  const watchedMaterialCost = watch("materialCost");
+  const watchedManufacturingCost = watch("manufacturingCost");
+  const watchedPackagingCost = watch("packagingCost");
+  const watchedCertificateCost = watch("certificateCost");
+  const watchedShippingCost = watch("shippingCost");
+  const watchedInsuranceCost = watch("insuranceCost");
+  const watchedOtherCosts = watch("otherCosts");
+
+  useEffect(() => {
+    const total =
+      Number(watchedMaterialCost || 0) +
+      Number(watchedManufacturingCost || 0) +
+      Number(watchedPackagingCost || 0) +
+      Number(watchedCertificateCost || 0) +
+      Number(watchedShippingCost || 0) +
+      Number(watchedInsuranceCost || 0) +
+      Number(watchedOtherCosts || 0);
+    setValue("totalCostSummary", parseFloat(total.toFixed(2)), { shouldDirty: true });
+  }, [
+    watchedMaterialCost, watchedManufacturingCost, watchedPackagingCost,
+    watchedCertificateCost, watchedShippingCost, watchedInsuranceCost,
+    watchedOtherCosts, setValue,
+  ]);
+
   const handleOpenAdd = () => {
     setEditingProduct(null);
     setActiveTab("general");
@@ -417,22 +461,63 @@ export default function ProductList() {
             />
           </div>
         );
-      case "pricing":
+      case "pricing": {
+        const calcTotalCost = Number(watchedPurchasePrice || 0) + Number(watchedAdditionalCost || 0);
+        const calcProfit = Number(watchedSellingPrice || 0) - calcTotalCost;
+        const calcMargin = Number(watchedSellingPrice || 0) > 0
+          ? (calcProfit / Number(watchedSellingPrice)) * 100
+          : 0;
         return (
           <>
+            {/* Manual inputs */}
             <Input label="Purchase Price" type="number" step="0.01" {...register("purchasePrice")} />
             <Input label="Additional Cost" type="number" step="0.01" {...register("additionalCost")} />
-            <Input label="Total Cost" type="number" step="0.01" {...register("totalCost")} />
             <Input label="Selling Price" type="number" step="0.01" {...register("sellingPrice")} />
             <Input label="Minimum Selling Price" type="number" step="0.01" {...register("minimumSellingPrice")} />
             <Input label="Wholesale Price" type="number" step="0.01" {...register("wholesalePrice")} />
             <Input label="Retail Price" type="number" step="0.01" {...register("retailPrice")} />
             <Select label="Currency" options={[{ value: "USD", label: "USD" }, { value: "AED", label: "AED" }, { value: "EUR", label: "EUR" }]} {...register("currency")} />
             <Select label="Discount Allowed" options={[{ value: "true", label: "Yes" }, { value: "false", label: "No" }]} {...register("discountAllowed")} />
-            <Input label="Profit" type="number" step="0.01" {...register("profit")} />
-            <Input label="Margin" type="number" step="0.01" {...register("margin")} />
+
+            {/* Auto-calculated read-only fields */}
+            <div className="flex flex-col gap-1">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">Total Cost <span className="ml-1 text-[10px] font-normal normal-case tracking-normal text-gray-400">(auto)</span></label>
+              <div className="flex items-center rounded-xl border border-gray-100 bg-gray-50 px-3.5 py-2.5 cursor-not-allowed select-none">
+                <span className="text-sm font-semibold text-gray-500">
+                  {calcTotalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-400">Purchase Price + Additional Cost</p>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">Profit <span className="ml-1 text-[10px] font-normal normal-case tracking-normal text-gray-400">(auto)</span></label>
+              <div className={`flex items-center rounded-xl border px-3.5 py-2.5 cursor-not-allowed select-none ${
+                calcProfit > 0 ? "bg-emerald-50 border-emerald-100" : calcProfit < 0 ? "bg-rose-50 border-rose-100" : "bg-gray-50 border-gray-100"
+              }`}>
+                <span className={`text-sm font-semibold ${
+                  calcProfit > 0 ? "text-emerald-600" : calcProfit < 0 ? "text-rose-500" : "text-gray-500"
+                }`}>
+                  {calcProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-400">Selling Price − Total Cost</p>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">Margin % <span className="ml-1 text-[10px] font-normal normal-case tracking-normal text-gray-400">(auto)</span></label>
+              <div className={`flex items-center rounded-xl border px-3.5 py-2.5 cursor-not-allowed select-none ${
+                calcMargin > 0 ? "bg-emerald-50 border-emerald-100" : calcMargin < 0 ? "bg-rose-50 border-rose-100" : "bg-gray-50 border-gray-100"
+              }`}>
+                <span className={`text-sm font-semibold ${
+                  calcMargin > 0 ? "text-emerald-600" : calcMargin < 0 ? "text-rose-500" : "text-gray-500"
+                }`}>
+                  {calcMargin.toFixed(2)}%
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-400">(Profit ÷ Selling Price) × 100</p>
+            </div>
           </>
         );
+      }
       case "specifications":
         return (
           <>
@@ -498,7 +583,15 @@ export default function ProductList() {
             Components are shown for jewellery, watch, and custom products.
           </div>
         );
-      case "costs":
+      case "costs": {
+        const calcCostSummary =
+          Number(watchedMaterialCost || 0) +
+          Number(watchedManufacturingCost || 0) +
+          Number(watchedPackagingCost || 0) +
+          Number(watchedCertificateCost || 0) +
+          Number(watchedShippingCost || 0) +
+          Number(watchedInsuranceCost || 0) +
+          Number(watchedOtherCosts || 0);
         return (
           <>
             <Input label="Material Cost" type="number" step="0.01" {...register("materialCost")} />
@@ -508,9 +601,22 @@ export default function ProductList() {
             <Input label="Shipping" type="number" step="0.01" {...register("shippingCost")} />
             <Input label="Insurance" type="number" step="0.01" {...register("insuranceCost")} />
             <Input label="Other Costs" type="number" step="0.01" {...register("otherCosts")} />
-            <Input label="Total Cost" type="number" step="0.01" {...register("totalCostSummary")} />
+
+            {/* Auto-calculated Total Cost */}
+            <div className="flex flex-col gap-1">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">
+                Total Cost <span className="ml-1 text-[10px] font-normal normal-case tracking-normal text-gray-400">(auto)</span>
+              </label>
+              <div className="flex items-center rounded-xl border border-gray-100 bg-gray-50 px-3.5 py-2.5 cursor-not-allowed select-none">
+                <span className="text-sm font-semibold text-gray-500">
+                  {calcCostSummary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-400">Sum of all cost fields above</p>
+            </div>
           </>
         );
+      }
       case "inventory":
         return (
           <>
@@ -675,9 +781,9 @@ export default function ProductList() {
       default:
         return (
           <>
-            <Input label="Stock No *" error={errors.stockNo?.message} {...register("stockNo")} />
-            <Select label="Category *" error={errors.category?.message} options={categoryOptions} {...register("category")} />
-            <Input label="Product Name *" containerClassName="md:col-span-2" error={errors.name?.message} {...register("name")} />
+            <Input label="Stock No" error={errors.stockNo?.message} {...register("stockNo")} />
+            <Select label="Category" error={errors.category?.message} options={categoryOptions} {...register("category")} />
+            <Input label="Product Name" containerClassName="md:col-span-2" error={errors.name?.message} {...register("name")} />
             <Input label="SKU" {...register("sku")} />
             <Input label="Barcode" {...register("barcode")} />
             <Input label="QR Code" {...register("qrCode")} />
@@ -859,7 +965,7 @@ export default function ProductList() {
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
           <div className="sticky top-0 z-20 -mx-6 border-b border-gray-100 bg-white px-6 pb-3 pt-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-semibold text-gray-600">Step through each section to verify required product details.</p>
+              <p className="text-sm font-semibold text-gray-600">Enter product details in any section. All fields are optional.</p>
               <span className="text-xs text-gray-500">Validated: {completedSteps.length}/{stepKeys.length}</span>
             </div>
             <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
@@ -889,15 +995,13 @@ export default function ProductList() {
             <div className="text-xs text-gray-500">
               {editingProduct
                 ? "Save changes to update this product."
-                : !isCreateReady
-                ? "Please complete and validate every section before creating the product."
-                : "All sections are verified and ready to submit."}
+                : "Enter product details. You can save with partial information."}
             </div>
             <div className="flex justify-end gap-3 md:col-span-2">
               <Button variant="outline" onClick={() => setIsOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" isLoading={isSubmitting} disabled={!editingProduct && !isCreateReady}>
+              <Button type="submit" isLoading={isSubmitting}>
                 {editingProduct ? "Save Changes" : "Create Product"}
               </Button>
             </div>

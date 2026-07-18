@@ -67,9 +67,9 @@ export function Modal({ isOpen, onClose, title, children, className }) {
         )}
       >
         {/* Drag handle for mobile bottom sheet */}
-        <div 
+        <div
           onClick={onClose}
-          className="md:hidden w-12 h-1.5 bg-gray-200/80 rounded-full mx-auto my-3 cursor-pointer shrink-0 hover:bg-gray-300 transition-colors" 
+          className="md:hidden w-12 h-1.5 bg-gray-200/80 rounded-full mx-auto my-3 cursor-pointer shrink-0 hover:bg-gray-300 transition-colors"
         />
 
         {/* Modal Header */}
@@ -87,7 +87,7 @@ export function Modal({ isOpen, onClose, title, children, className }) {
         </div>
 
         {/* Scrollable Modal Content */}
-        <div className="px-6 py-5 md:px-7 md:py-6 overflow-y-auto flex-1">{children}</div>
+        <div className="px-6 pb-5 md:px-7 md:pb-6 overflow-y-auto flex-1">{children}</div>
       </div>
     </div>,
     document.body

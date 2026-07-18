@@ -6,18 +6,15 @@ const productSchema = new Schema(
   {
     productCode: {
       type: String,
-      required: true,
       unique: true,
       trim: true,
     },
     stockNo: {
       type: String,
-      required: true,
       trim: true,
     },
     category: {
       type: String,
-      required: [true, "Product category is required"],
       enum: [
         "Gemstone",
         "Jewellery",
@@ -35,7 +32,6 @@ const productSchema = new Schema(
     },
     name: {
       type: String,
-      required: [true, "Product name is required"],
       trim: true,
     },
     sku: { type: String, default: "" },
@@ -49,13 +45,11 @@ const productSchema = new Schema(
     shortDescription: { type: String, default: "" },
     sellingPrice: {
       type: Number,
-      required: [true, "Selling price is required"],
       min: 0,
       default: 0,
     },
     costPrice: {
       type: Number,
-      required: [true, "Cost price is required"],
       min: 0,
       default: 0,
     },
@@ -151,19 +145,16 @@ const productSchema = new Schema(
     },
     grossProfit: {
       type: Number,
-      required: true,
       min: 0,
       default: 0,
     },
     charityAmount: {
       type: Number,
-      required: true,
       min: 0,
       default: 0,
     },
     netProfit: {
       type: Number,
-      required: true,
       min: 0,
       default: 0,
     },

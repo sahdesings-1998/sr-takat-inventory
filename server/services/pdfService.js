@@ -111,5 +111,5 @@ export async function generateInvoicePDFBuffer(invoiceData, documentType = "invo
 }
 
 console.log("NODE_ENV:", process.env.NODE_ENV);
-console.log("Executable Path:", launchOptions.executablePath);
+console.log("Chrome Path:", getChromeExecutablePath());
 console.log("Puppeteer Path:", puppeteer.executablePath());

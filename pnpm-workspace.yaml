@@ -4,6 +4,7 @@ packages:
 allowBuilds:
   bcrypt: false
   esbuild: false
+  puppeteer: true
 onlyBuiltDependencies:
   - bcrypt
   - esbuild

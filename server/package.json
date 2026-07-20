@@ -12,7 +12,7 @@
     "seed:data": "node scripts/seedData.js"
   },
   "dependencies": {
-    "@puppeteer/browsers": "^3.0.6",
+    "@sparticuz/chromium": "^149.0.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.5.0",
     "cookie-parser": "^1.4.7",
@@ -23,7 +23,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.8.0",
     "multer": "^1.4.5-lts.1",
-    "puppeteer": "^25.3.0"
+    "puppeteer-core": "^25.3.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.7"

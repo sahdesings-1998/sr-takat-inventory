@@ -5,13 +5,8 @@ import { generateMemoHTML } from "../templates/memoTemplate.js";
 import { generateInvoiceHTML } from "../templates/invoiceTemplate.js";
 
 /**
- * Resolves the Chrome executable path if default lookup fails
+ * Resolves the Chrome executable path
  */
-// function getChromeExecutablePath() {
-//   if (process.env.PUPPETEER_EXECUTABLE_PATH && typeof process.env.PUPPETEER_EXECUTABLE_PATH === "string" && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
-//     return process.env.PUPPETEER_EXECUTABLE_PATH;
-//   }
-
 function getChromeExecutablePath() {
   if (process.env.NODE_ENV === "production") {
     return puppeteer.executablePath();
@@ -19,18 +14,41 @@ function getChromeExecutablePath() {
 
   try {
     const defaultPath = puppeteer.executablePath();
-    if (defaultPath && typeof defaultPath === "string" && fs.existsSync(defaultPath)) return defaultPath;
-  } catch (e) {
-    // Continue fallback search
+
+    if (
+      defaultPath &&
+      typeof defaultPath === "string" &&
+      fs.existsSync(defaultPath)
+    ) {
+      return defaultPath;
+    }
+  } catch (err) {
+    // Ignore and continue
   }
 
-  const userHome = process.env.USERPROFILE || process.env.HOME || "C:\\Users\\SHAN";
-  const cacheBase = path.join(userHome, ".cache", "puppeteer", "chrome");
+  const userHome =
+    process.env.USERPROFILE ||
+    process.env.HOME ||
+    "C:\\Users\\SHAN";
+
+  const cacheBase = path.join(
+    userHome,
+    ".cache",
+    "puppeteer",
+    "chrome"
+  );
 
   if (fs.existsSync(cacheBase)) {
     const dirs = fs.readdirSync(cacheBase);
+
     for (const dir of dirs) {
-      const execPath = path.join(cacheBase, dir, "chrome-win64", "chrome.exe");
+      const execPath = path.join(
+        cacheBase,
+        dir,
+        "chrome-win64",
+        "chrome.exe"
+      );
+
       if (fs.existsSync(execPath)) {
         return execPath;
       }
@@ -40,44 +58,29 @@ function getChromeExecutablePath() {
   return undefined;
 }
 
-/**
- * Renders an invoice/memorandum HTML template to a PDF Buffer using Puppeteer.
- * @param {Object} invoiceData
- * @param {String} documentType "invoice" | "memo"
- * @returns {Promise<Buffer>} PDF Buffer
- */
-export async function generateInvoicePDFBuffer(invoiceData, documentType = "invoice") {
-  const htmlContent = documentType === "memo"
-    ? generateMemoHTML(invoiceData)
-    : generateInvoiceHTML(invoiceData);
+export async function generateInvoicePDFBuffer(
+  invoiceData,
+  documentType = "invoice"
+) {
+  const htmlContent =
+    documentType === "memo"
+      ? generateMemoHTML(invoiceData)
+      : generateInvoiceHTML(invoiceData);
 
-  let browser = null;
+  let browser;
+
   try {
-    // const launchOptions = {
-    //   headless: "new",
-    //   args: [
-    //     "--no-sandbox",
-    //     "--disable-setuid-sandbox",
-    //     "--disable-dev-shm-usage",
-    //     "--disable-gpu",
-    //   ],
-    // };
+    const executablePath =
+      process.env.NODE_ENV === "production"
+        ? await puppeteer.executablePath()
+        : getChromeExecutablePath();
 
-
-
-    // const execPath = getChromeExecutablePath();
-    // if (execPath) {
-    //   launchOptions.executablePath = execPath;
-    // }
-
-    // browser = await puppeteer.launch(launchOptions);
+    console.log("NODE_ENV:", process.env.NODE_ENV);
+    console.log("Executable Path:", executablePath);
 
     browser = await puppeteer.launch({
       headless: true,
-      executablePath:
-        process.env.NODE_ENV === "production"
-          ? puppeteer.executablePath()
-          : getChromeExecutablePath(),
+      executablePath,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -87,6 +90,7 @@ export async function generateInvoicePDFBuffer(invoiceData, documentType = "invo
     });
 
     const page = await browser.newPage();
+
     await page.setContent(htmlContent, {
       waitUntil: "networkidle0",
     });
@@ -103,13 +107,16 @@ export async function generateInvoicePDFBuffer(invoiceData, documentType = "invo
     });
 
     return Buffer.from(pdfBuffer);
+  } catch (err) {
+    console.error("========== PDF ERROR ==========");
+    console.error(err);
+    console.error(err.stack);
+    console.error("===============================");
+
+    throw err;
   } finally {
     if (browser) {
       await browser.close();
     }
   }
 }
-
-console.log("NODE_ENV:", process.env.NODE_ENV);
-console.log("Chrome Path:", getChromeExecutablePath());
-console.log("Puppeteer Path:", puppeteer.executablePath());

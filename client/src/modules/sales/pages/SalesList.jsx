@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Eye, Trash2 } from "lucide-react";
-import { useSales } from "../hooks/useSales";
+import { Plus, Eye, Trash2, FileDown, Loader2 } from "lucide-react";
+import { useSales, downloadInvoicePdf } from "../hooks/useSales";
 import { useCustomers } from "@/modules/customers/hooks/useCustomers";
 import { useProducts } from "@/modules/products/hooks/useProducts";
 import { useGemstones } from "@/modules/inventory/hooks/useInventory";
@@ -220,12 +220,30 @@ export default function SalesList() {
             <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">{sale.paymentMethod}</td>
             <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{new Date(sale.createdAt).toLocaleDateString()}</td>
             <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
-              <Link
-                to={`/sales/${sale._id}`}
-                className="inline-flex items-center gap-1.5 text-accent hover:underline font-semibold text-xs sm:text-sm"
-              >
-                <Eye className="h-4 w-4 flex-shrink-0" /> <span className="hidden sm:inline">Invoice details</span><span className="sm:hidden">View</span>
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link
+                  to={`/sales/${sale._id}`}
+                  className="inline-flex items-center gap-1.5 text-accent hover:underline font-semibold text-xs sm:text-sm"
+                  title="View Invoice Details"
+                >
+                  <Eye className="h-4 w-4 flex-shrink-0" /> <span className="hidden sm:inline">Invoice details</span><span className="sm:hidden">View</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await downloadInvoicePdf(sale._id, sale.invoiceNo);
+                      showSuccess("PDF Downloaded", `Invoice ${sale.invoiceNo} PDF downloaded.`);
+                    } catch (err) {
+                      showError("PDF Failed", "Failed to generate invoice PDF.");
+                    }
+                  }}
+                  className="inline-flex items-center gap-1 text-gray-600 hover:text-primary p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                  title="Generate & Download PDF Invoice"
+                >
+                  <FileDown className="h-4 w-4" />
+                </button>
+              </div>
             </td>
           </tr>
         )}

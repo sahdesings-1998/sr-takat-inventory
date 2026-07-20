@@ -25,6 +25,7 @@ import auditLogRoutes from "./routes/auditLogRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import incomeRoutes from "./routes/incomeRoutes.js";
 import expenseRoutes from "./routes/expenseRoutes.js";
+import invoiceRoutes from "./routes/invoiceRoutes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import ApiError from "./utils/ApiError.js";
 
@@ -32,7 +33,7 @@ import ApiError from "./utils/ApiError.js";
 // implemented, e.g.:
 // import userRoutes from "./routes/userRoutes.js";
 // app.use("/api/v1/users", userRoutes);
-// See Section 6 (REST API Endpoints) of SR_TAKAT_Antigravity_Prompt.md for the full list.
+// See Section 6 (REST API Endpoints) of SR_TAKAT_Prompt.md for the full list.
 
 const app = express();
 
@@ -89,6 +90,8 @@ app.use("/api/v1/audit", auditLogRoutes);
 app.use("/api/v1/upload", uploadRoutes);
 app.use("/api/v1/incomes", incomeRoutes);
 app.use("/api/v1/expenses", expenseRoutes);
+app.use("/api/v1/invoices", invoiceRoutes);
+app.use("/api/invoices", invoiceRoutes);
 
 // 404 handler for unmatched API routes
 app.use("/api", (req, res, next) => {

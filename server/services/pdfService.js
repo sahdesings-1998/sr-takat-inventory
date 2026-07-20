@@ -7,9 +7,14 @@ import { generateInvoiceHTML } from "../templates/invoiceTemplate.js";
 /**
  * Resolves the Chrome executable path if default lookup fails
  */
+// function getChromeExecutablePath() {
+//   if (process.env.PUPPETEER_EXECUTABLE_PATH && typeof process.env.PUPPETEER_EXECUTABLE_PATH === "string" && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
+//     return process.env.PUPPETEER_EXECUTABLE_PATH;
+//   }
+
 function getChromeExecutablePath() {
-  if (process.env.PUPPETEER_EXECUTABLE_PATH && typeof process.env.PUPPETEER_EXECUTABLE_PATH === "string" && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
-    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  if (process.env.NODE_ENV === "production") {
+    return puppeteer.executablePath();
   }
 
   try {
@@ -42,28 +47,44 @@ function getChromeExecutablePath() {
  * @returns {Promise<Buffer>} PDF Buffer
  */
 export async function generateInvoicePDFBuffer(invoiceData, documentType = "invoice") {
-  const htmlContent = documentType === "memo" 
-    ? generateMemoHTML(invoiceData) 
+  const htmlContent = documentType === "memo"
+    ? generateMemoHTML(invoiceData)
     : generateInvoiceHTML(invoiceData);
 
   let browser = null;
   try {
-    const launchOptions = {
-      headless: "new",
+    // const launchOptions = {
+    //   headless: "new",
+    //   args: [
+    //     "--no-sandbox",
+    //     "--disable-setuid-sandbox",
+    //     "--disable-dev-shm-usage",
+    //     "--disable-gpu",
+    //   ],
+    // };
+
+
+
+    // const execPath = getChromeExecutablePath();
+    // if (execPath) {
+    //   launchOptions.executablePath = execPath;
+    // }
+
+    // browser = await puppeteer.launch(launchOptions);
+
+    browser = await puppeteer.launch({
+      headless: true,
+      executablePath:
+        process.env.NODE_ENV === "production"
+          ? puppeteer.executablePath()
+          : getChromeExecutablePath(),
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
       ],
-    };
-
-    const execPath = getChromeExecutablePath();
-    if (execPath) {
-      launchOptions.executablePath = execPath;
-    }
-
-    browser = await puppeteer.launch(launchOptions);
+    });
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, {
@@ -88,3 +109,7 @@ export async function generateInvoicePDFBuffer(invoiceData, documentType = "invo
     }
   }
 }
+
+console.log("NODE_ENV:", process.env.NODE_ENV);
+console.log("Executable Path:", launchOptions.executablePath);
+console.log("Puppeteer Path:", puppeteer.executablePath());

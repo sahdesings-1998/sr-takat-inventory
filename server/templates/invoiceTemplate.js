@@ -6,7 +6,8 @@ function getLogoBase64() {
   try {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    const logoPath = path.resolve(__dirname, "../../client/src/assets/logo.png");
+    const logoPath = path.join(__dirname, "../assets/logo.png");
+    // const logoPath = path.resolve(__dirname, "../../client/src/assets/logo.png");
     if (fs.existsSync(logoPath)) {
       return `data:image/png;base64,${fs.readFileSync(logoPath).toString("base64")}`;
     }

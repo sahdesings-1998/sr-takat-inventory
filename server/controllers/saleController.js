@@ -20,23 +20,71 @@ export const createSale = catchAsync(async (req, res) => {
   sendSuccess(res, { statusCode: 201, message: "Sale invoice created successfully", data: result });
 });
 
-export const generateSalePDF = catchAsync(async (req, res) => {
+export const generateSalePDF = async (req, res, next) => {
   const { id } = req.params;
-  const saleData = await saleService.getSaleById(id);
-  if (!saleData || !saleData.sale) {
-    throw new ApiError(404, "Sale invoice not found");
+  console.log(`[saleController] generateSalePDF request received for sale ID: ${id}`);
+
+  // Validate Mongo ID format
+  if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+    console.warn(`[saleController] Invalid sale ID format received: ${id}`);
+    return res.status(400).json({
+      success: false,
+      message: `Invalid sale ID format: ${id}`,
+    });
   }
 
-  const pdfBuffer = await generateInvoicePDFBuffer(saleData, "invoice");
-  const buffer = Buffer.from(pdfBuffer);
+  let saleData;
+  try {
+    saleData = await saleService.getSaleById(id);
+  } catch (dbErr) {
+    console.error(`[saleController] Database error fetching sale ID ${id}:`, dbErr);
+    return res.status(dbErr.statusCode || 500).json({
+      success: false,
+      message: dbErr.message || "Failed to retrieve sale record from database",
+    });
+  }
 
-  const filename = `Invoice-${saleData.sale.invoiceNo || id}.pdf`;
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  res.setHeader("Content-Length", buffer.length);
+  if (!saleData || !saleData.sale) {
+    console.warn(`[saleController] Sale document not found for ID: ${id}`);
+    return res.status(404).json({
+      success: false,
+      message: `Sale invoice not found for ID: ${id}`,
+    });
+  }
 
-  res.send(buffer);
-});
+  console.log(`[saleController] Sale invoice retrieved: ${saleData.sale.invoiceNo} (${saleData.items?.length || 0} items). Invoking PDF generator...`);
+
+  try {
+    const pdfBuffer = await generateInvoicePDFBuffer(saleData, "invoice");
+    const buffer = Buffer.from(pdfBuffer);
+
+    if (!buffer || buffer.length === 0) {
+      throw new Error("Generated PDF binary buffer is empty");
+    }
+
+    const filename = `Invoice-${saleData.sale.invoiceNo || id}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Length", buffer.length);
+
+    console.log(`[saleController] Successfully generated PDF for invoice ${saleData.sale.invoiceNo} (${buffer.length} bytes). Sending response...`);
+    return res.send(buffer);
+  } catch (pdfErr) {
+    console.error(`========== SALE PDF CONTROLLER EXCEPTION ==========`);
+    console.error(`Sale ID: ${id}`);
+    console.error(`Error Message: ${pdfErr.message}`);
+    console.error(`Stack Trace:\n${pdfErr.stack}`);
+    console.error(`===================================================`);
+
+    if (!res.headersSent) {
+      return res.status(500).json({
+        success: false,
+        message: `PDF Generation Error: ${pdfErr.message}`,
+        error: pdfErr.message,
+      });
+    }
+  }
+};
 
 export default {
   getSales,

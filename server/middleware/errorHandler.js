@@ -38,9 +38,10 @@ export default function errorHandler(err, req, res, next) {
     error = new ApiError(statusCode, message, errors);
   }
 
-  if (process.env.NODE_ENV !== "production") {
-    // eslint-disable-next-line no-console
-    console.error("API ERROR HANDLED:", err);
+  // Always log error details in server logs for debugging
+  console.error(`[API ERROR] ${req.method} ${req.originalUrl} - Status ${error.statusCode || 500}: ${err.message || error.message}`);
+  if (err.stack) {
+    console.error(err.stack);
   }
 
   res.status(error.statusCode || 500).json({

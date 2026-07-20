@@ -311,7 +311,7 @@ export default function SaleDetails() {
         </div>
 
         {/* Signature Row */}
-        <div className="grid grid-cols-2 gap-12 mt-12 pt-4">
+        {/* <div className="grid grid-cols-2 gap-12 mt-12 pt-4">
           <div className="text-left">
             <div className="border-b border-black h-8 mb-1"></div>
             <p className="text-xs font-bold text-black">Authorized Signature (Issuer):</p>
@@ -320,7 +320,7 @@ export default function SaleDetails() {
             <div className="border-b border-black h-8 mb-1"></div>
             <p className="text-xs font-bold text-black">Customer Signature (Receiver):</p>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

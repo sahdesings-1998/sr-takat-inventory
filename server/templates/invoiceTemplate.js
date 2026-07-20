@@ -25,10 +25,8 @@ export function generateInvoiceHTML(data = {}) {
   const sale = data.sale || data;
   const items = data.items || sale.items || sale.lineItems || [];
 
-  const invoiceNo = sale.invoiceNo || sale.invoiceNumber || "";
+  // ---- DATE ----
   const rawDate = sale.createdAt || sale.date || new Date();
-
-  // Format date helper (DD/MM/YYYY)
   let formattedDate = "";
   if (rawDate && !isNaN(new Date(rawDate).getTime())) {
     const d = new Date(rawDate);
@@ -40,7 +38,7 @@ export function generateInvoiceHTML(data = {}) {
     formattedDate = String(rawDate || "");
   }
 
-  // Customer info extraction
+  // ---- TO / ADDRESS / ATTENTION / TEL ----
   const customer = sale.customerId || {};
   const customerName =
     typeof customer === "object" && customer !== null
@@ -59,28 +57,25 @@ export function generateInvoiceHTML(data = {}) {
     (typeof customer === "object" && customer !== null ? customer.contactPerson : "") ||
     "";
 
-  // Address lines (handles multi-line input or string)
-  let addressLines = ["", ""];
+  let addressLine1 = "";
+  let addressLine2 = "";
   if (customerAddress) {
     const lines = customerAddress.split("\n").map((l) => l.trim()).filter(Boolean);
-    if (lines.length > 0) addressLines[0] = lines[0];
-    if (lines.length > 1) addressLines[1] = lines.slice(1).join(", ");
+    if (lines.length > 0) addressLine1 = lines[0];
+    if (lines.length > 1) addressLine2 = lines.slice(1).join(", ");
   }
 
-  // Financials
-  const paymentStatus = sale.paymentStatus || "Paid";
-  const paymentMethod = sale.paymentMethod || "Cash";
-  const subtotal = Number(sale.subtotal || 0);
-  const discount = Number(sale.discount || 0);
-  const tax = Number(sale.tax || 0);
-  const total = Number(sale.total || 0);
-  const charityAmount = Number(sale.charityAmount || 0);
-  const charityPercentage = Number(sale.charityPercentage || 0);
-  const notes = sale.notes || "";
+  // ---- FOOTER FIELDS ----
+  const totalParcels = sale.totalParcels || sale.parcels || "";
+  const memoClearingDate = sale.memoClearingDate || "";
+  const termsOfPayment = sale.termsOfPayment || sale.paymentTerms || "";
 
-  // Normalize line items
+  // ---- LINE ITEMS ----
+  // Each row: description, qtyGiven (PCS/CTS combined field), returnVal, keptVal,
+  // pricePerCts, amount, remark
   const normalizedItems = items.map((item) => {
     if (!item) return null;
+
     let description = item.description || "";
     if (!description) {
       if (item.inventoryType === "Product") {
@@ -96,38 +91,35 @@ export function generateInvoiceHTML(data = {}) {
       }
     }
 
-    const qty = Number(item.quantity || item.qtyGivenPcs || item.keptPcs || 1);
-    const unitPrice = Number(item.sellingPrice || item.pricePerCts || item.price || 0);
-    const lineDiscount = Number(item.discount || 0);
-    const lineAmount = Number(item.amount || (qty * unitPrice) - lineDiscount);
+    const qtyGiven = item.qtyGiven || item.qtyGivenPcs || item.quantity || "";
+    const returnVal = item.return || item.returnPcs || "";
+    const kept = item.kept || item.keptPcs || "";
+    const pricePerCts = item.pricePerCts || item.price || item.sellingPrice || "";
+    const amount = item.amount || (Number(qtyGiven) && Number(pricePerCts)
+      ? (Number(qtyGiven) * Number(pricePerCts)).toFixed(2)
+      : "");
+    const remark = item.remark || "";
 
-    return {
-      description,
-      qty,
-      unitPrice,
-      discount: lineDiscount,
-      amount: lineAmount,
-      remark: item.remark || "",
-    };
+    return { description, qtyGiven, returnVal, kept, pricePerCts, amount, remark };
   });
 
-  // Ensure minimum 12 display rows for balanced A4 presentation
+  // Fixed 15 rows, matching the reference memorandum exactly
+  const TOTAL_ROWS = 15;
   const paddedItems = [...normalizedItems];
-  while (paddedItems.length < 12) {
-    paddedItems.push(null);
-  }
-  const displayRows = paddedItems.slice(0, 12);
+  while (paddedItems.length < TOTAL_ROWS) paddedItems.push(null);
+  const displayRows = paddedItems.slice(0, TOTAL_ROWS);
 
-  const subtotalDisplay = subtotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const discountDisplay = discount > 0 ? discount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
-  const taxDisplay = tax > 0 ? tax.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
-  const totalDisplay = total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Totals
+  const totalAmount = normalizedItems.reduce((sum, i) => sum + (Number(i?.amount) || 0), 0);
+  const totalAmountDisplay = totalAmount > 0
+    ? totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>TAKAT GEMS SR CO., LTD. - INVOICE ${invoiceNo}</title>
+  <title>TAKAT GEMS SR CO., LTD.</title>
   <style>
     @page {
       size: A4 portrait;
@@ -158,7 +150,7 @@ export function generateInvoiceHTML(data = {}) {
     .header-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
 
     .header-table td {
@@ -166,40 +158,39 @@ export function generateInvoiceHTML(data = {}) {
     }
 
     .header-left {
-      width: 35%;
-      font-size: 9px;
-      line-height: 1.25;
+      width: 36%;
+      font-size: 10px;
+      line-height: 1.35;
     }
 
     .company-title {
-      font-size: 13px;
+      font-size: 15px;
       font-weight: bold;
       letter-spacing: 0.2px;
-      margin-bottom: 2px;
+      margin-bottom: 3px;
       white-space: nowrap;
     }
 
     .address-line {
-      font-size: 9px;
+      font-size: 10px;
       color: #111;
     }
 
     .header-center {
-      width: 30%;
+      width: 28%;
       text-align: center;
     }
 
     .logo-container {
-      margin: 0 auto 1px auto;
+      margin: 0 auto 2px auto;
       display: inline-block;
     }
 
     .sr-wordmark {
-      font-size: 14px;
+      font-size: 15px;
       font-weight: bold;
-      font-family: "Times New Roman", Times, serif;
-      letter-spacing: 1px;
-      margin-top: 1px;
+      letter-spacing: 1.5px;
+      margin-top: 2px;
     }
 
     .by-subtext {
@@ -211,26 +202,26 @@ export function generateInvoiceHTML(data = {}) {
     .est-text {
       font-size: 7.5px;
       color: #444;
-      margin-bottom: 3px;
+      margin-bottom: 4px;
     }
 
-    .invoice-heading {
-      font-size: 13px;
+    .memo-heading {
+      font-size: 14px;
       font-weight: bold;
       text-decoration: underline;
       letter-spacing: 1.5px;
-      margin-top: 2px;
+      margin-top: 3px;
     }
 
     .header-right {
-      width: 35%;
-      font-size: 9.5px;
+      width: 36%;
+      font-size: 10px;
       text-align: right;
-      padding-top: 2px;
+      padding-top: 4px;
     }
 
     .field-row {
-      margin-bottom: 3px;
+      margin-bottom: 5px;
       display: flex;
       justify-content: flex-end;
       align-items: flex-end;
@@ -247,18 +238,18 @@ export function generateInvoiceHTML(data = {}) {
       display: inline-block;
       text-align: left;
       padding-left: 4px;
-      font-family: "Courier New", Courier, monospace, serif;
+      font-family: "Times New Roman", Times, serif;
       font-size: 10px;
       min-height: 12px;
+      width: 165px;
     }
 
-    /* LEGAL DISCLAIMER */
+    /* LEGAL DISCLAIMER PARAGRAPH */
     .legal-disclaimer {
-      font-size: 7.5px;
+      font-size: 8px;
       text-align: justify;
-      line-height: 1.15;
+      line-height: 1.25;
       margin-bottom: 6px;
-      letter-spacing: -0.05px;
     }
 
     /* MAIN TABLE */
@@ -266,12 +257,12 @@ export function generateInvoiceHTML(data = {}) {
       width: 100%;
       border-collapse: collapse;
       border: 1px solid #000;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
     .main-table th, .main-table td {
       border: 1px solid #000;
-      padding: 4px 3px;
+      padding: 3px 2px;
       font-size: 9px;
     }
 
@@ -280,18 +271,18 @@ export function generateInvoiceHTML(data = {}) {
       text-align: center;
       vertical-align: middle;
       font-size: 8.5px;
-      line-height: 1.1;
-      background-color: #f8f8f8;
+      line-height: 1.15;
     }
 
-    .col-no { width: 35px; text-align: center; }
+    .col-no { width: 30px; text-align: center; }
     .col-desc { text-align: left; }
-    .col-qty { width: 60px; text-align: center; }
-    .col-price { width: 90px; text-align: right; }
-    .col-amount { width: 95px; text-align: right; }
+    .col-qty { width: 62px; text-align: center; }
+    .col-price { width: 70px; text-align: center; }
+    .col-amount { width: 75px; text-align: center; }
+    .col-remark { width: 75px; text-align: center; }
 
     .main-table tbody tr {
-      height: 22px;
+      height: 20px;
     }
 
     .main-table tbody td {
@@ -300,13 +291,11 @@ export function generateInvoiceHTML(data = {}) {
 
     .cell-no {
       text-align: center;
-      font-weight: normal;
     }
 
     .cell-desc {
       text-align: left;
       padding-left: 5px;
-      font-family: inherit;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -317,8 +306,7 @@ export function generateInvoiceHTML(data = {}) {
     }
 
     .cell-price {
-      text-align: right;
-      padding-right: 5px;
+      text-align: center;
     }
 
     .cell-amount {
@@ -326,98 +314,71 @@ export function generateInvoiceHTML(data = {}) {
       padding-right: 5px;
     }
 
-    /* SUMMARY / TOTALS TABLE */
-    .summary-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 8px;
+    .cell-remark {
+      text-align: center;
     }
 
-    .summary-table td {
-      vertical-align: top;
+    /* FOOTER TOTALS ROW (inside table) */
+    .footer-total-label {
+      text-align: center;
+      font-weight: bold;
       font-size: 9px;
     }
 
-    .summary-left {
-      width: 55%;
-      padding-right: 15px;
+    .footer-total-val {
+      text-align: center;
+      font-weight: bold;
+      font-size: 9px;
     }
 
-    .summary-right {
-      width: 45%;
-    }
-
-    .totals-box {
+    /* BELOW-TABLE FIELDS: Total Parcels / Memo Clearing Date / Terms Of Payment */
+    .below-table-row {
       width: 100%;
-      border-collapse: collapse;
-      border: 1px solid #000;
-    }
-
-    .totals-box td {
-      padding: 3px 6px;
-      border-bottom: 1px solid #ddd;
-    }
-
-    .totals-box tr:last-child td {
-      border-bottom: none;
-    }
-
-    .totals-label {
-      font-weight: bold;
-      text-align: left;
-    }
-
-    .totals-val {
-      text-align: right;
-      font-weight: bold;
-      font-family: "Courier New", Courier, monospace, serif;
-    }
-
-    .grand-total-row td {
-      background-color: #f0f0f0;
-      font-size: 10px;
-      border-top: 1.5px solid #000;
-      border-bottom: 1.5px solid #000;
-    }
-
-    .charity-badge {
-      border: 1px dashed #b45309;
-      background-color: #fffbeb;
-      color: #92400e;
-      padding: 5px 8px;
-      border-radius: 4px;
-      font-size: 8px;
-      line-height: 1.25;
+      display: flex;
+      justify-content: space-between;
+      font-size: 9.5px;
+      margin-bottom: 8px;
       margin-top: 4px;
     }
 
-    .notes-box {
-      font-size: 8.5px;
-      line-height: 1.2;
-      margin-bottom: 4px;
+    .below-field {
+      display: flex;
+      align-items: baseline;
     }
 
-    .notes-title {
+    .below-field-label {
       font-weight: bold;
-      text-decoration: underline;
+      white-space: nowrap;
+      margin-right: 4px;
+    }
+
+    .below-field-blank {
+      border-bottom: 1px solid #000;
+      display: inline-block;
+      min-width: 90px;
+      min-height: 12px;
+      text-align: center;
     }
 
     /* TREATMENT DISCLAIMER */
     .treatment-disclaimer {
-      font-size: 7.5px;
+      font-size: 8.5px;
       text-align: justify;
-      line-height: 1.15;
-      margin-top: 6px;
-      margin-bottom: 16px;
-      border-top: 1px solid #ccc;
-      padding-top: 4px;
+      line-height: 1.3;
+      margin-top: 4px;
+      margin-bottom: 30px;
+    }
+
+    .treatment-disclaimer .received-line {
+      font-weight: bold;
+      margin-top: 2px;
     }
 
     /* SIGNATURE ROW */
     .signature-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 8px;
+      margin-top: 4px;
     }
 
     .signature-col {
@@ -427,19 +388,19 @@ export function generateInvoiceHTML(data = {}) {
 
     .signature-line {
       border-bottom: 1px solid #000;
-      height: 24px;
+      height: 28px;
       margin-bottom: 3px;
     }
 
     .signature-label {
-      font-size: 9px;
+      font-size: 10px;
       font-weight: bold;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    
+
     <!-- HEADER -->
     <table class="header-table">
       <tr>
@@ -452,68 +413,77 @@ export function generateInvoiceHTML(data = {}) {
           <div class="address-line">T: +662 126 6759</div>
           <div class="address-line">M: +852 5538 0785 (Rehman Ahmed Takat)</div>
           <div class="address-line">M: +91 9587867863 (Ruman Ahmed Takat)</div>
-          <div class="address-line">E: info@takatsr.com</div>
+          <div class="address-line">E : info@takatsr.com</div>
         </td>
 
         <!-- Center Column -->
         <td class="header-center">
           <div class="logo-container">
-            ${logoBase64 ? `<img src="${logoBase64}" alt="TAKAT-SR Logo" style="max-height: 55px; max-width: 140px; object-fit: contain;" />` : `
+            ${logoBase64 ? `<img
+  src="${logoBase64}"
+  alt="SR-TAKAT Logo"
+  style="max-height: 100px; max-width: 300px; object-fit: contain;"
+/>` : `
             <svg width="46" height="46" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="50" cy="50" r="46" stroke="#000" stroke-width="2.5" fill="none"/>
               <text x="35" y="62" font-family="Times New Roman, serif" font-size="44" font-weight="bold" fill="#000">S</text>
               <text x="48" y="66" font-family="Times New Roman, serif" font-size="44" font-weight="bold" font-style="italic" fill="#000">R</text>
             </svg>
+            <div class="sr-wordmark">TAKAT-SR</div>
+            <div class="by-subtext">by Siraj Takat</div>
+            <div class="est-text">Est. 1955</div>
             `}
           </div>
-          <div class="invoice-heading">INVOICE</div>
+          <div class="memo-heading">INVOICE</div>
         </td>
 
         <!-- Right Column -->
         <td class="header-right">
           <div class="field-row">
-            <span class="field-label">INVOICE NO:</span>
-            <span class="field-blank" style="width: 150px; font-weight: bold;">${invoiceNo}</span>
-          </div>
-          <div class="field-row">
             <span class="field-label">DATE:</span>
-            <span class="field-blank" style="width: 150px;">${formattedDate}</span>
+            <span class="field-blank">${formattedDate}</span>
           </div>
           <div class="field-row">
             <span class="field-label">TO:</span>
-            <span class="field-blank" style="width: 150px;">${customerName}</span>
+            <span class="field-blank">${customerName}</span>
           </div>
           <div class="field-row">
             <span class="field-label">ADDRESS:</span>
-            <span class="field-blank" style="width: 150px;">${addressLines[0]}</span>
+            <span class="field-blank">${addressLine1}</span>
           </div>
           <div class="field-row">
-            <span class="field-label"></span>
-            <span class="field-blank" style="width: 150px;">${addressLines[1]}</span>
+            <span class="field-label" style="visibility:hidden;">ADDRESS:</span>
+            <span class="field-blank">${addressLine2}</span>
           </div>
           <div class="field-row">
-            <span class="field-label">TEL / PHONE:</span>
-            <span class="field-blank" style="width: 150px;">${customerPhone}</span>
+            <span class="field-label">ATTENTION:</span>
+            <span class="field-blank">${attention}</span>
           </div>
-          ${attention ? `<div class="field-row"><span class="field-label">ATTENTION:</span><span class="field-blank" style="width: 150px;">${attention}</span></div>` : ""}
+          <div class="field-row">
+            <span class="field-label">TEL:</span>
+            <span class="field-blank">${customerPhone}</span>
+          </div>
         </td>
       </tr>
     </table>
 
-    <!-- LEGAL PARAGRAPH -->
+    <!-- LEGAL DISCLAIMER PARAGRAPH (exact reference wording) -->
     <div class="legal-disclaimer">
-      All sales are final. Goods sold remain the property of TAKAT GEMS SR CO., LTD. until full payment is received. Payment method: <strong>${paymentMethod}</strong> | Status: <strong>${paymentStatus}</strong>.
+      The goods described and valued as below are delivered to you for EXAMINATION AND INSPECTION ONLY and are the property of TAKAT GEMS SR CO., LTD.. This merchandise is subject to their order and shall be returned to them on demand. Such merchandise, until returned to them and actually received, are at your risk from all hazards. NO RIGHT OR POWER IS GIVEN TO YOU TO SELL, PLEDGE, HYPOTHECATE OR OTHERWISE DISPOSE OF THIS MERCHANDISE regardless of prior transactions. A sale of this merchandise can only be effected and title will pass only if, as and when the said TAKAT GEMS SR CO., LTD. shall agree to such a sale and a bill of sale rendered thereof.
     </div>
 
-    <!-- MAIN TABLE -->
+    <!-- MAIN TABLE (exact reference columns, 15 fixed rows) -->
     <table class="main-table">
       <thead>
         <tr>
           <th class="col-no">NO.</th>
-          <th class="col-desc">ITEM DESCRIPTION</th>
-          <th class="col-qty">QTY</th>
-          <th class="col-price">UNIT PRICE ($)</th>
-          <th class="col-amount">TOTAL ($)</th>
+          <th class="col-desc">DESCRIPTION</th>
+          <th class="col-qty">QTY GIVEN<br/>PCS / CTS</th>
+          <th class="col-qty">RETURN<br/>PCS / CTS</th>
+          <th class="col-qty">KEPT<br/>PCS / CTS</th>
+          <th class="col-price">PRICE<br/>PER CTS. $</th>
+          <th class="col-amount">AMOUNT</th>
+          <th class="col-remark">REMARK</th>
         </tr>
       </thead>
       <tbody>
@@ -525,73 +495,57 @@ export function generateInvoiceHTML(data = {}) {
                 <td class="cell-no">${rowNo}</td>
                 <td class="cell-desc"></td>
                 <td class="cell-num"></td>
+                <td class="cell-num"></td>
+                <td class="cell-num"></td>
                 <td class="cell-price"></td>
                 <td class="cell-amount"></td>
+                <td class="cell-remark"></td>
               </tr>`;
         }
-
-        const unitPriceStr = item.unitPrice > 0 ? item.unitPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-";
-        const amountStr = item.amount > 0 ? item.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-";
-
         return `<tr>
               <td class="cell-no">${rowNo}</td>
               <td class="cell-desc">${item.description}</td>
-              <td class="cell-num">${item.qty}</td>
-              <td class="cell-price">${unitPriceStr}</td>
-              <td class="cell-amount">${amountStr}</td>
+              <td class="cell-num">${item.qtyGiven}</td>
+              <td class="cell-num">${item.returnVal}</td>
+              <td class="cell-num">${item.kept}</td>
+              <td class="cell-price">${item.pricePerCts}</td>
+              <td class="cell-amount">${item.amount}</td>
+              <td class="cell-remark">${item.remark}</td>
             </tr>`;
       })
       .join("")}
+        <!-- FOOTER TOTALS ROW -->
+        <tr>
+          <td colspan="2" class="footer-total-label">TOTAL PCS &amp; CTS</td>
+          <td class="footer-total-val"></td>
+          <td class="footer-total-val"></td>
+          <td class="footer-total-val"></td>
+          <td class="footer-total-label" style="text-align:right; padding-right:4px;">TOTAL<br/>US$</td>
+          <td class="footer-total-val" colspan="2">${totalAmountDisplay}</td>
+        </tr>
       </tbody>
     </table>
 
-    <!-- SUMMARY & TOTALS SECTION -->
-    <table class="summary-table">
-      <tr>
-        <td class="summary-left">
-          ${notes ? `
-          <div class="notes-box">
-            <span class="notes-title">Special Notes:</span> ${notes}
-          </div>
-          ` : ""}
+    <!-- BELOW-TABLE FIELDS -->
+    <div class="below-table-row">
+      <div class="below-field">
+        <span class="below-field-label">Total Parcels :</span>
+        <span class="below-field-blank">${totalParcels}</span>
+      </div>
+      <div class="below-field">
+        <span class="below-field-label">Clearing Date :</span>
+        <span class="below-field-blank">${memoClearingDate}</span>
+      </div>
+      <div class="below-field">
+        <span class="below-field-label">Terms Of Payment :</span>
+        <span class="below-field-blank">${termsOfPayment}</span>
+      </div>
+    </div>
 
-          ${charityAmount > 0 ? `
-          <div class="charity-badge">
-            <strong>Charity Contribution (${charityPercentage}%):</strong> A gross donation of <strong>$${charityAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> has been contributed to our community program from this transaction.
-          </div>
-          ` : ""}
-        </td>
-        <td class="summary-right">
-          <table class="totals-box">
-            <tr>
-              <td class="totals-label">SUBTOTAL:</td>
-              <td class="totals-val">$${subtotalDisplay}</td>
-            </tr>
-            ${discount > 0 ? `
-            <tr>
-              <td class="totals-label">DISCOUNT:</td>
-              <td class="totals-val" style="color: #b91c1c;">-$${discountDisplay}</td>
-            </tr>
-            ` : ""}
-            ${tax > 0 ? `
-            <tr>
-              <td class="totals-label">TAX / VAT:</td>
-              <td class="totals-val">+$${taxDisplay}</td>
-            </tr>
-            ` : ""}
-            <tr class="grand-total-row">
-              <td class="totals-label">TOTAL US$:</td>
-              <td class="totals-val">$${totalDisplay}</td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-
-    <!-- TREATMENT DISCLAIMER -->
+    <!-- TREATMENT DISCLAIMER (exact reference wording) -->
     <div class="treatment-disclaimer">
-      ALL OUR COLORED GEMSTONES ARE GUARANTEED AUTHENTIC FINE GEMSTONES. In general, some enhancement methods used in colored gemstones include heating, oiling, or resin treatment. We operate with full transparency. Thank you for doing business with TAKAT GEMS SR CO., LTD.<br>
-      <strong>Received goods in good order and condition.</strong>
+      ALL OUR COLORED GEMSTONES ARE "E" (ENHANCED) AND/OR (TREATED). In general, some of the enhancement methods used are heating, oiling, filling, with resin agents, etc. Some of the treatment methods used are coating, diffusion, dyeing, joban oil, glass filling, irradiation, lasering, etc, we do not know the methods used prior to our import since each country uses different methods. If required, we may send the stones to a laboratory for more information prior to your purchase.
+      <div class="received-line">I have received the above goods in court quantity and in order.</div>
     </div>
 
     <!-- SIGNATURE ROW -->
@@ -599,12 +553,12 @@ export function generateInvoiceHTML(data = {}) {
       <tr>
         <td class="signature-col">
           <div class="signature-line"></div>
-          <div class="signature-label">Authorized Signature (Issuer):</div>
+          <div class="signature-label">Chop/Signature of Issuer:</div>
         </td>
         <td style="width: 4%;"></td>
         <td class="signature-col">
           <div class="signature-line"></div>
-          <div class="signature-label">Customer Signature (Receiver):</div>
+          <div class="signature-label">Chop/Signature of Receiver:</div>
         </td>
       </tr>
     </table>

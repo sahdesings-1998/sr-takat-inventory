@@ -134,7 +134,11 @@ export default function SaleDetails() {
           {/* Center Column: Logo & Heading */}
           <div className="flex flex-col items-center justify-center text-center my-2 md:my-0">
             <div className="flex items-center justify-center mb-1">
-              <img src={logo} alt="TAKAT-SR Logo" className="max-h-18 max-w-[250px]" />
+              <img
+                src={logo}
+                alt="SR-TAKAT Logo"
+                className="max-h-28 max-w-[400px] w-auto h-auto object-contain"
+              />
             </div>
             {/* <span className="font-bold text-sm tracking-wider uppercase font-serif">TAKAT-SR</span>
             <span className="text-[10px] italic text-gray-700">by Siraj Takat</span>

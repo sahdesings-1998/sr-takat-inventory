@@ -10,13 +10,13 @@ function getLogoBase64() {
     if (fs.existsSync(logoPath)) {
       return `data:image/png;base64,${fs.readFileSync(logoPath).toString("base64")}`;
     }
-  } catch (e) {}
+  } catch (e) { }
   try {
     const fallbackPath = path.resolve(process.cwd(), "client/src/assets/logo.png");
     if (fs.existsSync(fallbackPath)) {
       return `data:image/png;base64,${fs.readFileSync(fallbackPath).toString("base64")}`;
     }
-  } catch (e) {}
+  } catch (e) { }
   return "";
 }
 
@@ -34,7 +34,6 @@ export function generateMemoHTML(data = {}) {
     termsOfPayment = "",
   } = data;
 
-  // Format date helper if ISO or Date object passed
   let formattedDate = date;
   if (date && !isNaN(new Date(date).getTime()) && typeof date !== "number") {
     const d = new Date(date);
@@ -44,7 +43,6 @@ export function generateMemoHTML(data = {}) {
     formattedDate = `${day}/${month}/${year}`;
   }
 
-  // Address lines (handles multi-line input or string)
   let addressLines = ["", ""];
   if (address) {
     const lines = address.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -52,14 +50,12 @@ export function generateMemoHTML(data = {}) {
     if (lines.length > 1) addressLines[1] = lines.slice(1).join(", ");
   }
 
-  // Ensure exactly 15 rows
   const paddedItems = [...lineItems];
   while (paddedItems.length < 15) {
     paddedItems.push(null);
   }
   const displayRows = paddedItems.slice(0, 15);
 
-  // Compute totals
   let totalQtyGivenCts = 0;
   let totalQtyGivenPcs = 0;
   let hasQtyGivenCts = false;
@@ -94,7 +90,9 @@ export function generateMemoHTML(data = {}) {
     totalQtyDisplay = `${totalQtyGivenPcs} Pcs`;
   }
 
-  const totalAmountDisplay = hasAmount ? totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+  const totalAmountDisplay = hasAmount
+    ? totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -131,7 +129,7 @@ export function generateMemoHTML(data = {}) {
     .header-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
 
     .header-table td {
@@ -139,40 +137,43 @@ export function generateMemoHTML(data = {}) {
     }
 
     .header-left {
-      width: 35%;
-      font-size: 9px;
-      line-height: 1.25;
+      width: 36%;
+      font-size: 10px;
+      line-height: 1.3;
     }
 
     .company-title {
-      font-size: 13px;
+      font-size: 15px;
       font-weight: bold;
       letter-spacing: 0.2px;
-      margin-bottom: 2px;
+      margin-bottom: 3px;
       white-space: nowrap;
     }
 
     .address-line {
-      font-size: 9px;
+      font-size: 10px;
       color: #111;
     }
 
     .header-center {
-      width: 30%;
+      width: 28%;
       text-align: center;
     }
 
     .logo-container {
-      margin: 0 auto 1px auto;
+      margin: 0 auto 2px auto;
       display: inline-block;
     }
 
+    /* These only ever render as a FALLBACK when no logo.png is found —
+       your real logo already contains the TAKAT-SR wordmark, "by Siraj Takat",
+       and "Est. 1955" baked into the graphic, so they must never render
+       alongside the image or the text will duplicate. */
     .sr-wordmark {
-      font-size: 14px;
+      font-size: 15px;
       font-weight: bold;
-      font-family: "Times New Roman", Times, serif;
-      letter-spacing: 1px;
-      margin-top: 1px;
+      letter-spacing: 1.5px;
+      margin-top: 2px;
     }
 
     .by-subtext {
@@ -184,26 +185,26 @@ export function generateMemoHTML(data = {}) {
     .est-text {
       font-size: 7.5px;
       color: #444;
-      margin-bottom: 3px;
+      margin-bottom: 4px;
     }
 
     .memo-heading {
-      font-size: 12px;
+      font-size: 14px;
       font-weight: bold;
       text-decoration: underline;
-      letter-spacing: 1px;
-      margin-top: 2px;
+      letter-spacing: 1.5px;
+      margin-top: 4px;
     }
 
     .header-right {
-      width: 35%;
-      font-size: 9.5px;
+      width: 36%;
+      font-size: 10px;
       text-align: right;
-      padding-top: 2px;
+      padding-top: 4px;
     }
 
     .field-row {
-      margin-bottom: 3px;
+      margin-bottom: 5px;
       display: flex;
       justify-content: flex-end;
       align-items: flex-end;
@@ -220,18 +221,18 @@ export function generateMemoHTML(data = {}) {
       display: inline-block;
       text-align: left;
       padding-left: 4px;
-      font-family: "Courier New", Courier, monospace, serif;
+      font-family: "Times New Roman", Times, serif;
       font-size: 10px;
       min-height: 12px;
+      width: 165px;
     }
 
     /* LEGAL PARAGRAPH */
     .legal-disclaimer {
-      font-size: 7.5px;
+      font-size: 8px;
       text-align: justify;
-      line-height: 1.15;
-      margin-bottom: 4px;
-      letter-spacing: -0.05px;
+      line-height: 1.25;
+      margin-bottom: 6px;
     }
 
     /* MAIN TABLE */
@@ -239,7 +240,7 @@ export function generateMemoHTML(data = {}) {
       width: 100%;
       border-collapse: collapse;
       border: 1px solid #000;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
     .main-table th, .main-table td {
@@ -253,7 +254,7 @@ export function generateMemoHTML(data = {}) {
       text-align: center;
       vertical-align: middle;
       font-size: 8.5px;
-      line-height: 1.1;
+      line-height: 1.15;
       background-color: #fff;
     }
 
@@ -267,7 +268,7 @@ export function generateMemoHTML(data = {}) {
     .col-remark { width: 70px; text-align: left; }
 
     .main-table tbody tr {
-      height: 22px;
+      height: 20px;
     }
 
     .main-table tbody td {
@@ -282,7 +283,6 @@ export function generateMemoHTML(data = {}) {
     .cell-desc {
       text-align: left;
       padding-left: 4px;
-      font-family: inherit;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -300,14 +300,13 @@ export function generateMemoHTML(data = {}) {
     /* FOOTER ROW */
     .main-table tfoot td {
       font-weight: bold;
-      height: 20px;
+      height: 22px;
       vertical-align: middle;
       font-size: 9px;
     }
 
     .footer-total-label {
-      text-align: right;
-      padding-right: 8px;
+      text-align: center;
     }
 
     /* BELOW TABLE ROW */
@@ -343,17 +342,18 @@ export function generateMemoHTML(data = {}) {
 
     /* TREATMENT DISCLAIMER */
     .treatment-disclaimer {
-      font-size: 7.5px;
+      font-size: 8.5px;
       text-align: justify;
-      line-height: 1.15;
-      margin-bottom: 24px;
+      line-height: 1.3;
+      margin-top: 4px;
+      margin-bottom: 26px;
     }
 
     /* SIGNATURE ROW */
     .signature-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
+      margin-top: 4px;
     }
 
     .signature-col {
@@ -363,19 +363,19 @@ export function generateMemoHTML(data = {}) {
 
     .signature-line {
       border-bottom: 1px solid #000;
-      height: 25px;
+      height: 28px;
       margin-bottom: 3px;
     }
 
     .signature-label {
-      font-size: 9px;
+      font-size: 10px;
       font-weight: bold;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    
+
     <!-- HEADER -->
     <table class="header-table">
       <tr>
@@ -391,20 +391,24 @@ export function generateMemoHTML(data = {}) {
           <div class="address-line">E: info@takatsr.com</div>
         </td>
 
-        <!-- Center Column -->
+        <!-- Center Column --> 
         <td class="header-center">
           <div class="logo-container">
-            ${logoBase64 ? `<img src="${logoBase64}" alt="TAKAT-SR Logo" style="max-height: 55px; max-width: 140px; object-fit: contain;" />` : `
+            ${logoBase64 ? `<img
+  src="${logoBase64}"
+  alt="SR-TAKAT Logo"
+  style="max-height: 100px; max-width: 300px; object-fit: contain;"
+/>` : `
             <svg width="46" height="46" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="50" cy="50" r="46" stroke="#000" stroke-width="2.5" fill="none"/>
               <text x="35" y="62" font-family="Times New Roman, serif" font-size="44" font-weight="bold" fill="#000">S</text>
               <text x="48" y="66" font-family="Times New Roman, serif" font-size="44" font-weight="bold" font-style="italic" fill="#000">R</text>
             </svg>
+            <div class="sr-wordmark">TAKAT-SR</div>
+            <div class="by-subtext">by Siraj Takat</div>
+            <div class="est-text">Est. 1955</div>
             `}
           </div>
-          <div class="sr-wordmark">TAKAT-SR</div>
-          <div class="by-subtext">by Siraj Takat</div>
-          <div class="est-text">Est. 1955</div>
           <div class="memo-heading">MEMORANDUM</div>
         </td>
 
@@ -412,27 +416,27 @@ export function generateMemoHTML(data = {}) {
         <td class="header-right">
           <div class="field-row">
             <span class="field-label">DATE:</span>
-            <span class="field-blank" style="width: 170px;">${formattedDate}</span>
+            <span class="field-blank">${formattedDate}</span>
           </div>
           <div class="field-row">
             <span class="field-label">TO:</span>
-            <span class="field-blank" style="width: 170px;">${to}</span>
+            <span class="field-blank">${to}</span>
           </div>
           <div class="field-row">
             <span class="field-label">ADDRESS:</span>
-            <span class="field-blank" style="width: 170px;">${addressLines[0]}</span>
+            <span class="field-blank">${addressLines[0]}</span>
           </div>
           <div class="field-row">
-            <span class="field-label"></span>
-            <span class="field-blank" style="width: 170px;">${addressLines[1]}</span>
+            <span class="field-label" style="visibility:hidden;">ADDRESS:</span>
+            <span class="field-blank">${addressLines[1]}</span>
           </div>
           <div class="field-row">
             <span class="field-label">ATTENTION:</span>
-            <span class="field-blank" style="width: 170px;">${attention}</span>
+            <span class="field-blank">${attention}</span>
           </div>
           <div class="field-row">
             <span class="field-label">TEL:</span>
-            <span class="field-blank" style="width: 170px;">${tel}</span>
+            <span class="field-blank">${tel}</span>
           </div>
         </td>
       </tr>
@@ -459,10 +463,10 @@ export function generateMemoHTML(data = {}) {
       </thead>
       <tbody>
         ${displayRows
-          .map((item, index) => {
-            const rowNo = index + 1;
-            if (!item) {
-              return `<tr>
+      .map((item, index) => {
+        const rowNo = index + 1;
+        if (!item) {
+          return `<tr>
                 <td class="cell-no">${rowNo}</td>
                 <td class="cell-desc"></td>
                 <td class="cell-num"></td>
@@ -472,22 +476,21 @@ export function generateMemoHTML(data = {}) {
                 <td class="cell-amount"></td>
                 <td class="cell-desc"></td>
               </tr>`;
-            }
+        }
 
-            // Format values for populated row
-            let qtyDisplay = "";
-            if (item.qtyGivenCts !== undefined && item.qtyGivenCts !== null && item.qtyGivenCts !== "") {
-              qtyDisplay = item.qtyGivenCts;
-            } else if (item.qtyGivenPcs !== undefined && item.qtyGivenPcs !== null && item.qtyGivenPcs !== "") {
-              qtyDisplay = `${item.qtyGivenPcs} Pcs`;
-            }
+        let qtyDisplay = "";
+        if (item.qtyGivenCts !== undefined && item.qtyGivenCts !== null && item.qtyGivenCts !== "") {
+          qtyDisplay = item.qtyGivenCts;
+        } else if (item.qtyGivenPcs !== undefined && item.qtyGivenPcs !== null && item.qtyGivenPcs !== "") {
+          qtyDisplay = `${item.qtyGivenPcs} Pcs`;
+        }
 
-            let returnDisplay = item.returnCts || (item.returnPcs ? `${item.returnPcs} Pcs` : "");
-            let keptDisplay = item.keptCts || (item.keptPcs ? `${item.keptPcs} Pcs` : "");
-            let priceDisplay = item.pricePerCts !== undefined && item.pricePerCts !== null && item.pricePerCts !== "" ? item.pricePerCts : "";
-            let amountDisplay = item.amount !== undefined && item.amount !== null && item.amount !== "" ? Number(item.amount).toFixed(2) : "";
+        let returnDisplay = item.returnCts || (item.returnPcs ? `${item.returnPcs} Pcs` : "");
+        let keptDisplay = item.keptCts || (item.keptPcs ? `${item.keptPcs} Pcs` : "");
+        let priceDisplay = item.pricePerCts !== undefined && item.pricePerCts !== null && item.pricePerCts !== "" ? item.pricePerCts : "";
+        let amountDisplay = item.amount !== undefined && item.amount !== null && item.amount !== "" ? Number(item.amount).toFixed(2) : "";
 
-            return `<tr>
+        return `<tr>
               <td class="cell-no">${rowNo}</td>
               <td class="cell-desc">${item.description || ""}</td>
               <td class="cell-num">${qtyDisplay}</td>
@@ -497,18 +500,19 @@ export function generateMemoHTML(data = {}) {
               <td class="cell-amount">${amountDisplay}</td>
               <td class="cell-desc">${item.remark || ""}</td>
             </tr>`;
-          })
-          .join("")}
+      })
+      .join("")}
       </tbody>
       <tfoot>
         <tr>
-          <td colspan="2" class="footer-total-label">TOTAL PCS & CTS</td>
+          <td colspan="2" class="footer-total-label">TOTAL PCS &amp; CTS</td>
           <td class="cell-num">${totalQtyDisplay}</td>
           <td></td>
           <td></td>
-          <td class="footer-total-label">TOTAL US$</td>
-          <td class="cell-amount">${totalAmountDisplay}</td>
           <td></td>
+          <td colspan="2" class="footer-total-label">
+            TOTAL<br>US$${totalAmountDisplay ? ` &nbsp;${totalAmountDisplay}` : ""}
+          </td>
         </tr>
       </tfoot>
     </table>

@@ -7,7 +7,6 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "postinstall": "npx puppeteer browsers install chrome",
     "seed:roles": "node scripts/seedRoles.js",
     "seed:data": "node scripts/seedData.js"
   },

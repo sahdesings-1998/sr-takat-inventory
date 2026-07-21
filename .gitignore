@@ -5,7 +5,7 @@ build/
 
 # Editor directories and files
 .vscode/
-docs
+securedfiles
 docs
 
 # Environment variables and secrets

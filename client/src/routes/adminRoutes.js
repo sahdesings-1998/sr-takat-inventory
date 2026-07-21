@@ -1,22 +1,8 @@
-import { createElement } from "react";
-import AdminRoute from "./AdminRoute.jsx";
-import DashboardLayout from "@/layouts/DashboardLayout.jsx";
-import Settings from "@/modules/settings/pages/Settings.jsx";
-
 /**
  * Level 3 of the 3-level route protection (Section 4): Role Protected.
- * Admin-only routes, e.g. /settings.
+ * Admin-only routes. All role-protected routes are nested under the central
+ * DashboardLayout inside protectedRoutes.js to prevent container unmounting.
  */
-const adminRoutes = [
-  {
-    element: createElement(AdminRoute),
-    children: [
-      {
-        element: createElement(DashboardLayout),
-        children: [{ path: "/settings", element: createElement(Settings) }],
-      },
-    ],
-  },
-];
+const adminRoutes = [];
 
 export default adminRoutes;

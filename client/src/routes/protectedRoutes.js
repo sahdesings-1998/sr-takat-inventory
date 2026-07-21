@@ -15,6 +15,8 @@ import salesRoutes from "@/modules/sales/routes.jsx";
 import reportsRoutes from "@/modules/reports/routes.jsx";
 import auditRoutes from "@/modules/audit/routes.jsx";
 import incomeExpenseRoutes from "@/modules/incomeExpense/routes.jsx";
+import AdminRoute from "./AdminRoute.jsx";
+import Settings from "@/modules/settings/pages/Settings.jsx";
 
 /**
  * Level 2 of the 3-level route protection (Section 4): Authenticated.
@@ -41,6 +43,12 @@ const protectedRoutes = [
           ...reportsRoutes,
           ...auditRoutes,
           ...incomeExpenseRoutes,
+          {
+            element: createElement(AdminRoute),
+            children: [
+              { path: "/settings", element: createElement(Settings) }
+            ]
+          }
         ],
       },
     ],

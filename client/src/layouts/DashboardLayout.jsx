@@ -180,10 +180,19 @@ export default function DashboardLayout() {
   const { user, logout } = useAuth();
   const { notifications } = useNotifications();
   const navigate = useNavigate();
+  const location = useLocation();
+  const mainRef = useRef(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef(null);
   const { title, sub } = usePageMeta();
+
+  // Reset scroll of main container to top instantly on pathname change
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+  }, [location.pathname]);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
   const isAdmin = user?.roleId?.name === "Admin";
@@ -282,10 +291,10 @@ export default function DashboardLayout() {
           <div className="flex items-center gap-2">
 
             {/* Search button */}
-            <button className="flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200/80 text-sm text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-all duration-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hidden sm:flex">
+            {/* <button className="flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200/80 text-sm text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-all duration-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hidden sm:flex">
               <Search className="h-4 w-4" />
               <span className="text-[13px] hidden lg:inline">Search...</span>
-            </button>
+            </button> */}
 
             {/* Notifications */}
             {/* <Link
@@ -343,7 +352,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* ── Page Content ──────────────────────────────────────────── */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-7">
             <Outlet />
           </div>

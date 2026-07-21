@@ -5,6 +5,7 @@ export const productsApi = {
   getById: (id) => apiClient.get(`/products/${id}`).then((res) => res.data),
   create: (data) => apiClient.post("/products", data).then((res) => res.data),
   update: (id, data) => apiClient.put(`/products/${id}`, data).then((res) => res.data),
+  delete: (id) => apiClient.delete(`/products/${id}`).then((res) => res.data),
   addComponent: (id, data) =>
     apiClient.post(`/products/${id}/components`, data).then((res) => res.data),
   deleteComponent: (id, componentId) =>

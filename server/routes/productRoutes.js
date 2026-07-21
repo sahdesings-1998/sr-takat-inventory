@@ -11,6 +11,7 @@ router.get("/", requirePermission("inventory.view"), productController.getProduc
 router.get("/:id", requirePermission("inventory.view"), productController.getProduct);
 router.post("/", requirePermission("inventory.create"), productController.createProduct);
 router.put("/:id", requirePermission("inventory.update"), productController.updateProduct);
+router.delete("/:id", requirePermission("inventory.delete"), productController.deleteProduct);
 router.post(
   "/:id/components",
   requirePermission("inventory.update"),

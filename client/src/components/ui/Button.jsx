@@ -127,6 +127,7 @@ const Button = forwardRef(function Button(
     type = "button",
     onClick,
     loadingText: explicitLoadingText,
+    icon,
     ...props
   },
   ref
@@ -196,7 +197,10 @@ const Button = forwardRef(function Button(
           <span>{derivedLoadingText || "Processing..."}</span>
         </>
       ) : (
-        children
+        <>
+          {icon && <span className="inline-flex shrink-0">{icon}</span>}
+          {children}
+        </>
       )}
     </button>
   );

@@ -15,8 +15,8 @@ export function requirePermission(...requiredPermissions) {
       throw new ApiError(403, "No role assigned to this account");
     }
 
-    // Admins implicitly hold every permission.
-    if (role.name === "Admin") return next();
+    // Admins implicitly hold every permission, and wildcard '*' grants all.
+    if (role.name === "Admin" || (role.permissions || []).includes("*")) return next();
 
     const granted = role.permissions || [];
     const hasAll = requiredPermissions.every((perm) => granted.includes(perm));

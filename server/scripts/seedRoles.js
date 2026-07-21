@@ -22,6 +22,7 @@ const ROLES = [
       "inventory.view",
       "inventory.create",
       "inventory.update",
+      "inventory.delete",
       "costing.view",
       "costing.approve",
       "memo.view",

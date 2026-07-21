@@ -24,6 +24,12 @@ export const updateProduct = catchAsync(async (req, res) => {
   sendSuccess(res, { message: "Product updated successfully", data: product });
 });
 
+export const deleteProduct = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  await productService.softDeleteProduct(id, req.user._id, req.ip);
+  sendSuccess(res, { message: "Product deleted successfully" });
+});
+
 export const addComponent = catchAsync(async (req, res) => {
   const { id } = req.params;
   const component = await productService.addProductComponent(id, req.body, req.user._id);
@@ -41,6 +47,7 @@ export default {
   getProduct,
   createProduct,
   updateProduct,
+  deleteProduct,
   addComponent,
   deleteComponent,
 };

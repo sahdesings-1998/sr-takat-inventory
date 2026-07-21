@@ -224,6 +224,11 @@ const productSchema = new Schema(
         },
       ],
     },
+
+    // ── Soft-delete fields ────────────────────────────────────────────────────
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date, default: null },
+    deletedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
   },
   { timestamps: true, collection: "products" }
 );
@@ -233,6 +238,7 @@ productSchema.index({ stockNo: 1 });
 productSchema.index({ status: 1 });
 productSchema.index({ category: 1 });
 productSchema.index({ status: 1, category: 1 }); // compound
+productSchema.index({ isDeleted: 1 }); // soft-delete filter
 
 productSchema.virtual("collection")
   .get(function () {

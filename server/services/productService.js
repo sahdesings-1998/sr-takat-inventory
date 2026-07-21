@@ -21,7 +21,7 @@ function buildProfitMetrics(data, productDoc = null) {
 }
 
 async function getAllProducts({ category, status, search } = {}) {
-  const query = {};
+  const query = { isDeleted: { $ne: true } };
   if (category) query.category = category;
   if (status) query.status = status;
   if (search) {
@@ -35,7 +35,7 @@ async function getAllProducts({ category, status, search } = {}) {
 }
 
 async function getProductById(id) {
-  const product = await Product.findById(id).populate("certificateIds");
+  const product = await Product.findOne({ _id: id, isDeleted: { $ne: true } }).populate("certificateIds");
   if (!product) throw new ApiError(404, "Product not found");
 
   const components = await ProductComponent.find({ productId: id }).populate("sourceId");
@@ -193,11 +193,45 @@ async function deleteProductComponent(productId, componentId, userId) {
   return { success: true };
 }
 
+async function softDeleteProduct(id, userId, ipAddress = "") {
+  const product = await Product.findOne({ _id: id, isDeleted: { $ne: true } });
+  if (!product) throw new ApiError(404, "Product not found or already deleted");
+
+  const oldVal = product.toObject();
+
+  product.isDeleted = true;
+  product.deletedAt = new Date();
+  product.deletedBy = userId || null;
+  product.history = [
+    ...(product.history || []),
+    {
+      date: new Date(),
+      action: "Product soft-deleted",
+      user: userId?.toString() || "System",
+    },
+  ];
+
+  await product.save();
+
+  await auditLogService.logAction({
+    userId,
+    entity: "Product",
+    entityId: product._id,
+    action: "delete",
+    oldValue: oldVal,
+    newValue: product.toObject(),
+    ipAddress,
+  });
+
+  return product;
+}
+
 export default {
   getAllProducts,
   getProductById,
   createProduct,
   updateProduct,
+  softDeleteProduct,
   addProductComponent,
   deleteProductComponent,
 };

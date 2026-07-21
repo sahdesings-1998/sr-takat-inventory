@@ -24,6 +24,14 @@ export function useProducts(params) {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id) => productsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product"] });
+    },
+  });
+
   return {
     products: productsQuery.data?.data || [],
     isLoading: productsQuery.isLoading,
@@ -32,6 +40,8 @@ export function useProducts(params) {
     isCreating: createMutation.isPending,
     updateProduct: updateMutation.mutateAsync,
     isUpdating: updateMutation.isPending,
+    deleteProduct: deleteMutation.mutateAsync,
+    isDeleting: deleteMutation.isPending,
   };
 }
 
@@ -82,6 +92,23 @@ export function useProduct(id) {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => productsApi.delete(id),
+    onSuccess: () => {
+      // Remove product from cache immediately so any stale references are cleared
+      queryClient.removeQueries({ queryKey: ["product", id] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data) => productsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product", id] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+
   return {
     product: productQuery.data?.data?.product,
     components: productQuery.data?.data?.components || [],
@@ -93,5 +120,9 @@ export function useProduct(id) {
     deleteComponent: deleteComponentMutation.mutateAsync,
     saveCosting: saveCostingMutation.mutateAsync,
     approveCosting: approveCostingMutation.mutateAsync,
+    deleteProduct: deleteMutation.mutateAsync,
+    isDeleting: deleteMutation.isPending,
+    updateProduct: updateMutation.mutateAsync,
+    isUpdating: updateMutation.isPending,
   };
 }

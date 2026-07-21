@@ -36,7 +36,7 @@ const NAV_GROUPS = [
     label: "MENU",
     items: [
       { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-      { to: "/notifications", icon: Bell, label: "Notifications", badge: true },
+      // { to: "/notifications", icon: Bell, label: "Notifications", badge: true },
     ],
   },
   {
@@ -268,11 +268,11 @@ export default function DashboardLayout() {
 
           {/* Page title block */}
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold text-gray-900 tracking-[-0.025em] leading-tight truncate">
+            <h1 className="text-2xl font-bold text-gray-900 font-display truncate">
               {title}
             </h1>
             {sub && (
-              <p className="text-xs text-gray-400 font-medium mt-0.5 truncate hidden sm:block">
+              <p className="text-sm text-gray-600 mt-1 font-medium truncate hidden sm:block">
                 {sub}
               </p>
             )}
@@ -288,7 +288,7 @@ export default function DashboardLayout() {
             </button>
 
             {/* Notifications */}
-            <Link
+            {/* <Link
               to="/notifications"
               className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-gray-200/80 text-gray-500 hover:text-gray-800 hover:border-gray-300 transition-all duration-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
             >
@@ -298,7 +298,7 @@ export default function DashboardLayout() {
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
-            </Link>
+            </Link> */}
 
             {/* Profile dropdown */}
             <div className="relative" ref={profileRef}>

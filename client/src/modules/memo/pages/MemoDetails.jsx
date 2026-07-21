@@ -10,6 +10,8 @@ import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
+import TableActionButton from "@/components/ui/TableActionButton";
+import { SkeletonDetailCard, Skeleton } from "@/components/ui/Skeleton";
 
 export default function MemoDetails() {
   const { id } = useParams();
@@ -18,6 +20,8 @@ export default function MemoDetails() {
 
   const [saleOpen, setSaleOpen] = useState(false);
   const [extendOpen, setExtendOpen] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
+  const [isExtending, setIsExtending] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [newExpectedReturn, setNewExpectedReturn] = useState("");
@@ -26,11 +30,14 @@ export default function MemoDetails() {
   const handleExtendSubmit = async (e) => {
     e.preventDefault();
     try {
+      setIsExtending(true);
       await extendMemo(newExpectedReturn);
       setExtendOpen(false);
       showSuccess("Extended", "Memo return date extended successfully!");
     } catch (err) {
       showError("Extend Failed", err?.response?.data?.message || "Failed to extend memo return date.");
+    } finally {
+      setIsExtending(false);
     }
   };
 
@@ -40,7 +47,22 @@ export default function MemoDetails() {
     }
   }, [isError, showError]);
 
-  if (isLoading) return <div className="text-gray-500 text-sm p-6">Loading memo details...</div>;
+  if (isLoading) return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-4 w-28 rounded-md" />
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-7 w-48 rounded-lg" />
+            <Skeleton className="h-4 w-36 rounded-md" />
+          </div>
+          <Skeleton className="h-6 w-20 rounded-full" />
+        </div>
+      </div>
+      <SkeletonDetailCard rows={8} cols={2} />
+      <SkeletonDetailCard rows={4} cols={1} title={false} />
+    </div>
+  );
   if (isError || !memo)
     return (
       <div className="text-center p-8 bg-white border border-gray-100 rounded-xl text-sm font-semibold text-gray-500 shadow-sm">
@@ -73,6 +95,7 @@ export default function MemoDetails() {
   const handleSaleSubmit = async (e) => {
     e.preventDefault();
     try {
+      setIsConverting(true);
       await convertMemoItem({
         itemId: selectedItemId,
         paymentMethod,
@@ -81,6 +104,8 @@ export default function MemoDetails() {
       showSuccess("Sold", "Item successfully sold and purchase invoice generated!");
     } catch (err) {
       showError("Conversion Failed", err?.response?.data?.message || "Failed to process conversion to sale.");
+    } finally {
+      setIsConverting(false);
     }
   };
 
@@ -118,7 +143,7 @@ export default function MemoDetails() {
               {memo.status}
             </Badge>
           </div>
-          <p className="mt-1 text-sm text-gray-500 font-medium">
+          <p className="mt-1 text-sm text-gray-600 mt-1 font-medium">
             Customer: <span className="font-semibold text-gray-900">{memo.customerId?.fullName || "—"}</span> | Expected Return:{" "}
             <span className="font-semibold text-gray-900">
               {new Date(memo.expectedReturn).toLocaleDateString()}
@@ -164,20 +189,18 @@ export default function MemoDetails() {
               <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
                 {item.status === "On Memo" && (
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleReturn(item._id)}
-                      className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
+                    <TableActionButton
+                      icon={RefreshCw}
                       title="Return Item to Stock"
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleOpenSale(item._id)}
-                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer flex-shrink-0"
+                      isLoading={returnConfirm.open && returnConfirm.itemId === item._id && returnConfirm.isLoading}
+                      onClick={() => handleReturn(item._id)}
+                    />
+                    <TableActionButton
+                      icon={ShoppingCart}
                       title="Convert to Sale"
-                    >
-                      <ShoppingCart className="h-4 w-4" />
-                    </button>
+                      variant="success"
+                      onClick={() => handleOpenSale(item._id)}
+                    />
                   </div>
                 )}
                 {item.status !== "On Memo" && <span className="text-xs text-gray-400">—</span>}
@@ -206,7 +229,7 @@ export default function MemoDetails() {
             <Button variant="outline" onClick={() => setSaleOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Generate Invoice</Button>
+            <Button type="submit" isLoading={isConverting}>Generate Invoice</Button>
           </div>
         </form>
       </Modal>
@@ -224,7 +247,7 @@ export default function MemoDetails() {
             <Button variant="outline" onClick={() => setExtendOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Extend Return Date</Button>
+            <Button type="submit" isLoading={isExtending}>Extend Return Date</Button>
           </div>
         </form>
       </Modal>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Save, Plus, X, Users, Settings2, Edit2, Trash2 } from "lucide-react";
+import { Save, Plus, X, Users, Settings2, Edit2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { SkeletonPageHeader, SkeletonDetailCard } from "@/components/ui/Skeleton";
 import { useSettings } from "../hooks/useSettings";
 import { useUsers } from "../hooks/useUsers";
 import { settingsSchema } from "../validation/settingsSchema";
@@ -17,6 +18,7 @@ import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import TableActionButton from "@/components/ui/TableActionButton";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("system"); // "system" or "users"
@@ -25,14 +27,14 @@ export default function Settings() {
   const { user: authUser } = useAuth();
 
   const { showSuccess, showError } = useToast();
-  
+
   // Consistent role options from Create Account page
   const ROLE_OPTIONS = [
     { value: "Workshop-Staff", label: "Workshop Staff (Default)" },
     { value: "Manager", label: "Manager" },
     { value: "Admin", label: "Admin" },
   ];
-  
+
   // Labs Configuration State
   const [labInput, setLabInput] = useState("");
   const [labs, setLabs] = useState([]);
@@ -154,17 +156,17 @@ export default function Settings() {
 
   const getUserRoleId = (user) => {
     if (!user) return "Workshop-Staff";
-    
+
     const roleName = user.roleName || user.roleId?.name || user.roleId || "";
     if (typeof roleName === "string" && ROLE_OPTIONS.some((r) => r.value === roleName)) {
       return roleName;
     }
-    
+
     if (typeof user.roleId === "object") {
       const name = user.roleId?.name || "";
       if (ROLE_OPTIONS.some((r) => r.value === name)) return name;
     }
-    
+
     return "Workshop-Staff";
   };
 
@@ -246,16 +248,21 @@ export default function Settings() {
   };
 
   const tabClass = (tabId) =>
-    `flex items-center gap-2 border-b-2 px-5 py-3.5 text-sm font-semibold transition-all duration-150 cursor-pointer ${
-      activeTab === tabId
-        ? "border-accent text-accent"
-        : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+    `flex items-center gap-2 border-b-2 px-5 py-3.5 text-sm font-semibold transition-all duration-150 cursor-pointer ${activeTab === tabId
+      ? "border-accent text-accent"
+      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
     }`;
 
   if (isSettingsLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Spinner size={40} />
+      <div className="flex flex-col gap-6">
+        <SkeletonPageHeader showButton={false} showSearch={false} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SkeletonDetailCard rows={6} cols={1} />
+          <SkeletonDetailCard rows={6} cols={1} />
+          <SkeletonDetailCard rows={4} cols={1} />
+          <SkeletonDetailCard rows={4} cols={1} />
+        </div>
       </div>
     );
   }
@@ -263,8 +270,8 @@ export default function Settings() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">System Settings</h1>
-        <p className="mt-1 text-sm text-gray-500">Configure global parameters, ID prefixes, and manage system users & access roles</p>
+        <h1 className="text-2xl font-bold text-gray-900 font-display">System Settings</h1>
+        <p className="text-sm text-gray-600 mt-1 font-medium">Configure global parameters, ID prefixes, and manage system users & access roles</p>
       </div>
 
       {/* Tabs */}
@@ -477,25 +484,86 @@ export default function Settings() {
                 </td>
                 <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleOpenEditUser(u)}
-                      className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
+                    <TableActionButton
+                      icon={Edit2}
                       title="Edit User"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </button>
+                      onClick={() => handleOpenEditUser(u)}
+                    />
                     {u._id !== currentUserId && (
-                      <button
-                        onClick={() => handleDeleteUser(u._id)}
-                        className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer flex-shrink-0"
+                      <TableActionButton
+                        icon={Trash2}
                         title="Delete User"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                        variant="danger"
+                        isLoading={deleteConfirm.open && deleteConfirm.id === u._id && deleteConfirm.isLoading}
+                        onClick={() => handleDeleteUser(u._id)}
+                      />
                     )}
                   </div>
                 </td>
               </tr>
+            )}
+            renderMobileCard={(u, idx, { isExpanded, toggleExpand }) => (
+              <div
+                key={u._id}
+                className="rounded-2xl border border-gray-100 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.015)] overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={toggleExpand}
+                  className="w-full p-4 flex items-center justify-between gap-3 text-left bg-white hover:bg-gray-50/50 transition-colors cursor-pointer select-none"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-900 text-sm truncate">{u.fullName}</span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                      <span className="font-semibold text-primary">{u.roleName || u.roleId?.name || "Staff"}</span>
+                      <span>•</span>
+                      <span className="truncate">{u.email}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant={getStatusVariant(u.status)}>{u.status}</Badge>
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                      {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <div className="border-t border-gray-100 p-4 bg-gray-50/40 flex flex-col gap-2.5 text-xs text-gray-700">
+                    <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                      <span className="font-semibold text-gray-500">Email Address</span>
+                      <span className="font-medium text-gray-900 truncate">{u.email}</span>
+                    </div>
+                    <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                      <span className="font-semibold text-gray-500">Phone Number</span>
+                      <span className="font-medium text-gray-900">{u.phone || "—"}</span>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                      <TableActionButton
+                        icon={Edit2}
+                        title="Edit User"
+                        showLabel
+                        label="Edit"
+                        onClick={() => handleOpenEditUser(u)}
+                      />
+                      {u._id !== currentUserId && (
+                        <TableActionButton
+                          icon={Trash2}
+                          title="Delete User"
+                          variant="danger"
+                          showLabel
+                          label="Delete"
+                          isLoading={deleteConfirm.open && deleteConfirm.id === u._id && deleteConfirm.isLoading}
+                          onClick={() => handleDeleteUser(u._id)}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           />
 

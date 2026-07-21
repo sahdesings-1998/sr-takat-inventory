@@ -8,17 +8,16 @@ export default function InventoryDashboard() {
   const [activeTab, setActiveTab] = useState("gemstones");
 
   const tabClass = (tabId) =>
-    `flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-all duration-150 cursor-pointer ${
-      activeTab === tabId
-        ? "border-accent text-accent"
-        : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+    `flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-all duration-150 cursor-pointer ${activeTab === tabId
+      ? "border-accent text-accent"
+      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
     }`;
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Gemstone & Materials Inventory</h1>
-        <p className="mt-1 text-sm text-gray-500 font-medium">
+        <h1 className="text-2xl font-bold text-gray-900 font-display">Gemstone & Materials Inventory</h1>
+        <p className="mt-1 text-sm text-gray-600 mt-1 font-medium">
           Track individual gemstones, parcel lots, and raw materials across all locations
         </p>
       </div>

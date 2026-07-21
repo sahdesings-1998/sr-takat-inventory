@@ -179,7 +179,7 @@ const DatePicker = forwardRef(function DatePicker(
   return (
     <div className={cn("flex flex-col gap-2", containerClassName)} ref={wrapperRef}>
       {label && (
-        <label htmlFor={inputId} className="text-[13px] font-semibold text-slate-700 tracking-[-0.01em]">
+        <label htmlFor={inputId} className="text-xs sm:text-sm font-semibold text-gray-700 tracking-tight select-none">
           {label}
           {required && <span className="ml-1 text-danger">*</span>}
         </label>
@@ -197,9 +197,12 @@ const DatePicker = forwardRef(function DatePicker(
             onBlur={onBlur}
             disabled={disabled}
             className={cn(
-              "flex h-11 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/95 px-4 py-2.5 text-left text-sm shadow-sm transition-all duration-200",
-              "hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50",
-              disabled && "cursor-not-allowed opacity-60",
+              "flex h-11 w-full items-center justify-between rounded-xl border bg-white px-4 text-left text-xs sm:text-sm transition-all duration-200",
+              "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50",
+              "hover:border-gray-400",
+              disabled
+                ? "bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed"
+                : "border-gray-200 text-gray-900",
               error && "border-danger/60 focus:border-danger/60 focus:ring-danger/20",
               className
             )}
@@ -209,12 +212,12 @@ const DatePicker = forwardRef(function DatePicker(
             aria-invalid={Boolean(error)}
             aria-describedby={error ? `${inputId}-error` : undefined}
           >
-            <span className={cn("truncate", selectedDate ? "text-slate-900" : "text-slate-400")}> 
+            <span className={cn("truncate", selectedDate ? "text-gray-900" : "text-gray-400")}>
               {selectedDate ? formatDisplayDate(selectedDate) : placeholder}
             </span>
 
             <span className="ml-3 flex shrink-0 items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-slate-500" />
+              <CalendarDays className="h-4 w-4 text-gray-500" />
             </span>
           </button>
 

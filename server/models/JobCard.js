@@ -111,6 +111,10 @@ const jobCardSchema = new Schema(
       type: Date,
       default: null,
     },
+    notes: {
+      type: String,
+      default: "",
+    },
     productionStages: {
       type: [productionStageSchema],
       default: [],

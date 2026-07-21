@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Plus, Edit2, Trash2 } from "lucide-react";
+import { Plus, Edit2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import TableActionButton from "@/components/ui/TableActionButton";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useToast } from "@/contexts/ToastContext";
 import Button from "@/components/ui/Button";
@@ -15,6 +16,7 @@ import ExpenseModal from "../components/ExpenseModal.jsx";
 import FinancialSummary from "../components/FinancialSummary.jsx";
 import { EXPENSE_CATEGORIES, STATUS_OPTIONS } from "../constants/index.js";
 import { formatCurrency, formatDate } from "@/utils/formatters.js";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
 
 export function ExpenseManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -101,15 +103,19 @@ export function ExpenseManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Expense Management</h1>
-          <p className="text-gray-600 mt-1">Track and manage all business expenses with filtering and reports.</p>
+      {isLoading && !expenses?.length ? (
+        <SkeletonPageHeader />
+      ) : (
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 font-display">Expense Management</h1>
+            <p className="text-sm text-gray-600 mt-1 font-medium">Track and manage all business expenses with filtering and reports.</p>
+          </div>
+          <Button onClick={handleOpenModal} className="w-fit flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Add Expense
+          </Button>
         </div>
-        <Button onClick={handleOpenModal} className="w-fit flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Add Expense
-        </Button>
-      </div>
+      )}
 
       <FinancialSummary
         totalIncome={totalIncome}
@@ -229,6 +235,72 @@ export function ExpenseManagement() {
                 </div>
               </td>
             </tr>
+          )}
+          renderMobileCard={(expense, idx, { isExpanded, toggleExpand }) => (
+            <div
+              key={expense._id}
+              className="rounded-2xl border border-gray-100 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.015)] overflow-hidden"
+            >
+              <button
+                type="button"
+                onClick={toggleExpand}
+                className="w-full p-4 flex items-center justify-between gap-3 text-left bg-white hover:bg-gray-50/50 transition-colors cursor-pointer select-none"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-900 text-sm truncate">{expense.description || expense.category}</span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 text-xs">
+                    <span className="font-mono font-bold text-red-600">{formatCurrency(expense.amount)}</span>
+                    <span className="text-gray-400 font-medium">•</span>
+                    <span className="text-gray-500">{formatDate(expense.date)}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Badge variant={expense.status === "Completed" ? "success" : expense.status === "Pending" ? "warning" : "danger"}>
+                    {expense.status}
+                  </Badge>
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                    {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </div>
+                </div>
+              </button>
+
+              {isExpanded && (
+                <div className="border-t border-gray-100 p-4 bg-gray-50/40 flex flex-col gap-2.5 text-xs text-gray-700">
+                  <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                    <span className="font-semibold text-gray-500">Category</span>
+                    <span className="font-medium text-gray-900">{expense.category}</span>
+                  </div>
+                  <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                    <span className="font-semibold text-gray-500">Vendor</span>
+                    <span className="font-medium text-gray-900">{expense.vendor || "—"}</span>
+                  </div>
+                  <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                    <span className="font-semibold text-gray-500">Payment Method</span>
+                    <span className="font-medium text-gray-900">{expense.paymentMethod}</span>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                    <TableActionButton
+                      icon={Edit2}
+                      title="Edit Expense"
+                      showLabel
+                      label="Edit"
+                      onClick={() => handleEditExpense(expense)}
+                    />
+                    <TableActionButton
+                      icon={Trash2}
+                      title="Delete Expense"
+                      variant="danger"
+                      showLabel
+                      label="Delete"
+                      onClick={() => handleDeleteExpense(expense._id)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         />
       </div>

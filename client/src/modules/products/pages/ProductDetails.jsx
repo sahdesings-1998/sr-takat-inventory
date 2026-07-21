@@ -25,6 +25,7 @@ import { componentSchema } from "../validation/productSchema";
 import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
 import Button from "@/components/ui/Button";
+import TableActionButton from "@/components/ui/TableActionButton";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Modal from "@/components/ui/Modal";
@@ -32,6 +33,8 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import Card, { CardHeader, CardBody } from "@/components/ui/Card";
+import { SkeletonDetailCard, Skeleton } from "@/components/ui/Skeleton";
+import DocumentPreviewModal from "@/components/ui/DocumentPreviewModal";
 
 // Product types that support component/recipe management
 const COMPONENT_ELIGIBLE_TYPES = ["Jewellery", "Watch", "Custom Product"];
@@ -114,7 +117,21 @@ export default function ProductDetails() {
 
   const [compOpen, setCompOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, isLoading: false });
-  const [previewImage, setPreviewImage] = useState(null);
+  const [previewDoc, setPreviewDoc] = useState({
+    isOpen: false,
+    fileUrl: "",
+    fileName: "",
+    fileType: "",
+  });
+
+  const handleOpenDocPreview = (url, name, type = "Document") => {
+    setPreviewDoc({
+      isOpen: true,
+      fileUrl: url,
+      fileName: name,
+      fileType: type,
+    });
+  };
 
   // Detailed Costing State
   const [costingForm, setCostingForm] = useState({
@@ -161,7 +178,7 @@ export default function ProductDetails() {
     handleSubmit,
     watch,
     reset,
-    formState: { errors },
+    formState: { errors, isSubmitting: isSubmittingComp },
   } = useForm({
     resolver: zodResolver(componentSchema),
     defaultValues: {
@@ -311,7 +328,27 @@ export default function ProductDetails() {
     setCostingForm({ ...costingForm, percentageItems: updated });
   };
 
-  if (isLoading) return <div className="text-gray-500 text-sm p-6">Loading details...</div>;
+  if (isLoading) return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-4 w-28 rounded-md" />
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-7 w-64 rounded-lg" />
+            <Skeleton className="h-4 w-40 rounded-md" />
+          </div>
+          <Skeleton className="h-6 w-20 rounded-full" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Skeleton className="h-24 rounded-[20px]" />
+        <Skeleton className="h-24 rounded-[20px]" />
+        <Skeleton className="h-24 rounded-[20px]" />
+      </div>
+      <SkeletonDetailCard rows={8} cols={2} />
+      <SkeletonDetailCard rows={6} cols={2} />
+    </div>
+  );
   if (isError || !product)
     return (
       <div className="text-center p-8 bg-white border border-gray-100 rounded-xl text-sm font-semibold text-gray-500 shadow-sm">
@@ -688,13 +725,13 @@ export default function ProductDetails() {
                     </td>
                     <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-500 break-words text-xs sm:text-sm">{comp.remarks || "—"}</td>
                     <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
-                      <button
-                        onClick={() => onDeleteComp(comp._id)}
-                        className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer flex-shrink-0"
+                      <TableActionButton
+                        icon={Trash2}
                         title="Remove Component"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                        variant="danger"
+                        isLoading={deleteConfirm.open && deleteConfirm.id === comp._id && deleteConfirm.isLoading}
+                        onClick={() => onDeleteComp(comp._id)}
+                      />
                     </td>
                   </tr>
                 )}
@@ -789,7 +826,7 @@ export default function ProductDetails() {
                     <div
                       key={idx}
                       className="relative group aspect-square rounded-xl overflow-hidden border border-gray-100 bg-gray-50 cursor-pointer"
-                      onClick={() => setPreviewImage(url)}
+                      onClick={() => handleOpenDocPreview(url, `Product Gallery Image ${idx + 1}`, "Image")}
                     >
                       <img
                         src={url}
@@ -814,74 +851,69 @@ export default function ProductDetails() {
               </CardHeader>
               <CardBody className="flex flex-col gap-2.5">
                 {hasValue(product.certificatePdf) && (
-                  <a
-                    href={product.certificatePdf}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-150 bg-gray-50/50 hover:bg-gray-50 hover:border-gray-200 transition-all text-sm text-primary font-semibold"
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDocPreview(product.certificatePdf, "Certificate Report", "PDF Document")}
+                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-150 bg-gray-50/50 hover:bg-gray-50 hover:border-gray-200 transition-all text-sm text-primary font-semibold text-left w-full cursor-pointer"
                   >
                     <span className="p-2 bg-primary/10 rounded-lg text-primary text-xs font-bold">PDF</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[10px] text-gray-400 font-normal uppercase tracking-wider">Certificate Report</p>
                       <p className="truncate text-gray-700 text-xs">View Certificate PDF</p>
                     </div>
-                  </a>
+                  </button>
                 )}
                 {hasValue(product.warranty) && (
-                  <a
-                    href={product.warranty}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-155 bg-gray-50/50 hover:bg-gray-50 hover:border-gray-200 transition-all text-sm text-primary font-semibold"
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDocPreview(product.warranty, "Warranty", "Document")}
+                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-155 bg-gray-50/50 hover:bg-gray-50 hover:border-gray-200 transition-all text-sm text-primary font-semibold text-left w-full cursor-pointer"
                   >
                     <span className="p-2 bg-primary/10 rounded-lg text-primary text-xs font-bold">WTY</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[10px] text-gray-400 font-normal uppercase tracking-wider">Warranty</p>
                       <p className="truncate text-gray-700 text-xs">View Warranty Document</p>
                     </div>
-                  </a>
+                  </button>
                 )}
                 {hasValue(product.cadFiles) && (
-                  <a
-                    href={product.cadFiles}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-155 bg-gray-50/50 hover:bg-gray-50 hover:border-gray-200 transition-all text-sm text-primary font-semibold"
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDocPreview(product.cadFiles, "CAD / 3D File", "Document")}
+                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-155 bg-gray-50/50 hover:bg-gray-50 hover:border-gray-200 transition-all text-sm text-primary font-semibold text-left w-full cursor-pointer"
                   >
                     <span className="p-2 bg-primary/10 rounded-lg text-primary text-xs font-bold">CAD</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[10px] text-gray-400 font-normal uppercase tracking-wider">CAD / 3D File</p>
                       <p className="truncate text-gray-700 text-xs">Download CAD File</p>
                     </div>
-                  </a>
+                  </button>
                 )}
                 {hasValue(product.videos) && (
-                  <a
-                    href={product.videos}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-155 bg-gray-50/50 hover:bg-gray-50 hover:border-gray-200 transition-all text-sm text-primary font-semibold"
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDocPreview(product.videos, "Video Clip", "Document")}
+                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-155 bg-gray-50/50 hover:bg-gray-50 hover:border-gray-200 transition-all text-sm text-primary font-semibold text-left w-full cursor-pointer"
                   >
                     <span className="p-2 bg-primary/10 rounded-lg text-primary text-xs font-bold">VID</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[10px] text-gray-400 font-normal uppercase tracking-wider">Video Clip</p>
                       <p className="truncate text-gray-700 text-xs">Play Product Video</p>
                     </div>
-                  </a>
+                  </button>
                 )}
                 {hasValue(product.documents) && (
-                  <a
-                    href={product.documents}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-155 bg-gray-50/50 hover:bg-gray-50 hover:border-gray-200 transition-all text-sm text-primary font-semibold"
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDocPreview(product.documents, "Attachment File", "Document")}
+                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-155 bg-gray-50/50 hover:bg-gray-50 hover:border-gray-200 transition-all text-sm text-primary font-semibold text-left w-full cursor-pointer"
                   >
                     <span className="p-2 bg-primary/10 rounded-lg text-primary text-xs font-bold">DOC</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[10px] text-gray-400 font-normal uppercase tracking-wider">Attachment</p>
                       <p className="truncate text-gray-700 text-xs">View Document File</p>
                     </div>
-                  </a>
+                  </button>
                 )}
               </CardBody>
             </Card>
@@ -1377,7 +1409,7 @@ export default function ProductDetails() {
             <Button variant="outline" onClick={() => setCompOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Add Component</Button>
+            <Button type="submit" isLoading={isSubmittingComp}>Add Component</Button>
           </div>
         </form>
       </Modal>
@@ -1393,15 +1425,13 @@ export default function ProductDetails() {
         variant="warning"
       />
 
-      <Modal isOpen={Boolean(previewImage)} onClose={() => setPreviewImage(null)} title="Image Preview">
-        <div className="flex items-center justify-center w-full max-h-[70vh] md:max-h-[60vh] overflow-auto">
-          <img
-            src={previewImage}
-            alt="Preview"
-            className="max-w-full max-h-full object-contain rounded-xl shadow-md border border-gray-100"
-          />
-        </div>
-      </Modal>
+      <DocumentPreviewModal
+        isOpen={previewDoc.isOpen}
+        onClose={() => setPreviewDoc((p) => ({ ...p, isOpen: false }))}
+        fileUrl={previewDoc.fileUrl}
+        fileName={previewDoc.fileName}
+        fileType={previewDoc.fileType}
+      />
     </div>
   );
 }

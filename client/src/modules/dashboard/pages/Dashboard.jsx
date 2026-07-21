@@ -33,7 +33,7 @@ import {
   Pie,
 } from "recharts";
 import Badge from "@/components/ui/Badge";
-import Spinner from "@/components/ui/Spinner";
+import { DashboardSkeleton, Skeleton } from "@/components/ui/Skeleton";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -97,8 +97,8 @@ function StatCard({ title, value, subtitle, icon: Icon, iconBg, trend, trendUp, 
           <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-400 mb-1 truncate">
             {title}
           </p>
-          <p className="text-lg sm:text-xl font-bold text-gray-900 tracking-[-0.03em]">{value}</p>
-          <p className="mt-1 text-[11px] sm:text-[12px] text-gray-500 font-medium leading-snug">{subtitle}</p>
+          <p className="text-lg sm:text-xl font-bold font-mono text-gray-900 tracking-tight">{value}</p>
+          <p className="mt-1 text-[11px] sm:text-[12px] text-gray-600 mt-1 font-medium leading-snug">{subtitle}</p>
         </div>
         <div className={`flex h-10 w-10 items-center justify-center rounded-[12px] shrink-0 ${iconBg}`}>
           <Icon className="h-5 w-5" />
@@ -290,11 +290,7 @@ export default function Dashboard() {
   ];
 
   if (isDashLoading) {
-    return (
-      <div className="flex justify-center items-center h-96">
-        <Spinner size={48} />
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
@@ -348,8 +344,13 @@ export default function Dashboard() {
         </div>
 
         {isForecastLoading ? (
-          <div className="mt-6 flex justify-center py-8">
-            <Spinner size={36} />
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {["bg-emerald-50", "bg-rose-50", "bg-gray-50"].map((bg, i) => (
+              <div key={i} className={`rounded-[18px] border border-gray-100 ${bg} p-4 flex flex-col gap-2`}>
+                <Skeleton className="h-3 w-32 rounded" />
+                <Skeleton className="h-7 w-24 rounded-md" />
+              </div>
+            ))}
           </div>
         ) : !forecastSummary.hasForecastData ? (
           <div className="mt-6 rounded-[18px] border border-dashed border-gray-200 bg-gray-50/70 px-4 py-8 text-center text-[13px] text-gray-500">
@@ -604,10 +605,10 @@ export default function Dashboard() {
               <div className="flex items-center gap-3.5 min-w-0">
                 <div
                   className={`h-9 w-9 rounded-[12px] flex items-center justify-center shrink-0 text-xs font-bold ${log.action === "delete"
-                      ? "bg-danger/10 text-danger"
-                      : log.action === "create"
-                        ? "bg-success/10 text-success"
-                        : "bg-info/10 text-info"
+                    ? "bg-danger/10 text-danger"
+                    : log.action === "create"
+                      ? "bg-success/10 text-success"
+                      : "bg-info/10 text-info"
                     }`}
                 >
                   {log.action?.[0]?.toUpperCase()}

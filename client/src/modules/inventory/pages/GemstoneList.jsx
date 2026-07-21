@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Edit2, Trash2, ArrowRightLeft, Image as ImageIcon } from "lucide-react";
+import { Plus, Edit2, Trash2, ArrowRightLeft, Image as ImageIcon, ChevronDown, ChevronUp } from "lucide-react";
 import { useGemstones } from "../hooks/useInventory";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
 import { useSuppliers } from "@/modules/suppliers/hooks/useSuppliers";
 import { useCertificates } from "@/modules/certificates/hooks/useCertificates";
 import { gemstoneSchema } from "../validation/inventorySchema";
@@ -17,7 +18,9 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import SearchInput from "@/components/ui/SearchInput";
+import TableActionButton from "@/components/ui/TableActionButton";
 import ImageUploader from "@/components/ui/ImageUploader";
+import DocumentPreviewModal from "@/components/ui/DocumentPreviewModal";
 
 export default function GemstoneList() {
   const [searchInput, setSearchInput] = useState("");
@@ -39,6 +42,7 @@ export default function GemstoneList() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingStone, setEditingStone] = useState(null);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
   const [selectedStone, setSelectedStone] = useState(null);
   const [statusValue, setStatusValue] = useState("");
   const [statusRemarks, setStatusRemarks] = useState("");
@@ -154,6 +158,7 @@ export default function GemstoneList() {
   const handleStatusSubmit = async (e) => {
     e.preventDefault();
     try {
+      setIsSubmittingStatus(true);
       await updateGemstoneStatus({
         id: selectedStone._id,
         status: statusValue,
@@ -163,6 +168,8 @@ export default function GemstoneList() {
       setStatusOpen(false);
     } catch (err) {
       showError("Update Failed", "Failed to update gemstone status.");
+    } finally {
+      setIsSubmittingStatus(false);
     }
   };
 
@@ -215,15 +222,19 @@ export default function GemstoneList() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">Individual Gemstone Stock</h2>
-          <p className="text-sm text-gray-500">Track individual stones by ID, type, origin, carat weight, certificate, and status lifecycle</p>
+      {isLoading && !gemstones?.length ? (
+        <SkeletonPageHeader />
+      ) : (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 font-display">Individual Gemstone Stock</h1>
+            <p className="text-sm text-gray-600 mt-1 font-medium">Track individual stones by ID, type, origin, carat weight, certificate, and status lifecycle</p>
+          </div>
+          <Button onClick={handleOpenAdd} className="w-fit">
+            <Plus className="h-4 w-4" /> Add Gemstone
+          </Button>
         </div>
-        <Button onClick={handleOpenAdd} className="w-fit">
-          <Plus className="h-4 w-4" /> Add Gemstone
-        </Button>
-      </div>
+      )}
 
       <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-4 rounded-[20px] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
         <SearchInput
@@ -306,30 +317,99 @@ export default function GemstoneList() {
             </td>
             <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
               <div className="flex items-center gap-2 flex-nowrap">
-                <button
-                  onClick={() => handleOpenStatus(stone)}
-                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
+                <TableActionButton
+                  icon={ArrowRightLeft}
                   title="Adjust Status"
-                >
-                  <ArrowRightLeft className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handleOpenEdit(stone)}
-                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
+                  onClick={() => handleOpenStatus(stone)}
+                />
+                <TableActionButton
+                  icon={Edit2}
                   title="Edit"
-                >
-                  <Edit2 className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(stone._id)}
-                  className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer"
+                  onClick={() => handleOpenEdit(stone)}
+                />
+                <TableActionButton
+                  icon={Trash2}
                   title="Delete"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                  variant="danger"
+                  isLoading={deleteConfirm.open && deleteConfirm.id === stone._id && deleteConfirm.isLoading}
+                  onClick={() => handleDelete(stone._id)}
+                />
               </div>
             </td>
           </tr>
+        )}
+        renderMobileCard={(stone, idx, { isExpanded, toggleExpand }) => (
+          <div
+            key={stone._id}
+            className="rounded-2xl border border-gray-100 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.015)] overflow-hidden"
+          >
+            <button
+              type="button"
+              onClick={toggleExpand}
+              className="w-full p-4 flex items-center justify-between gap-3 text-left bg-white hover:bg-gray-50/50 transition-colors cursor-pointer select-none"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-primary text-sm">{stone.stoneId}</span>
+                  <span className="text-xs text-gray-500 font-medium truncate">• {stone.gemstone}</span>
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-xs">
+                  <span className="font-mono font-bold text-gray-900">{stone.carat} ct</span>
+                  <span className="text-gray-400 font-medium">•</span>
+                  <span className="font-mono font-bold text-emerald-600">${stone.costPrice ? stone.costPrice.toLocaleString() : "—"}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge variant={getStatusVariant(stone.status)}>{stone.status}</Badge>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </div>
+              </div>
+            </button>
+
+            {isExpanded && (
+              <div className="border-t border-gray-100 p-4 bg-gray-50/40 flex flex-col gap-2.5 text-xs text-gray-700">
+                <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                  <span className="font-semibold text-gray-500">Variety / Color</span>
+                  <span className="font-medium text-gray-900">{stone.variety || "—"} / {stone.color || "—"}</span>
+                </div>
+                <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                  <span className="font-semibold text-gray-500">Shape / Cut</span>
+                  <span className="font-medium text-gray-900">{stone.shape || "—"} / {stone.cut || "—"}</span>
+                </div>
+                <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                  <span className="font-semibold text-gray-500">Origin / Location</span>
+                  <span className="font-medium text-gray-900">{stone.origin || "—"} / {stone.location || "—"}</span>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                  <TableActionButton
+                    icon={ArrowRightLeft}
+                    title="Adjust Status"
+                    showLabel
+                    label="Status"
+                    onClick={() => handleOpenStatus(stone)}
+                  />
+                  <TableActionButton
+                    icon={Edit2}
+                    title="Edit"
+                    showLabel
+                    label="Edit"
+                    onClick={() => handleOpenEdit(stone)}
+                  />
+                  <TableActionButton
+                    icon={Trash2}
+                    title="Delete"
+                    variant="danger"
+                    showLabel
+                    label="Delete"
+                    isLoading={deleteConfirm.open && deleteConfirm.id === stone._id && deleteConfirm.isLoading}
+                    onClick={() => handleDelete(stone._id)}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         )}
       />
 
@@ -470,7 +550,7 @@ export default function GemstoneList() {
             <Button variant="outline" onClick={() => setStatusOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Update Status</Button>
+            <Button type="submit" isLoading={isSubmittingStatus}>Update Status</Button>
           </div>
         </form>
       </Modal>
@@ -486,20 +566,13 @@ export default function GemstoneList() {
         variant="danger"
       />
 
-      {/* Image Preview Modal */}
-      <Modal
+      <DocumentPreviewModal
         isOpen={Boolean(previewImage)}
         onClose={() => setPreviewImage(null)}
-        title="Image Preview"
-      >
-        <div className="flex items-center justify-center w-full max-h-[70vh] md:max-h-[60vh] overflow-auto">
-          <img
-            src={previewImage}
-            alt="Preview"
-            className="max-w-full max-h-full object-contain rounded-xl shadow-md border border-gray-100"
-          />
-        </div>
-      </Modal>
+        fileUrl={previewImage}
+        fileName="Gemstone Image Preview"
+        fileType="Image"
+      />
     </div>
   );
 }

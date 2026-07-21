@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, ExternalLink, FileText, Award } from "lucide-react";
+import { Plus, Trash2, ExternalLink, FileText, Award, ChevronDown, ChevronUp, Upload, X } from "lucide-react";
 import { useCertificates } from "../hooks/useCertificates";
 import { useGemstones } from "@/modules/inventory/hooks/useInventory";
 import { useProducts } from "@/modules/products/hooks/useProducts";
@@ -13,8 +13,12 @@ import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import DataTable from "@/components/ui/DataTable";
 import Card, { CardBody } from "@/components/ui/Card";
+import TableActionButton from "@/components/ui/TableActionButton";
 import Badge from "@/components/ui/Badge";
 import FileUploader from "@/components/ui/FileUploader";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
+import DocumentPreviewModal from "@/components/ui/DocumentPreviewModal";
+
 
 export default function CertificateList() {
   const { certificates, isLoading, isError, createCertificate, deleteCertificate, isCreating } = useCertificates();
@@ -25,6 +29,14 @@ export default function CertificateList() {
 
   const [isOpen, setIsOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, isLoading: false });
+  const [previewDoc, setPreviewDoc] = useState({
+    isOpen: false,
+    fileUrl: "",
+    fileName: "",
+    fileType: "",
+    uploadDate: "",
+  });
+
   const [form, setForm] = useState({
     certificateNo: "",
     lab: "GIA",
@@ -32,8 +44,7 @@ export default function CertificateList() {
     reportType: "Grading Report",
     entityType: "Gemstone",
     entityId: "",
-    fileUrl: "",
-    publicId: "",
+    file: null,
   });
 
   const labsList = settings?.certificateLabs || ["GIA", "GRS", "SSEF", "GÜBELIN", "IGI", "OTHER"];
@@ -44,40 +55,64 @@ export default function CertificateList() {
     }
   }, [isError, showError]);
 
+  const handleOpenPreview = (cert) => {
+    const ext = cert.format || cert.fileUrl?.split("?")[0]?.split(".").pop()?.toLowerCase();
+    const typeLabel = ext === "pdf" ? "PDF Document" : ["png", "jpg", "jpeg", "webp", "gif"].includes(ext) ? "Image" : "Document";
+
+    // Format size label
+    let sizeLabel = "N/A";
+    if (cert.bytes) {
+      sizeLabel = cert.bytes > 1024 * 1024 
+        ? `${(cert.bytes / 1024 / 1024).toFixed(2)} MB` 
+        : `${(cert.bytes / 1024).toFixed(1)} KB`;
+    }
+
+    setPreviewDoc({
+      isOpen: true,
+      fileUrl: `/certificates/${cert._id}/file`,
+      fileName: cert.originalFilename || `Certificate_${cert.certificateNo}.${ext || 'pdf'}`,
+      fileType: typeLabel,
+      uploadDate: cert.uploadTimestamp || cert.createdAt || cert.issueDate,
+      fileSize: sizeLabel,
+    });
+  };
+
+
   const handleOpenAdd = () => {
+    const defaultEntityType = "Gemstone";
+    const defaultOptions = defaultEntityType === "Gemstone" ? gemstones : products;
+    const defaultEntityId = defaultOptions.length > 0 ? defaultOptions[0]._id : "";
+
     setForm({
       certificateNo: "",
       lab: labsList[0] || "GIA",
       issueDate: new Date().toISOString().split("T")[0],
       reportType: "Grading Report",
-      entityType: "Gemstone",
-      entityId: "",
-      fileUrl: "",
-      publicId: "",
+      entityType: defaultEntityType,
+      entityId: defaultEntityId,
+      file: null,
     });
     setIsOpen(true);
   };
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    if (!form.certificateNo || !form.lab || !form.entityId || !form.fileUrl) {
-      showError("Validation Error", "Please fill in all required fields, including certificate file.");
+    if (!form.certificateNo || !form.lab || !form.entityId || !form.file) {
+      showError("Validation Error", "Please fill in all required fields, including the certificate file.");
       return;
     }
 
     try {
-      const payload = {
-        certificateNo: form.certificateNo,
-        lab: form.lab,
-        issueDate: form.issueDate,
-        reportType: form.reportType,
-        entityType: form.entityType,
-        entityId: form.entityId,
-        fileUrl: form.fileUrl,
-        publicId: form.publicId || "",
-      };
+      const formData = new FormData();
+      formData.append("certificateNo", form.certificateNo);
+      formData.append("lab", form.lab);
+      formData.append("issueDate", form.issueDate);
+      formData.append("reportType", form.reportType);
+      formData.append("entityType", form.entityType);
+      formData.append("entityId", form.entityId);
+      formData.append("file", form.file);
 
-      await createCertificate(payload);
+      await createCertificate(formData);
       showSuccess("Certificate Added", "Laboratory certificate added and linked successfully!");
       setIsOpen(false);
     } catch (err) {
@@ -107,24 +142,32 @@ export default function CertificateList() {
 
   // Set the first asset option automatically when entityType changes
   useEffect(() => {
-    if (assetOptions.length > 0) {
-      setForm((prev) => ({ ...prev, entityId: assetOptions[0].value }));
+    const currentOptions = form.entityType === "Gemstone" ? gemstones : products;
+    if (currentOptions.length > 0) {
+      const exists = currentOptions.some((opt) => opt._id === form.entityId);
+      if (!exists) {
+        setForm((prev) => ({ ...prev, entityId: currentOptions[0]._id }));
+      }
     } else {
       setForm((prev) => ({ ...prev, entityId: "" }));
     }
-  }, [form.entityType, gemstones, products]);
+  }, [form.entityType, gemstones, products, form.entityId]);
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-[-0.02em]">Laboratory Certificates</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage laboratory grading and identification reports linked to inventory assets</p>
+      {isLoading && !certificates?.length ? (
+        <SkeletonPageHeader />
+      ) : (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 font-display">Laboratory Certificates</h1>
+            <p className="text-sm text-gray-600 mt-1 font-medium">Manage laboratory grading and identification reports linked to inventory assets</p>
+          </div>
+          <Button onClick={handleOpenAdd} className="w-fit">
+            <Plus className="h-4.5 w-4.5" /> Upload Certificate
+          </Button>
         </div>
-        <Button onClick={handleOpenAdd} className="w-fit">
-          <Plus className="h-4.5 w-4.5" /> Upload Certificate
-        </Button>
-      </div>
+      )}
 
       <Card>
         <DataTable
@@ -150,28 +193,100 @@ export default function CertificateList() {
               </td>
               <td className="px-3 py-4 sm:px-4 md:px-6">
                 {cert.fileUrl ? (
-                  <a
-                    href={cert.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-accent hover:underline font-semibold"
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPreview(cert)}
+                    className="inline-flex items-center gap-1 text-xs text-accent hover:underline font-semibold cursor-pointer"
                   >
                     <FileText className="h-3.5 w-3.5" /> Open Report <ExternalLink className="h-3 w-3" />
-                  </a>
+                  </button>
                 ) : (
                   <span className="text-xs text-gray-400">No File</span>
                 )}
               </td>
               <td className="px-3 py-4 sm:px-4 md:px-6">
-                <button
-                  onClick={() => handleDelete(cert._id)}
-                  className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition-colors cursor-pointer flex-shrink-0"
+                <TableActionButton
+                  icon={Trash2}
                   title="Delete Certificate"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                  variant="danger"
+                  isLoading={deleteConfirm.open && deleteConfirm.id === cert._id && deleteConfirm.isLoading}
+                  onClick={() => handleDelete(cert._id)}
+                />
               </td>
             </tr>
+          )}
+          renderMobileCard={(cert, idx, { isExpanded, toggleExpand }) => (
+            <div
+              key={cert._id}
+              className="rounded-2xl border border-gray-100 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.015)] overflow-hidden"
+            >
+              <button
+                type="button"
+                onClick={toggleExpand}
+                className="w-full p-4 flex items-center justify-between gap-3 text-left bg-white hover:bg-gray-50/50 transition-colors cursor-pointer select-none"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Award className="h-4 w-4 text-accent flex-shrink-0" />
+                    <span className="font-semibold text-gray-900 text-sm truncate">{cert.certificateNo}</span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                    <span className="font-bold text-primary">{cert.lab}</span>
+                    <span>•</span>
+                    <span>{cert.reportType}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Badge variant={cert.entityType === "Gemstone" ? "info" : "success"}>
+                    {cert.entityType}
+                  </Badge>
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                    {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </div>
+                </div>
+              </button>
+
+              {isExpanded && (
+                <div className="border-t border-gray-100 p-4 bg-gray-50/40 flex flex-col gap-2.5 text-xs text-gray-700">
+                  <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                    <span className="font-semibold text-gray-500">Issue Date</span>
+                    <span className="font-medium text-gray-900">{cert.issueDate ? new Date(cert.issueDate).toLocaleDateString() : "—"}</span>
+                  </div>
+                  <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                    <span className="font-semibold text-gray-500">Linked Asset ID</span>
+                    <span className="font-mono font-medium text-gray-900">{cert.entityId?.stoneId || cert.entityId?.productCode || cert.entityId || "—"}</span>
+                  </div>
+                  <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                    <span className="font-semibold text-gray-500">Report Document</span>
+                    <span>
+                      {cert.fileUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPreview(cert)}
+                          className="inline-flex items-center gap-1 text-xs text-accent hover:underline font-semibold cursor-pointer"
+                        >
+                          <FileText className="h-3.5 w-3.5" /> Open Report <ExternalLink className="h-3 w-3" />
+                        </button>
+                      ) : (
+                        <span className="text-gray-450">No File</span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                    <TableActionButton
+                      icon={Trash2}
+                      title="Delete Certificate"
+                      variant="danger"
+                      showLabel
+                      label="Delete"
+                      isLoading={deleteConfirm.open && deleteConfirm.id === cert._id && deleteConfirm.isLoading}
+                      onClick={() => handleDelete(cert._id)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         />
       </Card>
@@ -180,32 +295,32 @@ export default function CertificateList() {
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Upload Laboratory Certificate">
         <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
           <Input
-            label="Certificate Number *"
+            label="Certificate Number"
             value={form.certificateNo}
             onChange={(e) => setForm({ ...form, certificateNo: e.target.value })}
             required
           />
           <Select
-            label="Laboratory *"
+            label="Laboratory"
             value={form.lab}
             onChange={(e) => setForm({ ...form, lab: e.target.value })}
             options={labsList.map((lab) => ({ value: lab, label: lab }))}
             required
           />
           <Input
-            label="Report Type *"
+            label="Report Type"
             value={form.reportType}
             onChange={(e) => setForm({ ...form, reportType: e.target.value })}
             required
           />
           <DatePicker
-            label="Issue Date *"
+            label="Issue Date"
             value={form.issueDate}
             onChange={(e) => setForm({ ...form, issueDate: e.target.value })}
             required
           />
           <Select
-            label="Entity Type *"
+            label="Entity Type"
             value={form.entityType}
             onChange={(e) => setForm({ ...form, entityType: e.target.value })}
             options={[
@@ -215,29 +330,55 @@ export default function CertificateList() {
             required
           />
           <Select
-            label="Link to Specific Asset *"
+            label="Link to Specific Asset"
             value={form.entityId}
             onChange={(e) => setForm({ ...form, entityId: e.target.value })}
             options={assetOptions}
             required
             disabled={assetOptions.length === 0}
           />
-          
-          <FileUploader
-            label="Upload Certificate File (PDF or Image)"
-            value={form.fileUrl}
-            onChange={(url) => setForm({ ...form, fileUrl: url })}
-            onPublicIdChange={(id) => setForm({ ...form, publicId: id })}
-          />
 
-          <div className="text-center text-xs text-gray-400 font-semibold my-1">— OR —</div>
+          <div className="flex flex-col gap-2">
+            <span className="text-xs sm:text-sm font-semibold text-gray-700 select-none">
+              Certificate File (PDF, JPG, JPEG, or PNG) *
+            </span>
+            <label className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50/70 p-4 text-center cursor-pointer hover:border-primary/50 hover:bg-white transition-all duration-200">
+              <input
+                type="file"
+                accept=".pdf,image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const selectedFile = e.target.files?.[0];
+                  if (selectedFile) {
+                    setForm({ ...form, file: selectedFile });
+                  }
+                }}
+              />
+              <Upload className="h-5 w-5 text-primary mb-1.5" />
+              <span className="text-xs sm:text-sm font-semibold text-gray-700">
+                {form.file ? form.file.name : "Select certificate file"}
+              </span>
+              <span className="text-[11px] text-gray-400 mt-1">
+                {form.file ? `${(form.file.size / 1024 / 1024).toFixed(2)} MB` : "PDF, JPG, JPEG, or PNG (Max 10MB)"}
+              </span>
+            </label>
+          </div>
 
-          <Input
-            label="Certificate File URL (or PDF Link)"
-            placeholder="https://..."
-            value={form.fileUrl}
-            onChange={(e) => setForm({ ...form, fileUrl: e.target.value })}
-          />
+          {form.file && (
+            <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs">
+              <span className="truncate font-semibold text-gray-700 max-w-[200px]" title={form.file.name}>
+                {form.file.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, file: null })}
+                className="text-gray-500 hover:text-danger p-1 rounded-full transition-colors cursor-pointer"
+                aria-label="Remove selected file"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 mt-2">
             <Button variant="outline" onClick={() => setIsOpen(false)}>
@@ -259,6 +400,16 @@ export default function CertificateList() {
         confirmLabel="Delete"
         isLoading={deleteConfirm.isLoading}
         variant="danger"
+      />
+
+      <DocumentPreviewModal
+        isOpen={previewDoc.isOpen}
+        onClose={() => setPreviewDoc((p) => ({ ...p, isOpen: false }))}
+        fileUrl={previewDoc.fileUrl}
+        fileName={previewDoc.fileName}
+        fileType={previewDoc.fileType}
+        uploadDate={previewDoc.uploadDate}
+        fileSize={previewDoc.fileSize}
       />
     </div>
   );

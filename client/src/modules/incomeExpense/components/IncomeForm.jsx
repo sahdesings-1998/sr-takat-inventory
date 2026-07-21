@@ -164,8 +164,8 @@ export function IncomeForm({ initialData, onSubmit, isLoading }) {
       />
 
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Saving..." : initialData ? "Update Income" : "Create Income"}
+        <Button type="submit" isLoading={isLoading}>
+          {initialData ? "Update Income" : "Create Income"}
         </Button>
       </div>
     </form>

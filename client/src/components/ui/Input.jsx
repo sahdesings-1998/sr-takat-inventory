@@ -38,7 +38,7 @@ const Input = forwardRef(function Input(
   return (
     <div className={cn("flex flex-col gap-2", containerClassName)}>
       {label && (
-        <label htmlFor={inputId} className="text-[13px] font-semibold text-gray-700 tracking-[-0.01em]">
+        <label htmlFor={inputId} className="text-xs sm:text-sm font-semibold text-gray-700 tracking-tight select-none">
           {label}
         </label>
       )}
@@ -50,7 +50,7 @@ const Input = forwardRef(function Input(
           value={value}
           onChange={onChange}
           className={cn(
-            "h-11 w-full rounded-xl border bg-white px-4 text-sm text-gray-900 placeholder:text-gray-400",
+            "h-11 w-full rounded-xl border bg-white px-4 text-xs sm:text-sm text-gray-900 placeholder:text-xs sm:placeholder:text-sm placeholder:text-gray-400 placeholder:font-normal",
             "transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50",
             "hover:border-gray-400",
             "disabled:bg-gray-50 disabled:text-gray-400 disabled:border-gray-200 disabled:cursor-not-allowed",

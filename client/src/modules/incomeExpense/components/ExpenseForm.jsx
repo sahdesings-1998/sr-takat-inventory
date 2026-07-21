@@ -180,8 +180,8 @@ export function ExpenseForm({ initialData, onSubmit, isLoading }) {
       />
 
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Saving..." : initialData ? "Update Expense" : "Create Expense"}
+        <Button type="submit" isLoading={isLoading}>
+          {initialData ? "Update Expense" : "Create Expense"}
         </Button>
       </div>
     </form>

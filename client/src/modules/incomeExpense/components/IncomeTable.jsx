@@ -13,6 +13,7 @@ import { Select } from "../../../components/ui/Select";
 import { INCOME_CATEGORIES, STATUS_OPTIONS } from "../constants/index.js";
 import { formatCurrency, formatDate } from "../../../utils/formatters.js";
 import { Trash2, Edit2 } from "lucide-react";
+import TableActionButton from "@/components/ui/TableActionButton";
 
 export function IncomeTable({
   data = [],
@@ -118,30 +119,25 @@ export function IncomeTable({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onEdit(income)}
+                      <TableActionButton
+                        icon={Edit2}
                         title="Edit income"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
+                        onClick={() => onEdit(income)}
+                      />
+                      <TableActionButton
+                        icon={Trash2}
+                        title="Delete income"
+                        variant="danger"
+                        onClick={async () => {
                           if (
                             window.confirm(
                               "Are you sure you want to delete this income record?"
                             )
                           ) {
-                            onDelete(income._id);
+                            await onDelete(income._id);
                           }
                         }}
-                        title="Delete income"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </Button>
+                      />
                     </div>
                   </TableCell>
                 </TableRow>

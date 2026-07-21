@@ -11,6 +11,8 @@ export default function NotificationList() {
   const { notifications, isLoading, isError, markAsRead } = useNotifications();
   const { showSuccess, showError } = useToast();
 
+  const [markingId, setMarkingId] = useState(null);
+
   useEffect(() => {
     if (isError) {
       showError("Fetch Failed", "Failed to fetch notifications.");
@@ -19,10 +21,13 @@ export default function NotificationList() {
 
   const handleMarkRead = async (id) => {
     try {
+      setMarkingId(id);
       await markAsRead(id);
       showSuccess("Notification Read", "Marked alert notification as read.");
     } catch (err) {
       showError("Action Failed", "Failed to mark notification as read.");
+    } finally {
+      setMarkingId(null);
     }
   };
 
@@ -60,8 +65,8 @@ export default function NotificationList() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Notifications</h1>
-        <p className="mt-1 text-sm text-gray-500">System alerts including low stock, overdue memos, and missing certificate warnings</p>
+        <h1 className="text-2xl font-bold text-gray-900 font-display">Notifications</h1>
+        <p className="text-sm text-gray-600 mt-1 font-medium">System alerts including low stock, overdue memos, and missing certificate warnings</p>
       </div>
 
       <Card>
@@ -73,23 +78,21 @@ export default function NotificationList() {
         </CardHeader>
         <CardBody className="flex flex-col divide-y divide-gray-100 p-0">
           {notifications.length === 0 ? (
-            <div className="p-6 text-center text-gray-500 font-medium">No notifications found</div>
+            <div className="p-6 text-center text-gray-600 mt-1 font-medium">No notifications found</div>
           ) : (
             notifications.map((notif) => (
               <div
                 key={notif._id}
-                className={`flex items-start justify-between gap-4 p-6 transition-colors ${
-                  notif.isRead ? "bg-white" : "bg-gray-50/50 border-l-4 border-accent"
-                }`}
+                className={`flex items-start justify-between gap-4 p-6 transition-colors ${notif.isRead ? "bg-white" : "bg-gray-50/50 border-l-4 border-accent"
+                  }`}
               >
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5">{getIcon(notif.type)}</div>
                   <div>
                     <div className="flex items-center gap-2">
                       <p
-                        className={`font-medium ${
-                          notif.isRead ? "text-gray-700" : "text-gray-900 font-semibold"
-                        }`}
+                        className={`font-medium ${notif.isRead ? "text-gray-700" : "text-gray-900 font-semibold"
+                          }`}
                       >
                         {notif.title}
                       </p>
@@ -106,6 +109,7 @@ export default function NotificationList() {
                   <Button
                     variant="outline"
                     size="sm"
+                    isLoading={markingId === notif._id}
                     onClick={() => handleMarkRead(notif._id)}
                     className="shrink-0 flex items-center gap-1 cursor-pointer"
                   >

@@ -47,8 +47,8 @@ export default function Register() {
     <div className="flex flex-col gap-8">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 tracking-[-0.03em]">Create your account</h2>
-        <p className="mt-1.5 text-[14px] text-gray-400 font-medium">
+        <h2 className="text-2xl font-bold text-gray-900 font-display">Create your account</h2>
+        <p className="mt-1 text-subtitle">
           Get started with SR TAKAT inventory management
         </p>
       </div>

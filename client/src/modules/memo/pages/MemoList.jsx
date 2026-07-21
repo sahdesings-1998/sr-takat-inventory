@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Eye, Trash2 } from "lucide-react";
+import { Plus, Eye, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { useMemos } from "../hooks/useMemo";
 import { useCustomers } from "@/modules/customers/hooks/useCustomers";
 import { useProducts } from "@/modules/products/hooks/useProducts";
@@ -16,6 +16,8 @@ import Modal from "@/components/ui/Modal";
 import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import SearchInput from "@/components/ui/SearchInput";
+import TableActionButton from "@/components/ui/TableActionButton";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
 
 export default function MemoList() {
   const [statusFilter, setStatusFilter] = useState("");
@@ -30,6 +32,7 @@ export default function MemoList() {
   const search = useDebounce(searchInput, 250);
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [customerId, setCustomerId] = useState("");
   const [expectedReturn, setExpectedReturn] = useState("");
@@ -92,6 +95,7 @@ export default function MemoList() {
       return;
     }
     try {
+      setIsSubmitting(true);
       await createMemo({
         customerId,
         expectedReturn,
@@ -102,6 +106,8 @@ export default function MemoList() {
       setIsOpen(false);
     } catch (err) {
       showError("Creation Failed", err?.response?.data?.message || "Failed to create approval memo.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -155,17 +161,21 @@ export default function MemoList() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900 font-display">Memos & Consignments</h1>
-          <p className="text-sm text-gray-500 font-medium">
-            Track stock sent to clients and dealers on consignment. Memos are automatically flagged Overdue when the return date passes.
-          </p>
+      {isLoading && !memos?.length ? (
+        <SkeletonPageHeader />
+      ) : (
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 font-display">Memos &amp; Consignments</h1>
+            <p className="text-sm text-gray-600 mt-1 font-medium">
+              Track stock sent to clients and dealers on consignment. Memos are automatically flagged Overdue when the return date passes.
+            </p>
+          </div>
+          <Button onClick={handleOpenAdd} className="w-fit">
+            <Plus className="h-4 w-4" /> Create Memo
+          </Button>
         </div>
-        <Button onClick={handleOpenAdd} className="w-fit">
-          <Plus className="h-4 w-4" /> Create Memo
-        </Button>
-      </div>
+      )}
 
       <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-4 rounded-[20px] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
         <SearchInput
@@ -206,7 +216,7 @@ export default function MemoList() {
             key={memo._id}
             className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-xs sm:text-sm"
           >
-            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary text-xs sm:text-sm">{memo.memoNo}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-mono font-semibold text-primary text-xs sm:text-sm">{memo.memoNo}</td>
             <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-gray-900 truncate text-xs sm:text-sm">
               {memo.customerId?.fullName || "—"}
             </td>
@@ -217,14 +227,62 @@ export default function MemoList() {
               <Badge variant={getStatusVariant(memo.status)}>{memo.status}</Badge>
             </td>
             <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
-              <Link
-                to={`/memos/${memo._id}`}
-                className="inline-flex items-center gap-1.5 text-accent hover:underline font-semibold text-xs sm:text-sm"
-              >
-                <Eye className="h-4 w-4 flex-shrink-0" /> <span className="hidden sm:inline">View Details</span><span className="sm:hidden">View</span>
+              <Link to={`/memos/${memo._id}`} title="View Details">
+                <TableActionButton
+                  icon={Eye}
+                  title="View Details"
+                />
               </Link>
             </td>
           </tr>
+        )}
+        renderMobileCard={(memo, idx, { isExpanded, toggleExpand }) => (
+          <div
+            key={memo._id}
+            className="rounded-2xl border border-gray-100 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.015)] overflow-hidden"
+          >
+            <button
+              type="button"
+              onClick={toggleExpand}
+              className="w-full p-4 flex items-center justify-between gap-3 text-left bg-white hover:bg-gray-50/50 transition-colors cursor-pointer select-none"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-primary text-sm">{memo.memoNo}</span>
+                  <span className="text-xs text-gray-500 font-medium truncate">• {memo.customerId?.fullName || "—"}</span>
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-xs">
+                  <span className="text-gray-500">Return: {memo.expectedReturn ? new Date(memo.expectedReturn).toLocaleDateString() : "—"}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge variant={getStatusVariant(memo.status)}>{memo.status}</Badge>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </div>
+              </div>
+            </button>
+
+            {isExpanded && (
+              <div className="border-t border-gray-100 p-4 bg-gray-50/40 flex flex-col gap-2.5 text-xs text-gray-700">
+                <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                  <span className="font-semibold text-gray-500">Customer Details</span>
+                  <span className="font-medium text-gray-900 truncate">{memo.customerId?.fullName || "—"}</span>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                  <Link to={`/memos/${memo._id}`} title="View Details">
+                    <TableActionButton
+                      icon={Eye}
+                      title="View Details"
+                      showLabel
+                      label="View Details"
+                    />
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       />
 
@@ -316,7 +374,7 @@ export default function MemoList() {
             <Button variant="outline" onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Create Memo</Button>
+            <Button type="submit" isLoading={isSubmitting}>Create Memo</Button>
           </div>
         </form>
       </Modal>

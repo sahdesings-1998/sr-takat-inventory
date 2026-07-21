@@ -7,13 +7,108 @@ import JobCard from "../models/JobCard.js";
 import InventoryMovement from "../models/InventoryMovement.js";
 import Supplier from "../models/Supplier.js";
 import Settings from "../models/Settings.js";
+import Income from "../models/Income.js";
+import Expense from "../models/Expense.js";
 
-async function getStockValuation() {
-  const stones = await Gemstone.find({
-    status: { $in: ["In Stock", "Reserved", "In Production", "On Memo"] },
-  });
-  const products = await Product.find({ status: { $in: ["In Stock", "Reserved", "On Memo"] } });
-  const materials = await Material.find({ status: "active" });
+// Helper to build MongoDB query filters from parameters
+function buildQueryFilter(queryParams = {}, dateField = "createdAt") {
+  const filter = { isDeleted: { $ne: true } };
+
+  const {
+    dateRange,
+    startDate,
+    endDate,
+    status,
+    category,
+    customerId,
+    supplierId,
+    workerId,
+    paymentMethod,
+  } = queryParams;
+
+  // Date Range Filtering
+  if (dateRange && dateRange !== "All" && dateRange !== "Custom") {
+    const now = new Date();
+    let start = new Date();
+    if (dateRange === "Today") {
+      start.setHours(0, 0, 0, 0);
+    } else if (dateRange === "ThisWeek") {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      start = new Date(now.setDate(diff));
+      start.setHours(0, 0, 0, 0);
+    } else if (dateRange === "ThisMonth") {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (dateRange === "ThisYear") {
+      start = new Date(now.getFullYear(), 0, 1);
+    }
+    filter[dateField] = { $gte: start };
+  } else if (startDate || endDate) {
+    const dateQuery = {};
+    if (startDate) dateQuery.$gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateQuery.$lte = end;
+    }
+    filter[dateField] = dateQuery;
+  }
+
+  // Status Filter
+  if (status && status !== "All") {
+    filter.status = status;
+  }
+
+  // Category Filter
+  if (category && category !== "All") {
+    filter.category = category;
+  }
+
+  // Customer Filter
+  if (customerId && customerId !== "All") {
+    filter.customerId = customerId;
+  }
+
+  // Supplier Filter
+  if (supplierId && supplierId !== "All") {
+    filter.supplierId = supplierId;
+  }
+
+  // Worker / Artisan Filter
+  if (workerId && workerId !== "All") {
+    filter.assignedTo = workerId;
+  }
+
+  // Payment Method Filter
+  if (paymentMethod && paymentMethod !== "All") {
+    filter.paymentMethod = paymentMethod;
+  }
+
+  return filter;
+}
+
+async function getStockValuation(queryParams = {}) {
+  const stoneFilter = buildQueryFilter(queryParams, "createdAt");
+  const productFilter = buildQueryFilter(queryParams, "createdAt");
+  const materialFilter = { status: "active" };
+
+  stoneFilter.status = { $in: ["In Stock", "Reserved", "In Production", "On Memo"] };
+  productFilter.status = { $in: ["In Stock", "Reserved", "On Memo"] };
+
+  if (queryParams.category && queryParams.category !== "All") {
+    if (queryParams.category === "Gemstone") {
+      productFilter._id = null;
+      materialFilter._id = null;
+    } else {
+      stoneFilter._id = null;
+      productFilter.category = queryParams.category;
+      materialFilter._id = null;
+    }
+  }
+
+  const stones = await Gemstone.find(stoneFilter);
+  const products = await Product.find(productFilter);
+  const materials = await Material.find(materialFilter);
 
   const gemstoneValue = stones.reduce((acc, curr) => acc + (curr.purchasePrice || 0), 0);
   const productValue = products.reduce((acc, curr) => acc + (curr.costPrice || 0), 0);
@@ -30,8 +125,20 @@ async function getStockValuation() {
   };
 }
 
-async function getRevenuesSummary() {
-  const sales = await Sale.find({});
+async function getRevenuesSummary(queryParams = {}) {
+  const filter = buildQueryFilter(queryParams, "createdAt");
+  if (queryParams.status && queryParams.status !== "All") {
+    filter.paymentStatus = queryParams.status;
+    delete filter.status;
+  }
+  if (queryParams.paymentMethod && queryParams.paymentMethod !== "All") {
+    filter.paymentMethod = queryParams.paymentMethod;
+  }
+  if (queryParams.search) {
+    filter.invoiceNo = { $regex: queryParams.search, $options: "i" };
+  }
+
+  const sales = await Sale.find(filter);
   const settings = await Settings.getSettings();
   const charityPercentage = Number(settings?.charityPercentage ?? 20);
 
@@ -49,9 +156,9 @@ async function getRevenuesSummary() {
   };
 }
 
-async function getDashboardSummary() {
-  const valuation = await getStockValuation();
-  const revenues = await getRevenuesSummary();
+async function getDashboardSummary(queryParams = {}) {
+  const valuation = await getStockValuation(queryParams);
+  const revenues = await getRevenuesSummary(queryParams);
 
   const activeStones = await Gemstone.find({
     status: { $in: ["In Stock", "Reserved", "In Production", "On Memo"] },
@@ -171,46 +278,142 @@ async function getDashboardSummary() {
   };
 }
 
-async function getGemstoneStockReport() {
-  return Gemstone.find({ status: { $ne: "Sold" } }).populate("supplierId");
+async function getGemstoneStockReport(queryParams = {}) {
+  const filter = buildQueryFilter(queryParams, "createdAt");
+  if (!filter.status) {
+    filter.status = { $ne: "Sold" };
+  }
+  if (queryParams.search) {
+    filter.$or = [
+      { stoneId: { $regex: queryParams.search, $options: "i" } },
+      { gemstone: { $regex: queryParams.search, $options: "i" } },
+      { variety: { $regex: queryParams.search, $options: "i" } },
+      { shape: { $regex: queryParams.search, $options: "i" } },
+    ];
+  }
+  return Gemstone.find(filter).populate("supplierId");
 }
 
-async function getJewelleryStockReport() {
-  return Product.find({ status: { $ne: "Sold" } });
+async function getJewelleryStockReport(queryParams = {}) {
+  const filter = buildQueryFilter(queryParams, "createdAt");
+  if (!filter.status) {
+    filter.status = { $ne: "Sold" };
+  }
+  if (queryParams.search) {
+    filter.$or = [
+      { productCode: { $regex: queryParams.search, $options: "i" } },
+      { name: { $regex: queryParams.search, $options: "i" } },
+      { stockNo: { $regex: queryParams.search, $options: "i" } },
+    ];
+  }
+  return Product.find(filter);
 }
 
-async function getMemoReport() {
-  return Memo.find({}).populate("customerId").populate("items.inventoryId");
+async function getMemoReport(queryParams = {}) {
+  const filter = buildQueryFilter(queryParams, "createdAt");
+  if (queryParams.search) {
+    filter.$or = [{ memoNo: { $regex: queryParams.search, $options: "i" } }];
+  }
+  return Memo.find(filter).populate("customerId").populate("items.inventoryId");
 }
 
-async function getSalesReport() {
-  return Sale.find({}).populate("customerId");
+async function getSalesReport(queryParams = {}) {
+  const filter = buildQueryFilter(queryParams, "createdAt");
+  if (queryParams.status && queryParams.status !== "All") {
+    filter.paymentStatus = queryParams.status;
+    delete filter.status;
+  }
+  if (queryParams.paymentMethod && queryParams.paymentMethod !== "All") {
+    filter.paymentMethod = queryParams.paymentMethod;
+  }
+  if (queryParams.search) {
+    filter.$or = [
+      { invoiceNo: { $regex: queryParams.search, $options: "i" } },
+    ];
+  }
+  return Sale.find(filter).populate("customerId");
 }
 
-async function getProductCostReport() {
-  return Product.find({}, "productCode name category costPrice sellingPrice grossProfit");
+async function getProductCostReport(queryParams = {}) {
+  const filter = buildQueryFilter(queryParams, "createdAt");
+  if (queryParams.search) {
+    filter.$or = [
+      { productCode: { $regex: queryParams.search, $options: "i" } },
+      { name: { $regex: queryParams.search, $options: "i" } },
+    ];
+  }
+  return Product.find(filter, "productCode name category costPrice sellingPrice grossProfit margin totalCost");
 }
 
-async function getStockMovementReport() {
-  return InventoryMovement.find({}).sort({ movementDate: -1 });
+async function getStockMovementReport(queryParams = {}) {
+  const filter = buildQueryFilter(queryParams, "movementDate");
+  if (queryParams.search) {
+    filter.$or = [
+      { stoneId: { $regex: queryParams.search, $options: "i" } },
+      { productCode: { $regex: queryParams.search, $options: "i" } },
+      { action: { $regex: queryParams.search, $options: "i" } },
+    ];
+  }
+  return InventoryMovement.find(filter).sort({ movementDate: -1 });
 }
 
-async function getSupplierPurchaseReport() {
-  const stones = await Gemstone.find({}).populate("supplierId");
+async function getSupplierPurchaseReport(queryParams = {}) {
+  const stoneFilter = buildQueryFilter(queryParams, "createdAt");
+  const stones = await Gemstone.find(stoneFilter).populate("supplierId");
   const suppliers = await Supplier.find({});
-  
+
   const summary = suppliers.map((sup) => {
     const purchases = stones.filter((s) => s.supplierId?._id?.toString() === sup._id.toString());
     const totalSpent = purchases.reduce((sum, curr) => sum + (curr.purchasePrice || 0), 0);
+    const totalCarats = purchases.reduce((sum, curr) => sum + (curr.carat || 0), 0);
     return {
       supplierName: sup.companyName,
       contact: sup.contactName,
       purchasesCount: purchases.length,
+      totalCarats,
       totalSpent,
     };
   });
 
-  return summary;
+  let result = summary;
+  if (queryParams.supplierId && queryParams.supplierId !== "All") {
+    result = result.filter((r) => r.supplierName === queryParams.supplierId);
+  }
+  if (queryParams.search) {
+    result = result.filter((r) =>
+      r.supplierName.toLowerCase().includes(queryParams.search.toLowerCase())
+    );
+  }
+  return result;
+}
+
+async function getIncomeReport(queryParams = {}) {
+  const filter = buildQueryFilter(queryParams, "date");
+  if (queryParams.status && queryParams.status !== "All") {
+    filter.status = queryParams.status;
+  }
+  if (queryParams.search) {
+    filter.$or = [
+      { description: { $regex: queryParams.search, $options: "i" } },
+      { reference: { $regex: queryParams.search, $options: "i" } },
+    ];
+  }
+  return Income.find(filter).populate("createdBy", "fullName");
+}
+
+async function getExpenseReport(queryParams = {}) {
+  const filter = buildQueryFilter(queryParams, "date");
+  if (queryParams.status && queryParams.status !== "All") {
+    filter.status = queryParams.status;
+  }
+  if (queryParams.search) {
+    filter.$or = [
+      { description: { $regex: queryParams.search, $options: "i" } },
+      { reference: { $regex: queryParams.search, $options: "i" } },
+      { vendor: { $regex: queryParams.search, $options: "i" } },
+    ];
+  }
+  return Expense.find(filter).populate("createdBy", "fullName");
 }
 
 export default {
@@ -224,4 +427,6 @@ export default {
   getProductCostReport,
   getStockMovementReport,
   getSupplierPurchaseReport,
+  getIncomeReport,
+  getExpenseReport,
 };

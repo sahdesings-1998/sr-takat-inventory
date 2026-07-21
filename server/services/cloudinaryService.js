@@ -27,13 +27,13 @@ function ensureConfig() {
  * @param {string} folder - Folder name in Cloudinary
  * @returns {Promise<object>} - The Cloudinary upload result containing secure_url, public_id, etc.
  */
-export const uploadToCloudinary = (fileBuffer, folder = "sr_takat") => {
+export const uploadToCloudinary = (fileBuffer, folder = "sr_takat", resourceType = "auto") => {
   ensureConfig();
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder,
-        resource_type: "auto", // Automatically detects PDF, images, etc.
+        resource_type: resourceType,
       },
       (error, result) => {
         if (error) {

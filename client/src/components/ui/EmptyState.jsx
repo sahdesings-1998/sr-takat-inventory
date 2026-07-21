@@ -39,8 +39,8 @@ export function EmptyState({
         )}
       </div>
       <div className="flex flex-col gap-1.5 max-w-sm">
-        <h3 className="text-sm font-bold text-gray-800 tracking-[-0.01em]">{title}</h3>
-        <p className="text-sm text-gray-400 leading-relaxed">{message}</p>
+        <h3 className="heading-h3 text-gray-800">{title}</h3>
+        <p className="text-subtitle">{message}</p>
       </div>
       {actionLabel && onAction && (
         <Button onClick={onAction} size="sm" className="mt-1">

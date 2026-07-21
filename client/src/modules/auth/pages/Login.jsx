@@ -40,8 +40,8 @@ export default function Login() {
     <div className="flex flex-col gap-8">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 tracking-[-0.03em]">Welcome back</h2>
-        <p className="mt-1.5 text-[14px] text-gray-400 font-medium">
+        <h2 className="text-2xl font-bold text-gray-900 font-display">Welcome back</h2>
+        <p className="mt-1 text-subtitle">
           Sign in to your SR TAKAT account to continue
         </p>
       </div>

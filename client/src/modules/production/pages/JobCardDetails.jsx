@@ -11,6 +11,7 @@ import Modal from "@/components/ui/Modal";
 import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import Textarea from "@/components/ui/Textarea";
+import { SkeletonDetailCard, Skeleton } from "@/components/ui/Skeleton";
 
 export default function JobCardDetails() {
   const { id } = useParams();
@@ -22,6 +23,10 @@ export default function JobCardDetails() {
   const [stageOpen, setStageOpen] = useState(false);
   const [issueOpen, setIssueOpen] = useState(false);
   const [returnOpen, setReturnOpen] = useState(false);
+
+  const [isSubmittingStage, setIsSubmittingStage] = useState(false);
+  const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
+  const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
 
   const [selectedStageName, setSelectedStageName] = useState("Design");
   const [stageStatus, setStageStatus] = useState("Pending");
@@ -40,7 +45,22 @@ export default function JobCardDetails() {
     }
   }, [isError, showError]);
 
-  if (isLoading) return <div className="text-gray-500 text-sm p-6">Loading job details...</div>;
+  if (isLoading) return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-4 w-28 rounded-md" />
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-7 w-52 rounded-lg" />
+            <Skeleton className="h-4 w-32 rounded-md" />
+          </div>
+          <Skeleton className="h-6 w-20 rounded-full" />
+        </div>
+      </div>
+      <SkeletonDetailCard rows={6} cols={2} />
+      <SkeletonDetailCard rows={6} cols={1} title={false} />
+    </div>
+  );
   if (isError || !jobCard)
     return (
       <div className="text-center p-8 bg-white border border-gray-100 rounded-xl text-sm font-semibold text-gray-500 shadow-sm">
@@ -59,6 +79,7 @@ export default function JobCardDetails() {
   const handleStageSubmit = async (e) => {
     e.preventDefault();
     try {
+      setIsSubmittingStage(true);
       await updateStage({
         stageName: selectedStageName,
         status: stageStatus,
@@ -68,12 +89,15 @@ export default function JobCardDetails() {
       setStageOpen(false);
     } catch (err) {
       showError("Update Failed", "Failed to update stage status.");
+    } finally {
+      setIsSubmittingStage(false);
     }
   };
 
   const handleIssueSubmit = async (e) => {
     e.preventDefault();
     try {
+      setIsSubmittingIssue(true);
       await issueMaterial({
         materialId: selectedMatId,
         quantity: Number(issueQty),
@@ -82,12 +106,15 @@ export default function JobCardDetails() {
       setIssueOpen(false);
     } catch (err) {
       showError("Issue Failed", err?.response?.data?.message || "Failed to issue material.");
+    } finally {
+      setIsSubmittingIssue(false);
     }
   };
 
   const handleReturnSubmit = async (e) => {
     e.preventDefault();
     try {
+      setIsSubmittingReturn(true);
       await returnMaterial({
         materialId: returnMatId,
         quantity: Number(returnQty),
@@ -97,6 +124,8 @@ export default function JobCardDetails() {
       setReturnOpen(false);
     } catch (err) {
       showError("Return Failed", err?.response?.data?.message || "Failed to return material.");
+    } finally {
+      setIsSubmittingReturn(false);
     }
   };
 
@@ -152,7 +181,7 @@ export default function JobCardDetails() {
             <span className="font-semibold text-gray-900">{jobCard.productId?.name || "—"}</span> |
             Due Date:{" "}
             <span className="font-semibold text-gray-900">
-              {new Date(jobCard.targetDueDate).toLocaleDateString()}
+              {jobCard.expectedDate ? new Date(jobCard.expectedDate).toLocaleDateString() : "—"}
             </span>
           </p>
         </div>
@@ -271,7 +300,7 @@ export default function JobCardDetails() {
             <Button variant="outline" onClick={() => setStageOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Save Status</Button>
+            <Button type="submit" isLoading={isSubmittingStage}>Save Status</Button>
           </div>
         </form>
       </Modal>
@@ -298,7 +327,7 @@ export default function JobCardDetails() {
             <Button variant="outline" onClick={() => setIssueOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Issue Stock</Button>
+            <Button type="submit" isLoading={isSubmittingIssue}>Issue Stock</Button>
           </div>
         </form>
       </Modal>
@@ -335,7 +364,7 @@ export default function JobCardDetails() {
             <Button variant="outline" onClick={() => setReturnOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Log Return</Button>
+            <Button type="submit" isLoading={isSubmittingReturn}>Log Return</Button>
           </div>
         </form>
       </Modal>

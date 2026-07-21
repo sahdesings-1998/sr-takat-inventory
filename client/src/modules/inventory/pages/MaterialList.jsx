@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Edit2, ArrowRightLeft } from "lucide-react";
+import { Plus, Edit2, ArrowRightLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { useMaterials } from "../hooks/useInventory";
 import { materialSchema } from "../validation/inventorySchema";
 import { useToast } from "@/contexts/ToastContext";
@@ -12,6 +12,8 @@ import Modal from "@/components/ui/Modal";
 import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import Textarea from "@/components/ui/Textarea";
+import TableActionButton from "@/components/ui/TableActionButton";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
 
 export default function MaterialList() {
   const [search, setSearch] = useState("");
@@ -26,6 +28,7 @@ export default function MaterialList() {
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [adjustQty, setAdjustQty] = useState("");
   const [adjustRemarks, setAdjustRemarks] = useState("");
+  const [isAdjusting, setIsAdjusting] = useState(false);
 
   useEffect(() => {
     if (isError) {
@@ -108,6 +111,7 @@ export default function MaterialList() {
   const handleAdjustSubmit = async (e) => {
     e.preventDefault();
     try {
+      setIsAdjusting(true);
       await adjustMaterialStock({
         id: selectedMaterial._id,
         quantityChange: Number(adjustQty),
@@ -117,6 +121,8 @@ export default function MaterialList() {
       setAdjustOpen(false);
     } catch (err) {
       showError("Adjustment Failed", err?.response?.data?.message || "Failed to adjust stock.");
+    } finally {
+      setIsAdjusting(false);
     }
   };
 
@@ -134,17 +140,21 @@ export default function MaterialList() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">Raw Materials & Metals</h2>
-          <p className="text-sm text-gray-500">
-            Track gold, silver, platinum, settings, components, straps, and other raw materials used in manufacturing
-          </p>
+      {isLoading && !materials?.length ? (
+        <SkeletonPageHeader />
+      ) : (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 font-display">Raw Materials &amp; Metals</h1>
+            <p className="text-sm text-gray-600 mt-1 font-medium">
+              Track gold, silver, platinum, settings, components, straps, and other raw materials used in manufacturing
+            </p>
+          </div>
+          <Button onClick={handleOpenAdd} className="w-fit">
+            <Plus className="h-4 w-4" /> Add Material
+          </Button>
         </div>
-        <Button onClick={handleOpenAdd} className="w-fit">
-          <Plus className="h-4 w-4" /> Add Material
-        </Button>
-      </div>
+      )}
 
       <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
         <Input
@@ -192,23 +202,79 @@ export default function MaterialList() {
             </td>
             <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
               <div className="flex items-center gap-2 flex-nowrap">
-                <button
-                  onClick={() => handleOpenAdjust(mat)}
-                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
+                <TableActionButton
+                  icon={ArrowRightLeft}
                   title="Adjust Stock"
-                >
-                  <ArrowRightLeft className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handleOpenEdit(mat)}
-                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
+                  onClick={() => handleOpenAdjust(mat)}
+                />
+                <TableActionButton
+                  icon={Edit2}
                   title="Edit"
-                >
-                  <Edit2 className="h-4 w-4" />
-                </button>
+                  onClick={() => handleOpenEdit(mat)}
+                />
               </div>
             </td>
           </tr>
+        )}
+        renderMobileCard={(mat, idx, { isExpanded, toggleExpand }) => (
+          <div
+            key={mat._id}
+            className="rounded-2xl border border-gray-100 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.015)] overflow-hidden"
+          >
+            <button
+              type="button"
+              onClick={toggleExpand}
+              className="w-full p-4 flex items-center justify-between gap-3 text-left bg-white hover:bg-gray-50/50 transition-colors cursor-pointer select-none"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-primary text-sm">{mat.materialCode}</span>
+                  <span className="text-xs text-gray-500 font-medium truncate">• {mat.materialName}</span>
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-xs">
+                  <span className="font-mono font-bold text-gray-900">{mat.quantity} {mat.unit}</span>
+                  <span className="text-gray-400 font-medium">•</span>
+                  <span className="font-mono font-bold text-emerald-600">${mat.cost ? mat.cost.toFixed(2) : "0.00"}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge variant={mat.status === "active" ? "success" : "neutral"}>{mat.status}</Badge>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </div>
+              </div>
+            </button>
+
+            {isExpanded && (
+              <div className="border-t border-gray-100 p-4 bg-gray-50/40 flex flex-col gap-2.5 text-xs text-gray-700">
+                <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                  <span className="font-semibold text-gray-500">Category</span>
+                  <span className="font-medium text-gray-900">{mat.category}</span>
+                </div>
+                <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                  <span className="font-semibold text-gray-500">Location</span>
+                  <span className="font-medium text-gray-900">{mat.location || "—"}</span>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                  <TableActionButton
+                    icon={ArrowRightLeft}
+                    title="Adjust Stock"
+                    showLabel
+                    label="Adjust"
+                    onClick={() => handleOpenAdjust(mat)}
+                  />
+                  <TableActionButton
+                    icon={Edit2}
+                    title="Edit"
+                    showLabel
+                    label="Edit"
+                    onClick={() => handleOpenEdit(mat)}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         )}
       />
 
@@ -313,6 +379,7 @@ export default function MaterialList() {
             </Button>
             <Button
               type="submit"
+              isLoading={isAdjusting}
               disabled={
                 !adjustQty ||
                 !adjustRemarks ||

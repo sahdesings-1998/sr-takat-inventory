@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Edit2, Eye, Image as ImageIcon, CheckCircle } from "lucide-react";
+import { Plus, Edit2, Eye, Image as ImageIcon, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { useProducts } from "../hooks/useProducts";
 import { useAuditLogs } from "@/modules/dashboard/hooks/useReports";
 import { productSchema } from "../validation/productSchema";
@@ -19,6 +19,9 @@ import Badge from "@/components/ui/Badge";
 import SearchInput from "@/components/ui/SearchInput";
 import ImageUploader from "@/components/ui/ImageUploader";
 import FileUploader from "@/components/ui/FileUploader";
+import TableActionButton from "@/components/ui/TableActionButton";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
+import DocumentPreviewModal from "@/components/ui/DocumentPreviewModal";
 
 const catalogTabs = [
   { key: "catalog", label: "Product Catalog" },
@@ -491,12 +494,10 @@ export default function ProductList() {
             </div>
             <div className="flex flex-col gap-1">
               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">Profit <span className="ml-1 text-[10px] font-normal normal-case tracking-normal text-gray-400">(auto)</span></label>
-              <div className={`flex items-center rounded-xl border px-3.5 py-2.5 cursor-not-allowed select-none ${
-                calcProfit > 0 ? "bg-emerald-50 border-emerald-100" : calcProfit < 0 ? "bg-rose-50 border-rose-100" : "bg-gray-50 border-gray-100"
-              }`}>
-                <span className={`text-sm font-semibold ${
-                  calcProfit > 0 ? "text-emerald-600" : calcProfit < 0 ? "text-rose-500" : "text-gray-500"
+              <div className={`flex items-center rounded-xl border px-3.5 py-2.5 cursor-not-allowed select-none ${calcProfit > 0 ? "bg-emerald-50 border-emerald-100" : calcProfit < 0 ? "bg-rose-50 border-rose-100" : "bg-gray-50 border-gray-100"
                 }`}>
+                <span className={`text-sm font-semibold ${calcProfit > 0 ? "text-emerald-600" : calcProfit < 0 ? "text-rose-500" : "text-gray-500"
+                  }`}>
                   {calcProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
@@ -504,12 +505,10 @@ export default function ProductList() {
             </div>
             <div className="flex flex-col gap-1">
               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">Margin % <span className="ml-1 text-[10px] font-normal normal-case tracking-normal text-gray-400">(auto)</span></label>
-              <div className={`flex items-center rounded-xl border px-3.5 py-2.5 cursor-not-allowed select-none ${
-                calcMargin > 0 ? "bg-emerald-50 border-emerald-100" : calcMargin < 0 ? "bg-rose-50 border-rose-100" : "bg-gray-50 border-gray-100"
-              }`}>
-                <span className={`text-sm font-semibold ${
-                  calcMargin > 0 ? "text-emerald-600" : calcMargin < 0 ? "text-rose-500" : "text-gray-500"
+              <div className={`flex items-center rounded-xl border px-3.5 py-2.5 cursor-not-allowed select-none ${calcMargin > 0 ? "bg-emerald-50 border-emerald-100" : calcMargin < 0 ? "bg-rose-50 border-rose-100" : "bg-gray-50 border-gray-100"
                 }`}>
+                <span className={`text-sm font-semibold ${calcMargin > 0 ? "text-emerald-600" : calcMargin < 0 ? "text-rose-500" : "text-gray-500"
+                  }`}>
                   {calcMargin.toFixed(2)}%
                 </span>
               </div>
@@ -801,17 +800,21 @@ export default function ProductList() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Product Catalog</h1>
-          <p className="text-sm text-gray-500">
-            Browse, manage and update product inventory with clear pricing, stock, and product detail tabs.
-          </p>
+      {isLoading && !products?.length ? (
+        <SkeletonPageHeader />
+      ) : (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 font-display">Product Catalog</h1>
+            <p className="text-sm text-gray-600 mt-1 font-medium">
+              Browse, manage and update product inventory with clear pricing, stock, and product detail tabs.
+            </p>
+          </div>
+          <Button onClick={handleOpenAdd} className="w-fit">
+            <Plus className="h-4 w-4" /> Add Product
+          </Button>
         </div>
-        <Button onClick={handleOpenAdd} className="w-fit">
-          <Plus className="h-4 w-4" /> Add Product
-        </Button>
-      </div>
+      )}
 
       <div className="flex border-b border-gray-200 overflow-x-auto">
         {catalogTabs.map((tab) => (
@@ -819,11 +822,10 @@ export default function ProductList() {
             key={tab.key}
             type="button"
             onClick={() => setActiveCatalogTab(tab.key)}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-all duration-150 whitespace-nowrap ${
-              activeCatalogTab === tab.key
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-all duration-150 whitespace-nowrap ${activeCatalogTab === tab.key
                 ? "border-accent text-accent"
                 : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-            }`}
+              }`}
           >
             {tab.label}
           </button>
@@ -888,29 +890,113 @@ export default function ProductList() {
                     )}
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-gray-900 text-sm">{prod.name || prod.productCode}</p>
-                      <p className="truncate text-gray-500 text-xs">{prod.productCode || prod.stockNo}</p>
+                      <p className="truncate font-mono text-gray-500 text-xs">{prod.productCode || prod.stockNo}</p>
                     </div>
                   </div>
                 </td>
                 <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">{prod.category}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">{prod.stockNo || "—"}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">${(prod.costPrice || 0).toLocaleString()}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 font-semibold text-xs sm:text-sm">${(prod.sellingPrice || 0).toLocaleString()}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-emerald-600 text-xs sm:text-sm">${(prod.netProfit || 0).toLocaleString()}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-gray-600 text-xs sm:text-sm">{prod.stockNo || "—"}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-gray-600 text-xs sm:text-sm">${(prod.costPrice || 0).toLocaleString()}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-gray-900 font-semibold text-xs sm:text-sm">${(prod.sellingPrice || 0).toLocaleString()}</td>
+                <td className="px-3 py-4 sm:px-4 md:px-6 font-mono font-semibold text-emerald-600 text-xs sm:text-sm">${(prod.netProfit || 0).toLocaleString()}</td>
                 <td className="px-3 py-4 sm:px-4 md:px-6">
                   <Badge variant={getStatusVariant(prod.status)}>{prod.status}</Badge>
                 </td>
                 <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
                   <div className="flex items-center gap-2 flex-nowrap">
-                    <Link to={`/products/${prod._id}`} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0" title="View Details">
-                      <Eye className="h-4 w-4" />
+                    <Link to={`/products/${prod._id}`} title="View Details">
+                      <TableActionButton
+                        icon={Eye}
+                        title="View Details"
+                      />
                     </Link>
-                    <button onClick={() => handleOpenEdit(prod)} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0" title="Edit">
-                      <Edit2 className="h-4 w-4" />
-                    </button>
+                    <TableActionButton
+                      icon={Edit2}
+                      title="Edit"
+                      onClick={() => handleOpenEdit(prod)}
+                    />
                   </div>
                 </td>
               </tr>
+            )}
+            renderMobileCard={(prod, idx, { isExpanded, toggleExpand }) => (
+              <div
+                key={prod._id}
+                className="rounded-2xl border border-gray-100 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.015)] overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={toggleExpand}
+                  className="w-full p-4 flex items-center justify-between gap-3 text-left bg-white hover:bg-gray-50/50 transition-colors cursor-pointer select-none"
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {prod.imageUrls && prod.imageUrls[0] ? (
+                      <img
+                        src={prod.imageUrls[0]}
+                        alt={prod.productCode || prod.name}
+                        className="w-10 h-10 object-cover rounded-lg bg-gray-50 border border-gray-100 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-100 text-gray-400 flex-shrink-0">
+                        <ImageIcon className="h-4.5 w-4.5" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-gray-900 text-sm">{prod.name || prod.productCode}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="font-mono text-xs text-gray-500">{prod.productCode || prod.stockNo}</span>
+                        <span className="text-xs text-gray-400">•</span>
+                        <span className="font-mono font-bold text-gray-900 text-xs">${(prod.sellingPrice || 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant={getStatusVariant(prod.status)}>{prod.status}</Badge>
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                      {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <div className="border-t border-gray-100 p-4 bg-gray-50/40 flex flex-col gap-2.5 text-xs text-gray-700">
+                    <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                      <span className="font-semibold text-gray-500">Category</span>
+                      <span className="font-medium text-gray-900">{prod.category}</span>
+                    </div>
+                    <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                      <span className="font-semibold text-gray-500">Stock No</span>
+                      <span className="font-mono font-medium text-gray-900">{prod.stockNo || "—"}</span>
+                    </div>
+                    <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                      <span className="font-semibold text-gray-500">Cost Price</span>
+                      <span className="font-mono font-medium text-gray-900">${(prod.costPrice || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                      <span className="font-semibold text-gray-500">Net Profit</span>
+                      <span className="font-mono font-semibold text-emerald-600">${(prod.netProfit || 0).toLocaleString()}</span>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                      <Link to={`/products/${prod._id}`} title="View Details">
+                        <TableActionButton
+                          icon={Eye}
+                          title="View Details"
+                          showLabel
+                          label="View"
+                        />
+                      </Link>
+                      <TableActionButton
+                        icon={Edit2}
+                        title="Edit"
+                        showLabel
+                        label="Edit"
+                        onClick={() => handleOpenEdit(prod)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           />
         </>
@@ -974,11 +1060,10 @@ export default function ProductList() {
                   key={step.key}
                   type="button"
                   onClick={() => handleStepChange(step.key)}
-                  className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition whitespace-nowrap ${
-                    activeTab === step.key
+                  className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition whitespace-nowrap ${activeTab === step.key
                       ? "border-accent bg-accent/10 text-accent"
                       : "border-gray-200 bg-gray-100 text-gray-600 hover:border-gray-300 hover:bg-gray-200"
-                  }`}
+                    }`}
                 >
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-gray-600 shadow-sm">
                     {completedSteps.includes(step.key) ? <CheckCircle className="h-4 w-4 text-emerald-600" /> : index + 1}
@@ -1009,11 +1094,13 @@ export default function ProductList() {
         </form>
       </Modal>
 
-      <Modal isOpen={Boolean(previewImage)} onClose={() => setPreviewImage(null)} title="Image Preview">
-        <div className="flex items-center justify-center w-full max-h-[70vh] md:max-h-[60vh] overflow-auto">
-          <img src={previewImage} alt="Preview" className="max-w-full max-h-full object-contain rounded-xl shadow-md border border-gray-100" />
-        </div>
-      </Modal>
+      <DocumentPreviewModal
+        isOpen={Boolean(previewImage)}
+        onClose={() => setPreviewImage(null)}
+        fileUrl={previewImage}
+        fileName="Product Image Preview"
+        fileType="Image"
+      />
     </div>
   );
 }

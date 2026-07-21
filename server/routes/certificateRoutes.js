@@ -10,6 +10,7 @@ router.use(auth);
 
 router.get("/", requirePermission("inventory.view"), certificateController.getCertificates);
 router.get("/:id", requirePermission("inventory.view"), certificateController.getCertificate);
+router.get("/:id/file", requirePermission("inventory.view"), certificateController.getCertificateFile);
 router.post(
   "/",
   requirePermission("inventory.create"),

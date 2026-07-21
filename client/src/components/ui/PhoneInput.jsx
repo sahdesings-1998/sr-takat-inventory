@@ -66,7 +66,7 @@ function sanitizePhoneNumber(value) {
 }
 
 const PhoneInput = forwardRef(function PhoneInput(
-  { label, hint, error, className, id, containerClassName, value, onChange, onBlur, placeholder, name, ...props },
+  { label, hint, error, className, id, containerClassName, value, onChange, onBlur, placeholder, name, disabled, ...props },
   ref
 ) {
   const inputId = id || name;
@@ -98,55 +98,56 @@ const PhoneInput = forwardRef(function PhoneInput(
   useEffect(() => {
     if (!isOpen) return;
     const timer = window.setTimeout(() => searchInputRef.current?.focus(), 80);
-    const handleDocumentClick = (event) => {
+    return () => window.clearTimeout(timer);
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setIsOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleDocumentClick);
-    return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener("mousedown", handleDocumentClick);
-    };
-  }, [isOpen]);
-
-  const emitValue = (nextDialCode, nextDisplay) => {
-    const digits = sanitizePhoneNumber(nextDisplay);
-    const formattedValue = digits ? `${nextDialCode} ${digits}`.trim() : nextDialCode;
-    if (onChange) {
-      onChange({ target: { name, value: formattedValue } });
-    }
-  };
-
-  const handlePhoneNumberChange = (event) => {
-    const nextDisplay = formatPhoneNumber(event.target.value);
-    setPhoneDisplay(nextDisplay);
-    emitValue(selectedCountry.dialCode, nextDisplay);
-  };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleCountrySelect = (country) => {
     setSelectedCountry(country);
     setIsOpen(false);
-    emitValue(country.dialCode, phoneDisplay);
+    setSearchTerm("");
+    const newRawNumber = sanitizePhoneNumber(phoneDisplay);
+    if (onChange) {
+      onChange({ target: { name, value: `${country.dialCode}${newRawNumber}` } });
+    }
+  };
+
+  const handlePhoneNumberChange = (event) => {
+    const rawInput = event.target.value;
+    const sanitized = sanitizePhoneNumber(rawInput);
+    setPhoneDisplay(formatPhoneNumber(sanitized));
+    if (onChange) {
+      onChange({ target: { name, value: `${selectedCountry.dialCode}${sanitized}` } });
+    }
   };
 
   const handleSelectorKeyDown = (event) => {
-    if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+    if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      setIsOpen(true);
-    }
-    if (event.key === "Escape") {
+      setIsOpen((val) => !val);
+    } else if (event.key === "Escape") {
       setIsOpen(false);
     }
   };
 
   const filteredCountries = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    if (!query) return countryOptions;
-
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return countryOptions;
     return countryOptions.filter((country) => {
-      const searchText = `${country.label} ${country.code} ${country.dialCode}`.toLowerCase();
-      return searchText.includes(query);
+      return (
+        country.label.toLowerCase().includes(term) ||
+        country.code.toLowerCase().includes(term) ||
+        country.dialCode.includes(term)
+      );
     });
   }, [searchTerm]);
 
@@ -227,18 +228,25 @@ const PhoneInput = forwardRef(function PhoneInput(
   return (
     <div className={cn("flex flex-col gap-2", containerClassName)} ref={containerRef}>
       {label && (
-        <label htmlFor={inputId} className="text-[13px] font-semibold text-gray-700 tracking-[-0.01em]">
+        <label htmlFor={inputId} className="text-xs sm:text-sm font-semibold text-gray-700 tracking-tight select-none">
           {label}
         </label>
       )}
 
       <div className="relative">
-        <div className="flex items-stretch overflow-hidden rounded-[16px] border border-gray-200 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.04)] transition-all duration-200 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 hover:border-gray-400">
+        <div className={cn(
+          "flex items-stretch overflow-hidden rounded-xl border transition-all duration-200",
+          disabled
+            ? "bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed"
+            : "border-gray-200 bg-white focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 hover:border-gray-400",
+          error && "border-danger/60 focus-within:ring-danger/20 focus-within:border-danger/60"
+        )}>
           <button
             type="button"
-            onClick={() => setIsOpen((value) => !value)}
+            onClick={() => !disabled && setIsOpen((value) => !value)}
             onKeyDown={handleSelectorKeyDown}
-            className="flex h-11 min-w-[92px] items-center gap-2 border-r border-gray-200 bg-gradient-to-r from-white to-gray-50 px-3 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+            disabled={disabled}
+            className="flex h-11 min-w-[92px] items-center gap-2 border-r border-gray-200 bg-gradient-to-r from-white to-gray-50 px-3 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
             aria-expanded={isOpen}
             aria-haspopup="listbox"
             aria-controls={`${inputId}-country-picker`}
@@ -246,7 +254,6 @@ const PhoneInput = forwardRef(function PhoneInput(
           >
             <span className="text-lg leading-none">{selectedCountry.flag}</span>
             <span className="flex min-w-0 flex-col">
-              {/* <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-gray-400">Code</span> */}
               <span className="text-sm font-semibold text-gray-900">{selectedCountry.dialCode}</span>
             </span>
             <ChevronDown className={cn("ml-auto h-4 w-4 text-gray-400 transition-transform duration-200", isOpen && "rotate-180")} />
@@ -259,9 +266,10 @@ const PhoneInput = forwardRef(function PhoneInput(
             value={phoneDisplay}
             onChange={handlePhoneNumberChange}
             onBlur={onBlur}
+            disabled={disabled}
             placeholder={placeholder || "Phone number"}
             className={cn(
-              "h-11 flex-1 border-0 bg-white px-4 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none",
+              "h-11 flex-1 border-0 bg-white px-4 text-xs sm:text-sm text-gray-900 placeholder:text-xs sm:placeholder:text-sm placeholder:text-gray-400 placeholder:font-normal focus:outline-none disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed",
               className,
               error && "text-danger"
             )}

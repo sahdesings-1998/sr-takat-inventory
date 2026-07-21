@@ -4,6 +4,7 @@ import { cn } from "@/utils/cn";
 import apiClient from "@/services/apiClient";
 import { useToast } from "@/contexts/ToastContext";
 import Modal from "./Modal";
+import DocumentPreviewModal from "./DocumentPreviewModal";
 
 export default function FileUploader({
   label,
@@ -186,11 +187,13 @@ export default function FileUploader({
 
       {error && <p className="text-xs font-medium text-danger">{error}</p>}
 
-      <Modal isOpen={Boolean(previewImage)} onClose={() => setPreviewImage(null)} title="Preview">
-        <div className="flex items-center justify-center overflow-auto">
-          <img src={previewImage} alt="Preview" className="max-h-[70vh] max-w-full rounded-xl border border-gray-100 object-contain shadow-sm" />
-        </div>
-      </Modal>
+      <DocumentPreviewModal
+        isOpen={Boolean(previewImage)}
+        onClose={() => setPreviewImage(null)}
+        fileUrl={previewImage}
+        fileName={getDisplayName(previewImage) || "File Preview"}
+        fileType={isImageValue(previewImage) ? "Image" : isVideoValue(previewImage) ? "Video" : "Document"}
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Edit2, ArrowDown } from "lucide-react";
+import { Plus, Edit2, ArrowDown, ChevronDown, ChevronUp } from "lucide-react";
 import { useLots } from "../hooks/useInventory";
 import { useSuppliers } from "@/modules/suppliers/hooks/useSuppliers";
 import { lotSchema } from "../validation/inventorySchema";
@@ -12,6 +12,8 @@ import Select from "@/components/ui/Select";
 import Modal from "@/components/ui/Modal";
 import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
+import TableActionButton from "@/components/ui/TableActionButton";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
 
 export default function LotList() {
   const { lots, isLoading, isError, createLot, updateLot, issueFromLot } = useLots();
@@ -23,6 +25,7 @@ export default function LotList() {
   const [issueOpen, setIssueOpen] = useState(false);
   const [selectedLot, setSelectedLot] = useState(null);
   const [issueCarats, setIssueCarats] = useState("");
+  const [isIssuing, setIsIssuing] = useState(false);
 
   useEffect(() => {
     if (isError) {
@@ -101,6 +104,7 @@ export default function LotList() {
   const handleIssueSubmit = async (e) => {
     e.preventDefault();
     try {
+      setIsIssuing(true);
       await issueFromLot({
         id: selectedLot._id,
         carat: Number(issueCarats),
@@ -109,6 +113,8 @@ export default function LotList() {
       setIssueOpen(false);
     } catch (err) {
       showError("Issue Failed", err?.response?.data?.message || "Failed to issue from lot.");
+    } finally {
+      setIsIssuing(false);
     }
   };
 
@@ -141,15 +147,19 @@ export default function LotList() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">Gemstone Lots & Parcels</h2>
-          <p className="text-sm text-gray-500">Melee and parcel stones grouped by lot. Stock is deducted by carat weight only — piece count is informational.</p>
+      {isLoading && !lots?.length ? (
+        <SkeletonPageHeader />
+      ) : (
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 font-display">Gemstone Lots &amp; Parcels</h1>
+            <p className="text-sm text-gray-600 mt-1 font-medium">Melee and parcel stones grouped by lot. Stock is deducted by carat weight only — piece count is informational.</p>
+          </div>
+          <Button onClick={handleOpenAdd} className="w-fit">
+            <Plus className="h-4 w-4" /> Add Lot
+          </Button>
         </div>
-        <Button onClick={handleOpenAdd} className="w-fit">
-          <Plus className="h-4 w-4" /> Add Lot
-        </Button>
-      </div>
+      )}
 
       <DataTable
         headers={headers}
@@ -174,24 +184,86 @@ export default function LotList() {
             <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
               <div className="flex items-center gap-2 flex-nowrap">
                 {lot.status !== "Depleted" && (
-                  <button
-                    onClick={() => handleOpenIssue(lot)}
-                    className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
+                  <TableActionButton
+                    icon={ArrowDown}
                     title="Issue Carat"
-                  >
-                    <ArrowDown className="h-4 w-4" />
-                  </button>
+                    onClick={() => handleOpenIssue(lot)}
+                  />
                 )}
-                <button
-                  onClick={() => handleOpenEdit(lot)}
-                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0"
+                <TableActionButton
+                  icon={Edit2}
                   title="Edit"
-                >
-                  <Edit2 className="h-4 w-4" />
-                </button>
+                  onClick={() => handleOpenEdit(lot)}
+                />
               </div>
             </td>
           </tr>
+        )}
+        renderMobileCard={(lot, idx, { isExpanded, toggleExpand }) => (
+          <div
+            key={lot._id}
+            className="rounded-2xl border border-gray-100 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.015)] overflow-hidden"
+          >
+            <button
+              type="button"
+              onClick={toggleExpand}
+              className="w-full p-4 flex items-center justify-between gap-3 text-left bg-white hover:bg-gray-50/50 transition-colors cursor-pointer select-none"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-primary text-sm">{lot.lotNo}</span>
+                  <span className="text-xs text-gray-500 font-medium truncate">• {lot.gemstone}</span>
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-xs">
+                  <span className="font-mono font-bold text-gray-900">Total: {lot.totalCarat} ct</span>
+                  <span className="text-gray-400 font-medium">•</span>
+                  <span className="font-mono font-bold text-emerald-600">Rem: {lot.remainingCarat} ct</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge variant={getStatusVariant(lot.status)}>{lot.status}</Badge>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </div>
+              </div>
+            </button>
+
+            {isExpanded && (
+              <div className="border-t border-gray-100 p-4 bg-gray-50/40 flex flex-col gap-2.5 text-xs text-gray-700">
+                <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                  <span className="font-semibold text-gray-500">Est. Pieces</span>
+                  <span className="font-mono font-medium text-gray-900">{lot.totalPieces ? `${lot.totalPieces} pcs` : "—"}</span>
+                </div>
+                <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                  <span className="font-semibold text-gray-500">Cost Price</span>
+                  <span className="font-mono font-medium text-gray-900">${lot.costPrice ? lot.costPrice.toLocaleString() : "—"}</span>
+                </div>
+                <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                  <span className="font-semibold text-gray-500">Location</span>
+                  <span className="font-medium text-gray-900">{lot.location || "—"}</span>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                  {lot.status !== "Depleted" && (
+                    <TableActionButton
+                      icon={ArrowDown}
+                      title="Issue Carat"
+                      showLabel
+                      label="Issue"
+                      onClick={() => handleOpenIssue(lot)}
+                    />
+                  )}
+                  <TableActionButton
+                    icon={Edit2}
+                    title="Edit"
+                    showLabel
+                    label="Edit"
+                    onClick={() => handleOpenEdit(lot)}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         )}
       />
 
@@ -275,6 +347,7 @@ export default function LotList() {
             </Button>
             <Button
               type="submit"
+              isLoading={isIssuing}
               disabled={
                 !issueCarats || Number(issueCarats) > (selectedLot?.remainingCarat || 0)
               }

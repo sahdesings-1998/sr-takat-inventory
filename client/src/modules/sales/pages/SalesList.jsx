@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Eye, Trash2, FileDown, Loader2 } from "lucide-react";
+import { Plus, Eye, Trash2, FileDown, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { useSales, downloadInvoicePdf } from "../hooks/useSales";
 import { useCustomers } from "@/modules/customers/hooks/useCustomers";
 import { useProducts } from "@/modules/products/hooks/useProducts";
@@ -14,6 +14,8 @@ import Textarea from "@/components/ui/Textarea";
 import Modal from "@/components/ui/Modal";
 import DataTable from "@/components/ui/DataTable";
 import SearchInput from "@/components/ui/SearchInput";
+import TableActionButton from "@/components/ui/TableActionButton";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
 
 export default function SalesList() {
   const { sales, isLoading, isError, createSale } = useSales();
@@ -27,6 +29,8 @@ export default function SalesList() {
   const search = useDebounce(searchInput, 250);
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
 
   const [customerId, setCustomerId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("Cash");
@@ -111,6 +115,7 @@ export default function SalesList() {
       return;
     }
     try {
+      setIsSubmitting(true);
       await createSale({
         customerId,
         paymentMethod,
@@ -123,6 +128,8 @@ export default function SalesList() {
       setIsOpen(false);
     } catch (err) {
       showError("Checkout Failed", err?.response?.data?.message || "Failed to create invoice.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -163,33 +170,39 @@ export default function SalesList() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900 font-display">Sales & Invoicing</h1>
-          <p className="text-sm text-gray-500 font-medium">
-            Select customer → Add products or gemstones → Apply discount → Complete sale. On completion, inventory status updates to Sold and profit & charity are calculated.
-          </p>
-        </div>
-        <Button onClick={handleOpenAdd} className="w-fit">
-          <Plus className="h-4 w-4" /> Create Invoice
-        </Button>
-      </div>
+      {isLoading && !sales?.length ? (
+        <SkeletonPageHeader />
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 font-display">Sales &amp; Invoicing</h1>
+              <p className="text-sm text-gray-600 mt-1 font-medium">
+                Select customer, add items, apply discounts, complete the sale, and automatically update inventory, profit, and charity.
+              </p>
+            </div>
+            <Button onClick={handleOpenAdd} className="w-fit">
+              <Plus className="h-4 w-4" /> Create Invoice
+            </Button>
+          </div>
 
-      <div className="flex items-center gap-4 bg-white p-4 rounded-[20px] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
-        <SearchInput
-          placeholder="Search by invoice no, customer name, or payment method..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          onClear={() => setSearchInput("")}
-          containerClassName="max-w-lg w-full"
-          id="sales-search"
-        />
-        {search && (
-          <span className="text-xs text-gray-400 font-medium shrink-0">
-            {filteredSales.length} result{filteredSales.length !== 1 ? "s" : ""}
-          </span>
-        )}
-      </div>
+          <div className="flex items-center gap-4 bg-white p-4 rounded-[20px] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
+            <SearchInput
+              placeholder="Search by invoice no, customer name, or payment method..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onClear={() => setSearchInput("")}
+              containerClassName="max-w-lg w-full"
+              id="sales-search"
+            />
+            {search && (
+              <span className="text-xs text-gray-400 font-medium shrink-0">
+                {filteredSales.length} result{filteredSales.length !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+        </>
+      )}
 
       <DataTable
         headers={[
@@ -210,42 +223,118 @@ export default function SalesList() {
             key={sale._id}
             className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-xs sm:text-sm"
           >
-            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary text-xs sm:text-sm">{sale.invoiceNo}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-mono font-semibold text-primary text-xs sm:text-sm">{sale.invoiceNo}</td>
             <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-gray-900 truncate text-xs sm:text-sm">{sale.customerId?.fullName || "—"}</td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">${sale.subtotal.toLocaleString()}</td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 font-bold text-xs sm:text-sm">${sale.total.toLocaleString()}</td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 text-amber-600 font-semibold text-xs sm:text-sm">
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-gray-600 text-xs sm:text-sm">${sale.subtotal.toLocaleString()}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-gray-900 font-bold text-xs sm:text-sm">${sale.total.toLocaleString()}</td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-amber-600 font-semibold text-xs sm:text-sm">
               ${(sale.charityAmount || 0).toLocaleString()}
             </td>
             <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">{sale.paymentMethod}</td>
             <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{new Date(sale.createdAt).toLocaleDateString()}</td>
             <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
-              <div className="flex items-center gap-3">
-                <Link
-                  to={`/sales/${sale._id}`}
-                  className="inline-flex items-center gap-1.5 text-accent hover:underline font-semibold text-xs sm:text-sm"
-                  title="View Invoice Details"
-                >
-                  <Eye className="h-4 w-4 flex-shrink-0" /> <span className="hidden sm:inline">Invoice details</span><span className="sm:hidden">View</span>
+              <div className="flex items-center gap-2">
+                <Link to={`/sales/${sale._id}`} title="View Invoice Details">
+                  <TableActionButton
+                    icon={Eye}
+                    title="View Invoice Details"
+                  />
                 </Link>
-                <button
-                  type="button"
+                <TableActionButton
+                  icon={FileDown}
+                  title="Generate & Download PDF Invoice"
+                  isLoading={downloadingId === sale._id}
+                  disabled={Boolean(downloadingId)}
                   onClick={async () => {
                     try {
+                      setDownloadingId(sale._id);
                       await downloadInvoicePdf(sale._id, sale.invoiceNo);
                       showSuccess("PDF Downloaded", `Invoice ${sale.invoiceNo} PDF downloaded.`);
                     } catch (err) {
                       showError("PDF Failed", "Failed to generate invoice PDF.");
+                    } finally {
+                      setDownloadingId(null);
                     }
                   }}
-                  className="inline-flex items-center gap-1 text-gray-600 hover:text-primary p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                  title="Generate & Download PDF Invoice"
-                >
-                  <FileDown className="h-4 w-4" />
-                </button>
+                />
               </div>
             </td>
           </tr>
+        )}
+        renderMobileCard={(sale, idx, { isExpanded, toggleExpand }) => (
+          <div
+            key={sale._id}
+            className="rounded-2xl border border-gray-100 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.015)] overflow-hidden"
+          >
+            <button
+              type="button"
+              onClick={toggleExpand}
+              className="w-full p-4 flex items-center justify-between gap-3 text-left bg-white hover:bg-gray-50/50 transition-colors cursor-pointer select-none"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-primary text-sm">{sale.invoiceNo}</span>
+                  <span className="text-xs text-gray-500 font-medium truncate">• {sale.customerId?.fullName || "Walk-in Client"}</span>
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-xs">
+                  <span className="font-mono font-bold text-gray-900">${sale.total.toLocaleString()}</span>
+                  <span className="text-gray-400 font-medium">{new Date(sale.createdAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </div>
+              </div>
+            </button>
+
+            {isExpanded && (
+              <div className="border-t border-gray-100 p-4 bg-gray-50/40 flex flex-col gap-2.5 text-xs text-gray-700">
+                <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                  <span className="font-semibold text-gray-500">Subtotal</span>
+                  <span className="font-mono font-medium text-gray-900">${sale.subtotal.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                  <span className="font-semibold text-gray-500">Charity Contribution</span>
+                  <span className="font-mono font-semibold text-amber-600">${(sale.charityAmount || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                  <span className="font-semibold text-gray-500">Payment Method</span>
+                  <span className="font-medium text-gray-900">{sale.paymentMethod}</span>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                  <Link to={`/sales/${sale._id}`} title="View Invoice Details">
+                    <TableActionButton
+                      icon={Eye}
+                      title="View Invoice Details"
+                      showLabel
+                      label="View"
+                    />
+                  </Link>
+                  <TableActionButton
+                    icon={FileDown}
+                    title="Generate & Download PDF Invoice"
+                    showLabel
+                    label="Download PDF"
+                    isLoading={downloadingId === sale._id}
+                    disabled={Boolean(downloadingId)}
+                    onClick={async () => {
+                      try {
+                        setDownloadingId(sale._id);
+                        await downloadInvoicePdf(sale._id, sale.invoiceNo);
+                        showSuccess("PDF Downloaded", `Invoice ${sale.invoiceNo} PDF downloaded.`);
+                      } catch (err) {
+                        showError("PDF Failed", "Failed to generate invoice PDF.");
+                      } finally {
+                        setDownloadingId(null);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         )}
       />
 
@@ -359,7 +448,7 @@ export default function SalesList() {
             <Button variant="outline" onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Print & Checkout Invoice</Button>
+            <Button type="submit" isLoading={isSubmitting}>Print & Checkout Invoice</Button>
           </div>
         </form>
       </Modal>

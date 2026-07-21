@@ -39,7 +39,7 @@ export function SearchInput({
   return (
     <div className={cn("flex flex-col gap-2", containerClassName)}>
       {label && (
-        <label htmlFor={id || name} className="text-[13px] font-semibold text-gray-700 tracking-[-0.01em]">
+        <label htmlFor={id || name} className="text-xs sm:text-sm font-semibold text-gray-700 tracking-tight select-none">
           {label}
         </label>
       )}
@@ -57,8 +57,8 @@ export function SearchInput({
         placeholder={placeholder}
         autoFocus={autoFocus}
         className={cn(
-          "h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-10 text-sm text-gray-900",
-          "placeholder:text-gray-400 transition-all duration-200",
+          "h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-10 text-xs sm:text-sm text-gray-900",
+          "placeholder:text-xs sm:placeholder:text-sm placeholder:text-gray-400 placeholder:font-normal transition-all duration-200",
           "hover:border-gray-400",
           "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50",
           "disabled:bg-gray-50 disabled:text-gray-400 disabled:border-gray-200 disabled:cursor-not-allowed",

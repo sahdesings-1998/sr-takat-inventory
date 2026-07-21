@@ -35,6 +35,7 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   variant = "danger",
   isLoading = false,
+  loadingText,
 }) {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [animate, setAnimate] = useState(false);
@@ -128,7 +129,7 @@ export function ConfirmDialog({
           {/* Title */}
           <h3
             id="confirm-dialog-title"
-            className="text-base font-bold text-gray-900 tracking-[-0.02em]"
+            className="heading-h3"
           >
             {title}
           </h3>
@@ -136,7 +137,7 @@ export function ConfirmDialog({
           {/* Message */}
           <p
             id="confirm-dialog-message"
-            className="text-sm text-gray-500 leading-relaxed -mt-1"
+            className="text-body -mt-1"
           >
             {message}
           </p>
@@ -157,6 +158,7 @@ export function ConfirmDialog({
               onClick={onConfirm}
               isLoading={isLoading}
               disabled={isLoading}
+              loadingText={loadingText}
             >
               {confirmLabel}
             </Button>

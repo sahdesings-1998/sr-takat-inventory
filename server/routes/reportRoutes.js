@@ -21,6 +21,8 @@ router.get("/charity", requirePermission("reports.view"), reportController.getRe
 router.get("/product-cost", requirePermission("reports.view"), reportController.getProductCostReport);
 router.get("/stock-movement", requirePermission("reports.view"), reportController.getStockMovementReport);
 router.get("/supplier-purchase", requirePermission("reports.view"), reportController.getSupplierPurchaseReport);
+router.get("/income", requirePermission("reports.view"), reportController.getIncomeReport);
+router.get("/expenses", requirePermission("reports.view"), reportController.getExpenseReport);
 
 // Keep legacy endpoints for compatibility
 router.get("/valuation", requirePermission("reports.view"), reportController.getValuationReport);

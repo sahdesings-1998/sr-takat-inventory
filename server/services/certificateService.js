@@ -7,11 +7,11 @@ async function getAllCertificates({ entityType, entityId } = {}) {
   const query = { isDeleted: false };
   if (entityType) query.entityType = entityType;
   if (entityId) query.entityId = entityId;
-  return Certificate.find(query).sort({ createdAt: -1 });
+  return Certificate.find(query).sort({ createdAt: -1 }).populate("entityId");
 }
 
 async function getCertificateById(id) {
-  const cert = await Certificate.findOne({ _id: id, isDeleted: false });
+  const cert = await Certificate.findOne({ _id: id, isDeleted: false }).populate("entityId");
   if (!cert) throw new ApiError(404, "Certificate not found");
   return cert;
 }

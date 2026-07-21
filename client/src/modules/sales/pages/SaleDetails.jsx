@@ -7,6 +7,8 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import logo from "@/assets/logo.png";
 
+import { Skeleton } from "@/components/ui/Skeleton";
+
 export default function SaleDetails() {
   const { id } = useParams();
   const { sale, items, isLoading, isError } = useSale(id);
@@ -21,8 +23,78 @@ export default function SaleDetails() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[300px] text-gray-500 text-sm font-medium">
-        <Loader2 className="h-5 w-5 animate-spin mr-2 text-primary" /> Loading invoice details...
+      <div className="flex flex-col gap-6 max-w-5xl mx-auto">
+        {/* Top Toolbar Skeleton */}
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-4 w-32 rounded-md" />
+          <div className="flex gap-3">
+            <Skeleton className="h-10 w-28 rounded-xl" />
+            <Skeleton className="h-10 w-28 rounded-xl" />
+          </div>
+        </div>
+
+        {/* Invoice Sheet Skeleton */}
+        <div className="bg-white p-6 sm:p-10 rounded-2xl border border-gray-200/80 shadow-md">
+          {/* Header */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-6 border-b border-gray-300">
+            {/* Company Info */}
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-40 rounded" />
+              <Skeleton className="h-3 w-32 rounded" />
+              <Skeleton className="h-3 w-36 rounded" />
+              <Skeleton className="h-3 w-28 rounded" />
+            </div>
+            {/* Center Logo */}
+            <div className="flex flex-col items-center justify-center gap-3">
+              <Skeleton className="h-16 w-32 rounded-md" />
+              <Skeleton className="h-4 w-20 rounded" />
+            </div>
+            {/* Invoice Meta */}
+            <div className="flex flex-col items-end gap-2.5">
+              <Skeleton className="h-6 w-36 rounded" />
+              <Skeleton className="h-6 w-36 rounded" />
+              <Skeleton className="h-6 w-36 rounded" />
+            </div>
+          </div>
+
+          {/* Legal / Payment Sub-bar */}
+          <div className="my-3 py-2 border-b border-gray-200 flex items-center justify-between">
+            <Skeleton className="h-3 w-96 rounded" />
+            <Skeleton className="h-5 w-16 rounded-full" />
+          </div>
+
+          {/* Table */}
+          <div className="my-4 space-y-2">
+            <div className="grid grid-cols-5 gap-4 py-2 border-y border-black font-bold">
+              <Skeleton className="h-4 w-8 rounded" />
+              <Skeleton className="h-4 w-48 rounded" />
+              <Skeleton className="h-4 w-8 rounded" />
+              <Skeleton className="h-4 w-20 rounded" />
+              <Skeleton className="h-4 w-20 rounded" />
+            </div>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="grid grid-cols-5 gap-4 py-2 border-b border-gray-100">
+                <Skeleton className="h-4 w-6 rounded" />
+                <Skeleton className="h-4 w-64 rounded" />
+                <Skeleton className="h-4 w-6 rounded" />
+                <Skeleton className="h-4 w-16 rounded" />
+                <Skeleton className="h-4 w-20 rounded" />
+              </div>
+            ))}
+          </div>
+
+          {/* Footer Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6 pt-2">
+            <div className="space-y-2">
+              <Skeleton className="h-16 rounded-lg w-full" />
+            </div>
+            <div className="space-y-2.5 flex flex-col items-end">
+              <Skeleton className="h-4 w-40 rounded" />
+              <Skeleton className="h-4 w-40 rounded" />
+              <Skeleton className="h-6 w-48 rounded-md" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -73,13 +145,8 @@ export default function SaleDetails() {
           <Button onClick={handlePrint} variant="outline" className="w-fit">
             <Printer className="h-4 w-4 mr-1.5" /> Print Invoice
           </Button>
-          <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf} className="w-fit">
-            {isGeneratingPdf ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-            ) : (
-              <FileDown className="h-4 w-4 mr-1.5" />
-            )}
-            {isGeneratingPdf ? "Generating PDF..." : "Generate PDF"}
+          <Button onClick={handleGeneratePdf} isLoading={isGeneratingPdf} className="w-fit">
+            <FileDown className="h-4 w-4 mr-1.5" /> Generate PDF
           </Button>
         </div>
       </div>
@@ -250,7 +317,7 @@ export default function SaleDetails() {
                 <p className="text-gray-700 leading-relaxed font-sans">{sale.notes}</p>
               </div>
             )}
-            {sale.charityAmount > 0 && (
+            {/* {sale.charityAmount > 0 && (
               <div className="bg-amber-50/80 border border-amber-200 p-3 rounded-lg text-amber-950 font-sans text-xs">
                 <span className="font-bold text-amber-900 block mb-0.5">
                   Charity Program ({sale.charityPercentage}%)
@@ -259,7 +326,7 @@ export default function SaleDetails() {
                 <span className="font-bold">${sale.charityAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span> from this
                 transaction is allocated to our charity fund.
               </div>
-            )}
+            )} */}
           </div>
 
           {/* Totals Box Column */}

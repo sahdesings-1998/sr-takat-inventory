@@ -6,7 +6,7 @@ import { useToast } from "@/contexts/ToastContext";
 import Card, { CardHeader, CardBody } from "@/components/ui/Card";
 import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
-import Spinner from "@/components/ui/Spinner";
+import { SkeletonDetailCard, Skeleton } from "@/components/ui/Skeleton";
 
 export default function CustomerDetails() {
   const { id } = useParams();
@@ -21,8 +21,25 @@ export default function CustomerDetails() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Spinner size={40} />
+      <div className="flex flex-col gap-6">
+        {/* Back link + header skeleton */}
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-4 w-32 rounded-md" />
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-7 w-52 rounded-lg" />
+              <Skeleton className="h-4 w-32 rounded-md" />
+            </div>
+            <Skeleton className="h-6 w-16 rounded-full" />
+          </div>
+        </div>
+        {/* KPI cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Skeleton className="h-24 rounded-[20px]" />
+          <Skeleton className="h-24 rounded-[20px]" />
+        </div>
+        {/* Detail card */}
+        <SkeletonDetailCard rows={8} cols={2} />
       </div>
     );
   }
@@ -48,7 +65,7 @@ export default function CustomerDetails() {
         </Link>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">{customer.fullName}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 font-display">{customer.fullName}</h1>
             <p className="text-sm text-gray-500">{customer.companyName || "No Company Specified"}</p>
           </div>
           <Badge variant={customer.status === "active" ? "success" : "neutral"}>

@@ -32,6 +32,26 @@ const certificateSchema = new Schema(
       type: String,
       default: null,
     },
+    resourceType: {
+      type: String,
+      default: null,
+    },
+    format: {
+      type: String,
+      default: null,
+    },
+    originalFilename: {
+      type: String,
+      default: null,
+    },
+    bytes: {
+      type: Number,
+      default: null,
+    },
+    uploadTimestamp: {
+      type: Date,
+      default: null,
+    },
     entityType: {
       type: String,
       enum: ["Gemstone", "Product"],

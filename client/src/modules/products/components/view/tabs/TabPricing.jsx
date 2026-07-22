@@ -39,7 +39,7 @@ export default function TabPricing({ product }) {
   const profitPositive = profit >= 0;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-0">
       {/* Cost Breakdown */}
       <Card>
         <CardHeader>

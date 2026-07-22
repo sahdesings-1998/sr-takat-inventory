@@ -54,16 +54,16 @@ export default function TabSpecifications({ product }) {
 
   const gemstoneHasData =
     isGemstone && [product.gemstoneType, product.variety, product.shape, product.cut, product.colour,
-      product.clarity, product.origin, product.treatment, product.transparency,
-      product.totalCarat, product.averageCarat, product.costPerCarat].some(hasValue);
+    product.clarity, product.origin, product.treatment, product.transparency,
+    product.totalCarat, product.averageCarat, product.costPerCarat].some(hasValue);
 
   const jewelleryHasData =
     isJewellery && [product.metalType, product.goldPurity, product.weight, product.dimensions,
-      product.manufacturedBy, product.manufacturedDate, product.material].some(hasValue);
+    product.manufacturedBy, product.manufacturedDate, product.material].some(hasValue);
 
   const watchHasData =
     isWatch && [product.metalType, product.material, product.weight, product.dimensions,
-      product.model, product.manufacturedBy, product.manufacturedDate].some(hasValue);
+    product.model, product.manufacturedBy, product.manufacturedDate].some(hasValue);
 
   const accessoryHasData =
     isAccessory && [product.material, product.weight, product.dimensions].some(hasValue);
@@ -72,10 +72,10 @@ export default function TabSpecifications({ product }) {
 
   const gemLotData =
     [product.pieces, product.totalCarat, product.averageCarat, product.costPerCarat,
-     product.sellingPricePerCarat].some(hasValue);
+    product.sellingPricePerCarat].some(hasValue);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-0">
       {/* Gemstone Specifications */}
       <SectionCard
         icon={Gem}

@@ -2,7 +2,9 @@ import Sale from "../models/Sale.js";
 import SaleItem from "../models/SaleItem.js";
 import Gemstone from "../models/Gemstone.js";
 import Product from "../models/Product.js";
+import Customer from "../models/Customer.js";
 import Settings from "../models/Settings.js";
+import Payment from "../models/Payment.js";
 import generateId from "../utils/generateId.js";
 import movementService from "./movementService.js";
 import auditLogService from "./auditLogService.js";
@@ -11,7 +13,7 @@ import ApiError from "../utils/ApiError.js";
 async function getAllSales({ customerId, paymentStatus } = {}) {
   const query = {};
   if (customerId) query.customerId = customerId;
-  if (paymentStatus) query.paymentStatus = paymentStatus;
+  if (paymentStatus && paymentStatus !== "All") query.paymentStatus = paymentStatus;
   return Sale.find(query).sort({ createdAt: -1 }).populate("customerId").populate("createdBy");
 }
 
@@ -20,9 +22,12 @@ async function getSaleById(id) {
   if (!sale) throw new ApiError(404, "Sale not found");
 
   const items = await SaleItem.find({ saleId: id }).populate("inventoryId");
+  const paymentHistory = await Payment.find({ saleId: id }).sort({ createdAt: -1 }).populate("createdBy");
+
   return {
     sale,
     items,
+    paymentHistory,
   };
 }
 
@@ -30,72 +35,146 @@ async function createDirectSale(data, userId, ipAddress = "") {
   const invoiceNo = await generateId(Sale, "invoiceNo", "invoice", 5);
 
   const settings = await Settings.getSettings();
-  const charityPct = settings.charityPercentage || 2.0;
+  const charityPct = settings.charityPercentage ?? 2.0;
 
   let calculatedSubtotal = 0;
-  let calculatedGrossProfit = 0;
+  let totalCostPrice = 0;
 
   const itemsToCreate = [];
 
   for (const item of data.items) {
     let costPrice = 0;
-    let sellingPrice = Number(item.sellingPrice);
+    let sellingPrice = Number(item.sellingPrice || 0);
+    const qty = Number(item.quantity || 1);
 
-    if (item.inventoryType === "Gemstone") {
-      const stone = await Gemstone.findById(item.inventoryId);
-      if (!stone || stone.status !== "In Stock") {
-        throw new ApiError(400, `Gemstone ${item.inventoryId} is not in stock`);
-      }
-      stone.status = "Sold";
-      await stone.save();
-      costPrice = stone.purchasePrice;
-    } else if (item.inventoryType === "Product") {
-      const prod = await Product.findById(item.inventoryId);
-      if (!prod || prod.status !== "In Stock") {
-        throw new ApiError(400, `Product ${item.inventoryId} is not in stock`);
-      }
-      prod.status = "Sold";
-      await prod.save();
-      costPrice = prod.costPrice;
+    if (item.inventoryType === "Product") {
+      const p = await Product.findById(item.inventoryId);
+      if (!p) throw new ApiError(404, `Product not found: ${item.inventoryId}`);
+      if (p.status === "Sold") throw new ApiError(400, `Product ${p.productCode} is already sold`);
+
+      costPrice = p.costPrice || 0;
+      if (!sellingPrice) sellingPrice = p.sellingPrice || 0;
+
+      p.status = "Sold";
+      p.stockQuantity = Math.max(0, (p.stockQuantity || 1) - qty);
+      await p.save();
+    } else if (item.inventoryType === "Gemstone") {
+      const g = await Gemstone.findById(item.inventoryId);
+      if (!g) throw new ApiError(404, `Gemstone not found: ${item.inventoryId}`);
+      if (g.status === "Sold") throw new ApiError(400, `Gemstone ${g.stoneId} is already sold`);
+
+      costPrice = g.costPrice || g.purchasePrice || 0;
+      if (!sellingPrice) sellingPrice = g.sellingPrice || costPrice * 1.25;
+
+      g.status = "Sold";
+      await g.save();
     }
 
-    calculatedSubtotal += sellingPrice * (item.quantity || 1);
-    const itemProfit = Math.max(0, sellingPrice - costPrice) * (item.quantity || 1);
-    calculatedGrossProfit += itemProfit;
+    calculatedSubtotal += sellingPrice * qty;
+    totalCostPrice += costPrice * qty;
 
     itemsToCreate.push({
       inventoryType: item.inventoryType,
       inventoryId: item.inventoryId,
-      quantity: item.quantity || 1,
+      quantity: qty,
       sellingPrice,
-      discount: item.discount || 0,
+      discount: Number(item.discount || 0),
     });
   }
 
-  const discount = Number(data.discount || 0);
-  const tax = Number(data.tax || 0);
-  const total = Math.max(0, calculatedSubtotal - discount + tax);
+  // Calculate Discount (Fixed vs Percentage)
+  const discountType = data.discountType === "percentage" ? "percentage" : "fixed";
+  const discountVal = Number(data.discountValue ?? data.discount ?? 0);
+  let computedDiscount = 0;
 
-  const finalGross = Math.max(0, calculatedGrossProfit - discount);
-  const charityAmount = finalGross * (charityPct / 100);
-  const netProfit = Math.max(0, finalGross - charityAmount);
+  if (discountType === "percentage") {
+    computedDiscount = (calculatedSubtotal * Math.min(100, Math.max(0, discountVal))) / 100;
+  } else {
+    computedDiscount = Math.min(calculatedSubtotal, Math.max(0, discountVal));
+  }
+
+  const netSubtotal = Math.max(0, calculatedSubtotal - computedDiscount);
+
+  // Separate Tax & GST Calculations
+  const isTaxEnabled = Boolean(data.isTaxEnabled);
+  const taxPct = isTaxEnabled ? Number(data.taxPercentage || 0) : 0;
+  const taxAmt = isTaxEnabled ? (netSubtotal * taxPct) / 100 : 0;
+
+  const isGstEnabled = Boolean(data.isGstEnabled);
+  const gstPct = isGstEnabled ? Number(data.gstPercentage || 0) : 0;
+  const gstAmt = isGstEnabled ? (netSubtotal * gstPct) / 100 : 0;
+
+  const totalTax = taxAmt + gstAmt + Number(data.tax || 0);
+  const total = Math.max(0, netSubtotal + totalTax);
+
+  // Payment Status & Balance Due
+  const amountPaid = Number(data.amountPaid ?? (data.paymentStatus === "Paid" ? total : 0));
+  const balanceDue = Math.max(0, total - amountPaid);
+
+  let derivedPaymentStatus = "Unpaid";
+  if (amountPaid >= total && total > 0) {
+    derivedPaymentStatus = "Paid";
+  } else if (amountPaid > 0) {
+    derivedPaymentStatus = "Partially Paid";
+  }
+
+  // Profit Calculations
+  const grossProfit = Math.max(0, total - totalCostPrice);
+  const charityAmount = grossProfit * (charityPct / 100);
+  const netProfit = Math.max(0, grossProfit - charityAmount);
 
   const sale = await Sale.create({
     invoiceNo,
     customerId: data.customerId,
     subtotal: calculatedSubtotal,
-    discount,
-    tax,
+    discountType,
+    discountValue: discountVal,
+    discount: computedDiscount,
+    isTaxEnabled,
+    taxPercentage: taxPct,
+    taxAmount: taxAmt,
+    isGstEnabled,
+    gstPercentage: gstPct,
+    gstAmount: gstAmt,
+    tax: totalTax,
     total,
-    paymentStatus: data.paymentStatus || "Paid",
+    amountPaid,
+    balanceDue,
+    paymentStatus: derivedPaymentStatus,
     paymentMethod: data.paymentMethod || "Cash",
+    dueDate: data.dueDate ? new Date(data.dueDate) : null,
     charityPercentage: charityPct,
     charityAmount,
-    grossProfit: finalGross,
+    grossProfit,
     netProfit,
     notes: data.notes || "",
     createdBy: userId,
   });
+
+  // Create initial Payment transaction if initial amountPaid > 0
+  if (amountPaid > 0) {
+    const paymentId = await generateId(Payment, "paymentId", "pay", 5);
+    await Payment.create({
+      paymentId,
+      saleId: sale._id,
+      invoiceNo,
+      customerId: data.customerId,
+      amount: amountPaid,
+      paymentMethod: data.paymentMethod || "Cash",
+      paymentDate: data.paymentDate ? new Date(data.paymentDate) : new Date(),
+      notes: data.notes ? `Initial Payment: ${data.notes}` : "Initial Payment on Sale Creation",
+      createdBy: userId,
+    });
+  }
+
+  // Update Customer Outstanding Balance if balance due > 0
+  if (balanceDue > 0 && data.customerId) {
+    const customer = await Customer.findById(data.customerId);
+    if (customer) {
+      customer.outstandingBalance = (customer.outstandingBalance || 0) + balanceDue;
+      await customer.save();
+    }
+  }
 
   for (const itemData of itemsToCreate) {
     await SaleItem.create({
@@ -112,7 +191,7 @@ async function createDirectSale(data, userId, ipAddress = "") {
       referenceType: "Sale",
       referenceId: sale._id,
       userId,
-      remarks: `Direct purchase invoice: ${sale.invoiceNo}`,
+      remarks: `Sales invoice ${sale.invoiceNo} completed`,
     });
   }
 
@@ -128,8 +207,73 @@ async function createDirectSale(data, userId, ipAddress = "") {
   return getSaleById(sale._id);
 }
 
+async function recordPayment(saleId, paymentData, userId, ipAddress = "") {
+  const sale = await Sale.findById(saleId);
+  if (!sale) throw new ApiError(404, "Sale not found");
+
+  const paymentAmount = Number(paymentData.amount || 0);
+  if (paymentAmount <= 0) {
+    throw new ApiError(400, "Payment amount must be greater than 0");
+  }
+  if (paymentAmount > sale.balanceDue + 0.001) {
+    throw new ApiError(400, `Payment amount ($${paymentAmount}) cannot exceed remaining balance due ($${sale.balanceDue})`);
+  }
+
+  const paymentId = await generateId(Payment, "paymentId", "pay", 5);
+
+  const paymentRecord = await Payment.create({
+    paymentId,
+    saleId: sale._id,
+    invoiceNo: sale.invoiceNo,
+    customerId: sale.customerId,
+    amount: paymentAmount,
+    paymentMethod: paymentData.paymentMethod || "Cash",
+    paymentDate: paymentData.paymentDate ? new Date(paymentData.paymentDate) : new Date(),
+    notes: paymentData.notes || "",
+    attachments: paymentData.attachments || [],
+    createdBy: userId,
+  });
+
+  // Update Sale balances
+  const newAmountPaid = sale.amountPaid + paymentAmount;
+  const newBalanceDue = Math.max(0, sale.total - newAmountPaid);
+
+  let newStatus = "Unpaid";
+  if (newBalanceDue <= 0.001) {
+    newStatus = "Paid";
+  } else if (sale.dueDate && new Date(sale.dueDate) < new Date()) {
+    newStatus = "Overdue";
+  } else if (newAmountPaid > 0) {
+    newStatus = "Partially Paid";
+  }
+
+  sale.amountPaid = newAmountPaid;
+  sale.balanceDue = newBalanceDue;
+  sale.paymentStatus = newStatus;
+  await sale.save();
+
+  // Recalculate Customer Outstanding Balance across all customer sales
+  if (sale.customerId) {
+    const customerSales = await Sale.find({ customerId: sale.customerId });
+    const totalCustomerBalance = customerSales.reduce((sum, s) => sum + (s.balanceDue || 0), 0);
+    await Customer.findByIdAndUpdate(sale.customerId, { outstandingBalance: totalCustomerBalance });
+  }
+
+  await auditLogService.logAction({
+    userId,
+    entity: "Payment",
+    entityId: paymentRecord._id,
+    action: "create",
+    newValue: paymentRecord.toObject(),
+    ipAddress,
+  });
+
+  return getSaleById(sale._id);
+}
+
 export default {
   getAllSales,
   getSaleById,
   createDirectSale,
+  recordPayment,
 };

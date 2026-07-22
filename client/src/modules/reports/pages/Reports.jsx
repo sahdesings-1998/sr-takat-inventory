@@ -32,6 +32,7 @@ import { useSuppliers } from "@/modules/suppliers/hooks/useSuppliers";
 import { useUsers } from "@/modules/settings/hooks/useUsers";
 import { useToast } from "@/contexts/ToastContext";
 import Button from "@/components/ui/Button";
+import FilterPanel from "@/components/ui/FilterPanel";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Card, { CardBody } from "@/components/ui/Card";
@@ -526,7 +527,7 @@ export default function Reports() {
   // Formatted Array Data for rendering and sorting
   const formattedDataList = useMemo(() => {
     if (!reportData || isLoading || isError) return [];
-    
+
     // Custom Valuation structure mapping
     if (activeTab === "inventory-valuation") {
       return [
@@ -569,7 +570,7 @@ export default function Reports() {
     sorted.sort((a, b) => {
       let valA = a[sortConfig.key];
       let valB = b[sortConfig.key];
-      
+
       if (sortConfig.key === "customer" && activeTab === "sales") {
         valA = a.customerName;
         valB = b.customerName;
@@ -932,7 +933,7 @@ export default function Reports() {
 
           cell.font = { name: fontName, size: 10, bold: true, color: { argb: "0F172A" } };
           cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "F1F5F9" } };
-          
+
           cell.border = {
             top: { style: "thin", color: { argb: "94A3B8" } },
             bottom: { style: "double", color: { argb: "94A3B8" } },
@@ -985,22 +986,22 @@ export default function Reports() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="page-container space-y-0">
       {/* Title Header Block */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between border-b border-gray-200/80 pb-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 font-display">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
             Report Management System
           </h1>
-          <p className="text-sm text-gray-500 mt-1 font-medium">
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
             Generate and export real-time sales, inventory valuation, purchases, memos, ledgers, and movement logs.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleResetFilters} className="premium-btn">
-            <RotateCcw className="h-4 w-4 mr-2" /> Reset Filters
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleResetFilters} className="text-xs sm:text-sm">
+            <RotateCcw className="h-4 w-4 mr-1.5" /> Reset Filters
           </Button>
-          <Button onClick={handleExportToExcel} className="premium-btn gap-2" disabled={isLoading || isError || sortedData.length === 0}>
+          <Button onClick={handleExportToExcel} className="text-xs sm:text-sm gap-2" disabled={isLoading || isError || sortedData.length === 0}>
             <FileSpreadsheet className="h-4 w-4" /> Export to Excel
           </Button>
         </div>
@@ -1016,11 +1017,10 @@ export default function Reports() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer ${
-                isActive
-                  ? "border-accent text-accent"
-                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-              }`}
+              className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer ${isActive
+                ? "border-accent text-accent"
+                : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                }`}
             >
               <Icon className="h-4 w-4" />
               {tab.label}
@@ -1029,14 +1029,19 @@ export default function Reports() {
         })}
       </div>
 
-      {/* Advanced Unified Filters Toolbar Panel */}
-      <div className="bg-white p-5 rounded-[24px] border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] flex flex-col gap-4">
-        <div className="flex items-center gap-2 border-b border-gray-50 pb-2">
-          <Calendar className="h-4 w-4 text-primary" />
-          <h4 className="font-semibold text-gray-900 text-xs uppercase tracking-wider font-display">
-            Report Filters
-          </h4>
-        </div>
+      {/* Advanced Unified Filters Toolbar Panel with Mobile Accordion */}
+      <FilterPanel
+        activeFilterCount={
+          (filters.dateRange !== "All" ? 1 : 0) +
+          (filters.status !== "All" ? 1 : 0) +
+          (filters.category !== "All" ? 1 : 0) +
+          (filters.customer !== "All" ? 1 : 0) +
+          (filters.supplier !== "All" ? 1 : 0) +
+          (filters.searchTerm ? 1 : 0)
+        }
+        onReset={handleResetFilters}
+        title="Report Filters"
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {isFilterVisible("dateRange") && (
             <Select
@@ -1140,7 +1145,7 @@ export default function Reports() {
             </div>
           )}
         </div>
-      </div>
+      </FilterPanel>
 
       {/* KPI Cards Ribbon Row (Styled like Dashboard summary cards) */}
       {!isLoading && !isError && Object.keys(metrics).length > 0 && (

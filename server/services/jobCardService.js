@@ -17,21 +17,36 @@ async function getJobCardById(id) {
     .populate("productId")
     .populate("assignedTo")
     .populate("materialsIssued.materialId")
+    .populate("materialsUsed.materialId")
     .populate("materialsReturned.materialId");
   if (!job) throw new ApiError(404, "Job Card not found");
   return job;
 }
 
+const WORKFLOW_STAGES = [
+  "Design",
+  "Materials Issued",
+  "Manufacturing",
+  "Stone Setting",
+  "Polishing",
+  "QC",
+  "Completed",
+];
+
 async function createJobCard(data, userId, ipAddress = "") {
   const jobNo = await generateId(JobCard, "jobNo", "jobCard", 5);
+
+  const initialStages = WORKFLOW_STAGES.map((stageName, idx) => ({
+    stageName,
+    status: idx === 0 ? "In Progress" : "Pending",
+    notes: idx === 0 ? "Initial production job design phase" : "",
+  }));
 
   const job = await JobCard.create({
     ...data,
     jobNo,
     status: "Assigned",
-    productionStages: [
-      { stageName: "Design", status: "Pending", notes: "Design stage initialized" },
-    ],
+    productionStages: initialStages,
   });
 
   await auditLogService.logAction({
@@ -89,7 +104,7 @@ async function updateStage(id, stageData, userId) {
 
   if (stageData.status === "In Progress") {
     job.status = "In Progress";
-  } else if (stageData.stageName === "QC" && stageData.status === "Completed") {
+  } else if (stageData.stageName === "Completed" && stageData.status === "Completed") {
     job.status = "Completed";
     job.completedDate = new Date();
   }
@@ -117,6 +132,13 @@ async function issueMaterials(id, { materialId, quantity }, userId) {
     issuedAt: new Date(),
   });
 
+  // Automatically mark Materials Issued stage as In Progress or Completed
+  const stageIdx = job.productionStages.findIndex((s) => s.stageName === "Materials Issued");
+  if (stageIdx > -1) {
+    job.productionStages[stageIdx].status = "Completed";
+    job.productionStages[stageIdx].notes = `Issued ${quantity} ${material.unit || "units"} of ${material.materialName}`;
+  }
+
   await job.save();
 
   await movementService.logMovement({
@@ -133,17 +155,40 @@ async function issueMaterials(id, { materialId, quantity }, userId) {
   return getJobCardById(id);
 }
 
-async function returnMaterials(id, { materialId, quantity, wastageType }, userId) {
+async function recordMaterialUsage(id, { materialId, quantity }, userId) {
   const job = await JobCard.findById(id);
   if (!job) throw new ApiError(404, "Job Card not found");
 
   const material = await Material.findById(materialId);
   if (!material) throw new ApiError(404, "Material not found");
 
-  if (wastageType === "returnedToStock") {
-    material.quantity += quantity;
+  job.materialsUsed.push({
+    materialId,
+    quantity,
+    usedBy: userId,
+    usedAt: new Date(),
+  });
+
+  await job.save();
+  return getJobCardById(id);
+}
+
+async function returnMaterials(id, { materialId, quantity, wastageType, returnedToStockQuantity, wastageQuantity }, userId) {
+  const job = await JobCard.findById(id);
+  if (!job) throw new ApiError(404, "Job Card not found");
+
+  const material = await Material.findById(materialId);
+  if (!material) throw new ApiError(404, "Material not found");
+
+  const returnQty = returnedToStockQuantity ?? (wastageType === "returnedToStock" ? quantity : 0);
+  const wasteQty = wastageQuantity ?? (wastageType !== "returnedToStock" ? quantity : 0);
+
+  if (returnQty > 0) {
+    material.quantity += returnQty;
     await material.save();
-  } else if (wastageType === "scrapRecovery") {
+  }
+
+  if (wastageType === "scrapRecovery" && wasteQty > 0) {
     let scrapMaterial = await Material.findOne({ materialCode: "MET-AU-SCRAP" });
     if (!scrapMaterial) {
       scrapMaterial = await Material.create({
@@ -157,13 +202,15 @@ async function returnMaterials(id, { materialId, quantity, wastageType }, userId
         status: "active",
       });
     }
-    scrapMaterial.quantity += quantity;
+    scrapMaterial.quantity += wasteQty;
     await scrapMaterial.save();
   }
 
   job.materialsReturned.push({
     materialId,
     quantity,
+    returnedToStockQuantity: returnQty,
+    wastageQuantity: wasteQty,
     wastageType,
     returnedBy: userId,
     returnedAt: new Date(),
@@ -179,7 +226,7 @@ async function returnMaterials(id, { materialId, quantity, wastageType }, userId
     referenceType: "JobCard",
     referenceId: id,
     userId,
-    remarks: `Material returned from job card: ${job.jobNo} (${wastageType})`,
+    remarks: `Material returned/reconciled from job card: ${job.jobNo} (Returned: ${returnQty}, Wastage: ${wasteQty})`,
   });
 
   return getJobCardById(id);
@@ -192,5 +239,6 @@ export default {
   updateJobCard,
   updateStage,
   issueMaterials,
+  recordMaterialUsage,
   returnMaterials,
 };

@@ -20,15 +20,22 @@ function buildProfitMetrics(data, productDoc = null) {
   });
 }
 
-async function getAllProducts({ category, status, search } = {}) {
+async function getAllProducts({ category, status, subCategory, brand, search } = {}) {
   const query = { isDeleted: { $ne: true } };
   if (category) query.category = category;
   if (status) query.status = status;
+  if (subCategory) query.subCategory = subCategory;
+  if (brand) query.brand = brand;
   if (search) {
     query.$or = [
       { productCode: { $regex: search, $options: "i" } },
       { stockNo: { $regex: search, $options: "i" } },
       { name: { $regex: search, $options: "i" } },
+      { sku: { $regex: search, $options: "i" } },
+      { barcode: { $regex: search, $options: "i" } },
+      { brand: { $regex: search, $options: "i" } },
+      { subCategory: { $regex: search, $options: "i" } },
+      { material: { $regex: search, $options: "i" } },
     ];
   }
   return Product.find(query).sort({ createdAt: -1 });

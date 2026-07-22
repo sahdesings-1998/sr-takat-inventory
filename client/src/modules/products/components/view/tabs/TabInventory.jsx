@@ -49,7 +49,7 @@ function StockLevelBadge({ qty, min, reorder }) {
 
 export default function TabInventory({ product }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-0">
       {/* Stock Status Banner */}
       <StockLevelBadge
         qty={product?.quantity}

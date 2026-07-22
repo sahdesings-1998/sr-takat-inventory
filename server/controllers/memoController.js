@@ -3,8 +3,8 @@ import catchAsync from "../utils/catchAsync.js";
 import sendSuccess from "../utils/apiResponse.js";
 
 export const getMemos = catchAsync(async (req, res) => {
-  const memos = await memoService.getAllMemos(req.query);
-  sendSuccess(res, { message: "Memos retrieved successfully", data: memos });
+  const result = await memoService.getAllMemos(req.query);
+  sendSuccess(res, { message: "Memos retrieved successfully", data: result });
 });
 
 export const getMemo = catchAsync(async (req, res) => {
@@ -33,8 +33,8 @@ export const convertMemoToSale = catchAsync(async (req, res) => {
 
 export const extendMemo = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const { expectedReturn } = req.body;
-  const memo = await memoService.extendMemo(id, expectedReturn, req.user._id, req.ip);
+  const { expectedReturn, reason } = req.body;
+  const memo = await memoService.extendMemo(id, expectedReturn, reason, req.user._id, req.ip);
   sendSuccess(res, { message: "Memo return date extended successfully", data: memo });
 });
 

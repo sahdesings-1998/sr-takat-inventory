@@ -7,6 +7,7 @@ export const TAB_DEFINITIONS = [
   { id: "inventory",       label: "Inventory",      showFor: null },
   { id: "components",      label: "Components",     showFor: ["Jewellery", "Watch", "Custom Product", "Ring", "Necklace", "Earrings", "Bracelet", "Pendant"] },
   { id: "supplier",        label: "Supplier",       showFor: null },
+  { id: "qrcode",          label: "QR & Barcode",   showFor: null },
   { id: "certificates",    label: "Certificates",   showFor: null, requiresData: "certificate" },
   { id: "media",           label: "Media",          showFor: null, requiresData: "media" },
   { id: "sales",           label: "Sales",          showFor: null },

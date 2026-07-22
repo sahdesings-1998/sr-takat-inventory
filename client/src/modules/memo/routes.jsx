@@ -10,6 +10,14 @@ const memoRoutes = [
     path: "/memos/:id",
     element: <MemoDetails />,
   },
+  {
+    path: "/memo",
+    element: <MemoList />,
+  },
+  {
+    path: "/memo/:id",
+    element: <MemoDetails />,
+  },
 ];
 
 export default memoRoutes;

@@ -16,6 +16,7 @@ import Modal from "@/components/ui/Modal";
 import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import SearchInput from "@/components/ui/SearchInput";
+import FilterPanel from "@/components/ui/FilterPanel";
 import TableActionButton from "@/components/ui/TableActionButton";
 import { SkeletonPageHeader } from "@/components/ui/Skeleton";
 
@@ -118,77 +119,154 @@ export default function JobCardList() {
     );
   }, [jobCards, search]);
 
-  const headers = ["Job No", "Product", "Due Date", "Status", "Actions"];
+  const productTypeOptions = [
+    { value: "Ring", label: "Ring" },
+    { value: "Necklace", label: "Necklace" },
+    { value: "Bracelet", label: "Bracelet" },
+    { value: "Watch", label: "Watch" },
+    { value: "Brooch", label: "Brooch" },
+    { value: "Earrings", label: "Earrings" },
+    { value: "Custom", label: "Custom Product" },
+  ];
+
+  const headers = ["Job No", "Product & Type", "Start Date", "Expected Date", "Assigned Artisan", "Status", "Actions"];
+
+  const activeFilterCount = (search ? 1 : 0) + (statusFilter ? 1 : 0);
+
+  const handleResetFilters = () => {
+    setSearchInput("");
+    setStatusFilter("");
+  };
+
+  const statusOptions = [
+    { value: "", label: "All Job Statuses" },
+    { value: "Assigned", label: "Assigned" },
+    { value: "In Progress", label: "In Progress" },
+    { value: "Completed", label: "Completed" },
+    { value: "Cancelled", label: "Cancelled" },
+  ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="page-container space-y-0">
       {isLoading && !jobCards?.length ? (
         <SkeletonPageHeader />
       ) : (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200/80 pb-0">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 font-display">Production Job Cards</h1>
-            <p className="text-sm text-gray-600 mt-1 font-medium">Full production workflow: Design &rarr; Materials Issued &rarr; Manufacturing &rarr; Stone Setting &rarr; Polishing &rarr; QC &rarr; Completed</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Production Job Cards</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+              Jewelry production workflow: Design &rarr; Materials Issued &rarr; Manufacturing &rarr; Stone Setting &rarr; Polishing &rarr; QC &rarr; Completed
+            </p>
           </div>
-          <Button onClick={handleOpenAdd} className="w-fit">
-            <Plus className="h-4 w-4" /> Add Job Card
+          <Button onClick={handleOpenAdd} className="w-fit" icon={<Plus className="h-4 w-4" />}>
+            Create Job Card
           </Button>
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-4 rounded-[20px] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
-        <SearchInput
-          placeholder="Search by job number or product name..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          onClear={() => setSearchInput("")}
-          containerClassName="flex-1 w-full"
-          id="jobcards-search"
-        />
-        <Select
-          placeholder="All Job Statuses"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          containerClassName="w-full sm:w-52"
-          options={[
-            { value: "Assigned", label: "Assigned" },
-            { value: "In Progress", label: "In Progress" },
-            { value: "Completed", label: "Completed" },
-            { value: "Cancelled", label: "Cancelled" },
-          ]}
-        />
-        {(search || statusFilter) && (
-          <span className="text-xs text-gray-400 font-medium shrink-0">
-            {filteredJobCards.length} result{filteredJobCards.length !== 1 ? "s" : ""}
-          </span>
-        )}
+      {/* Main Search & Filters Card with Mobile Collapsible Accordion */}
+      <FilterPanel
+        activeFilterCount={activeFilterCount}
+        onReset={handleResetFilters}
+        title="Job Card Filters"
+        chips={
+          activeFilterCount > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-gray-100 text-xs">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mr-1">
+                Active Filters:
+              </span>
+
+              {search && (
+                <span className="inline-flex items-center gap-1 bg-primary/10 text-primary font-semibold px-2.5 py-1 rounded-full border border-primary/20">
+                  Search: "{search}"
+                  <button onClick={() => setSearchInput("")}>✕</button>
+                </span>
+              )}
+              {statusFilter && (
+                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-800 font-semibold px-2.5 py-1 rounded-full border border-gray-200">
+                  Status: {statusFilter}
+                  <button onClick={() => setStatusFilter("")}>✕</button>
+                </span>
+              )}
+
+              <button onClick={handleResetFilters} className="text-xs font-bold text-danger hover:underline ml-auto">
+                Clear All
+              </button>
+            </div>
+          )
+        }
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+          {/* Filter 1: Search (Always First) */}
+          <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-2">
+            <label className="text-xs sm:text-sm font-semibold text-gray-700 tracking-tight select-none">
+              Search Job Cards
+            </label>
+            <SearchInput
+              placeholder="Search job number or product name..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onClear={() => setSearchInput("")}
+              className="w-full"
+              id="jobcards-search"
+            />
+          </div>
+
+          {/* Filter 2: Job Status */}
+          <Select
+            label="Job Status"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            options={statusOptions}
+            containerClassName="w-full"
+          />
+        </div>
+      </FilterPanel>
+
+      {/* Results Counter Summary */}
+      <div className="flex items-center justify-between text-xs text-gray-500 font-medium px-1">
+        <span>
+          Showing <strong className="text-gray-900 font-bold">{filteredJobCards.length}</strong> of{" "}
+          <strong className="text-gray-900">{jobCards.length}</strong> job cards
+        </span>
       </div>
 
       <DataTable
         headers={headers}
         data={filteredJobCards}
         isLoading={isLoading}
-        emptyMessage="No production job cards scheduled."
         renderRow={(job) => (
-          <tr
-            key={job._id}
-            className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 text-xs sm:text-sm"
-          >
-            <td className="px-3 py-4 sm:px-4 md:px-6 font-mono font-semibold text-primary text-xs sm:text-sm">{job.jobNo}</td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-gray-900 truncate text-xs sm:text-sm" title={job.productId ? `${job.productId.productCode} - ${job.productId.name}` : ""}>
-              {job.productId ? `${job.productId.productCode} - ${job.productId.name}` : "—"}
+          <tr key={job._id} className="hover:bg-gray-50/50 transition-colors">
+            <td className="px-4 py-3.5 text-xs sm:text-sm font-mono font-bold text-primary">{job.jobNo}</td>
+            <td className="px-4 py-3.5 text-xs sm:text-sm font-medium text-gray-900">
+              {job.productId ? (
+                <div>
+                  <p className="font-semibold text-gray-900">{job.productId.name}</p>
+                  <p className="text-[11px] text-gray-500">{job.productType || job.productId.category || "Jewellery"}</p>
+                </div>
+              ) : (
+                "Unlinked Product"
+              )}
             </td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
+            <td className="px-4 py-3.5 text-xs sm:text-sm text-gray-600">
+              {job.startDate ? new Date(job.startDate).toLocaleDateString() : "—"}
+            </td>
+            <td className="px-4 py-3.5 text-xs sm:text-sm text-gray-600">
               {job.expectedDate ? new Date(job.expectedDate).toLocaleDateString() : "—"}
             </td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 text-xs sm:text-sm">
+            <td className="px-4 py-3.5 text-xs sm:text-sm font-medium text-gray-700">
+              {job.assignedTo ? job.assignedTo.fullName : "Unassigned"}
+            </td>
+            <td className="px-4 py-3.5 text-xs sm:text-sm">
               <Badge variant={getStatusVariant(job.status)}>{job.status}</Badge>
             </td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
-              <Link to={`/production/${job._id}`} title="View Stages">
+            <td className="px-4 py-3.5 text-xs sm:text-sm">
+              <Link to={`/production/${job._id}`} title="View Job Card">
                 <TableActionButton
                   icon={Eye}
-                  title="View Stages"
+                  title="View Job Card"
+                  showLabel
+                  label="View Job Card"
                 />
               </Link>
             </td>
@@ -210,7 +288,7 @@ export default function JobCardList() {
                   <span className="text-xs text-gray-500 font-medium truncate">• {job.productId ? job.productId.name : "Product"}</span>
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-xs">
-                  <span className="text-gray-500">Due: {job.expectedDate ? new Date(job.expectedDate).toLocaleDateString() : "—"}</span>
+                  <span className="text-gray-500">Expected: {job.expectedDate ? new Date(job.expectedDate).toLocaleDateString() : "—"}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -227,14 +305,18 @@ export default function JobCardList() {
                   <span className="font-semibold text-gray-500">Product Specification</span>
                   <span className="font-medium text-gray-900 truncate">{job.productId ? `${job.productId.productCode} - ${job.productId.name}` : "—"}</span>
                 </div>
+                <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                  <span className="font-semibold text-gray-500">Assigned To</span>
+                  <span className="font-medium text-gray-900">{job.assignedTo ? job.assignedTo.fullName : "Unassigned"}</span>
+                </div>
 
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-                  <Link to={`/production/${job._id}`} title="View Stages">
+                  <Link to={`/production/${job._id}`} title="View Job Card">
                     <TableActionButton
                       icon={Eye}
-                      title="View Stages"
+                      title="View Job Card"
                       showLabel
-                      label="View Stages"
+                      label="View Job Card"
                     />
                   </Link>
                 </div>
@@ -245,31 +327,44 @@ export default function JobCardList() {
       />
 
       {/* Add Job Card Modal */}
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Create Job Card">
+      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Create Jewelry Production Job">
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Select
+              label="Product Type"
+              options={productTypeOptions}
+              {...register("productType")}
+              required
+            />
+            <Select
+              label="Select Product"
+              options={productOptions}
+              {...register("productId")}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <DatePicker label="Start Date" {...register("startDate")} />
+            <DatePicker label="Expected Completion Date" {...register("expectedDate")} required />
+          </div>
 
           <Select
-            label="Select Product"
-            options={productOptions}
-            {...register("productId")}
-            required
-          />
-          <Select
-            label="Assigned Artisan / Workshop"
+            label="Assigned Workshop / Artisan"
             options={userOptions}
             {...register("assignedTo")}
             required
             placeholder="Select artisan or workshop staff"
           />
-          <DatePicker label="Due Date" {...register("expectedDate")} required />
-          <Textarea label="Special Notes" {...register("notes")} />
+
+          <Textarea label="Special Production Notes" {...register("notes")} />
 
           <div className="flex justify-end gap-3 mt-2">
             <Button variant="outline" onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" isLoading={isSubmitting}>
-              Create Job Card
+              Create Production Job
             </Button>
           </div>
         </form>

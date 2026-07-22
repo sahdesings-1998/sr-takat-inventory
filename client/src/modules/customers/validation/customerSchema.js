@@ -29,6 +29,11 @@ export const customerSchema = z.object({
     .max(100, "Company name is too long")
     .optional()
     .or(z.literal("")),
+  country: z.string().trim().optional().or(z.literal("")),
+  whatsApp: z.string().trim().optional().or(z.literal("")),
+  customerType: z
+    .enum(["Private Client", "Dealer", "Wholesaler", "VIP", "Other"])
+    .default("Private Client"),
   status: z.enum(["active", "inactive"]).default("active"),
   notes: z.string().trim().optional().or(z.literal("")),
 });

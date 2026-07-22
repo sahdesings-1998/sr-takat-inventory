@@ -21,6 +21,7 @@ import TabPricing from "../components/view/tabs/TabPricing";
 import TabInventory from "../components/view/tabs/TabInventory";
 import TabComponents from "../components/view/tabs/TabComponents";
 import TabSupplier from "../components/view/tabs/TabSupplier";
+import TabQrBarcode from "../components/view/tabs/TabQrBarcode";
 import TabCertificates from "../components/view/tabs/TabCertificates";
 import TabMedia from "../components/view/tabs/TabMedia";
 import TabSales from "../components/view/tabs/TabSales";
@@ -155,7 +156,9 @@ export default function ProductDetails() {
           />
         );
       case "supplier":
-        return <TabSupplier product={product} />;
+        return <TabSupplier product={product} updateProduct={updateProduct} isUpdating={isUpdating} />;
+      case "qrcode":
+        return <TabQrBarcode product={product} updateProduct={updateProduct} isUpdating={isUpdating} />;
       case "certificates":
         return <TabCertificates product={product} onPreviewDoc={handleOpenDocPreview} />;
       case "media":
@@ -172,7 +175,7 @@ export default function ProductDetails() {
   };
 
   return (
-    <div className="page-container space-y-5">
+    <div className="page-container space-y-0">
       {/* Header */}
       <ProductViewHeader
         product={product}

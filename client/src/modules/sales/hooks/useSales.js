@@ -26,17 +26,32 @@ export function useSales(params) {
 }
 
 export function useSale(id) {
+  const queryClient = useQueryClient();
+
   const salesQuery = useQuery({
     queryKey: ["sale", id],
     queryFn: () => salesApi.getById(id),
     enabled: !!id,
   });
 
+  const recordPaymentMutation = useMutation({
+    mutationFn: salesApi.recordPayment,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sale", id] });
+      queryClient.invalidateQueries({ queryKey: ["sales"] });
+      queryClient.invalidateQueries({ queryKey: ["customer"] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+  });
+
   return {
     sale: salesQuery.data?.data?.sale,
     items: salesQuery.data?.data?.items || [],
+    paymentHistory: salesQuery.data?.data?.paymentHistory || [],
     isLoading: salesQuery.isLoading,
     isError: salesQuery.isError,
+    recordPayment: recordPaymentMutation.mutateAsync,
+    isRecordingPayment: recordPaymentMutation.isPending,
   };
 }
 

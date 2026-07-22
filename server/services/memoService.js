@@ -13,19 +13,83 @@ async function updateOverdueMemos() {
   const now = new Date();
   await Memo.updateMany(
     {
-      status: { $in: ["With Client", "Partially Returned"] },
-      expectedReturn: { $lt: now }
+      status: { $in: ["With Client", "Extended", "Partially Returned"] },
+      expectedReturn: { $lt: now },
     },
     { $set: { status: "Overdue" } }
   );
 }
 
+async function getMemoMetrics() {
+  const allMemos = await Memo.find({});
+  let totalStockOutsideCompany = 0;
+  let activeMemosCount = 0;
+  let overdueMemosCount = 0;
+  let extendedMemosCount = 0;
+  let itemsSoldFromMemoCount = 0;
+  let itemsReturnedCount = 0;
+
+  const now = new Date();
+
+  allMemos.forEach((memo) => {
+    const isOverdue = memo.expectedReturn && new Date(memo.expectedReturn) < now && (memo.status === "With Client" || memo.status === "Extended");
+
+    if (memo.status === "With Client" || memo.status === "Extended" || memo.status === "Partially Returned" || memo.status === "Overdue") {
+      activeMemosCount += 1;
+      if (isOverdue || memo.status === "Overdue") {
+        overdueMemosCount += 1;
+      }
+      if (memo.status === "Extended") {
+        extendedMemosCount += 1;
+      }
+    }
+
+    memo.items.forEach((item) => {
+      if (item.status === "On Memo") {
+        totalStockOutsideCompany += Number(item.totalValue || (item.value * item.quantity) || 0);
+      } else if (item.status === "Sold") {
+        itemsSoldFromMemoCount += 1;
+      } else if (item.status === "Returned") {
+        itemsReturnedCount += 1;
+      }
+    });
+  });
+
+  return {
+    totalStockOutsideCompany,
+    activeMemosCount,
+    overdueMemosCount,
+    extendedMemosCount,
+    itemsSoldFromMemoCount,
+    itemsReturnedCount,
+    totalMemosCount: allMemos.length,
+  };
+}
+
 async function getAllMemos({ status, customerId } = {}) {
   await updateOverdueMemos();
   const query = {};
-  if (status) query.status = status;
+  if (status) {
+    if (status === "Active") {
+      query.status = { $in: ["With Client", "Extended", "Partially Returned", "Overdue"] };
+    } else {
+      query.status = status;
+    }
+  }
   if (customerId) query.customerId = customerId;
-  return Memo.find(query).sort({ createdAt: -1 }).populate("customerId").populate("createdBy");
+
+  const memos = await Memo.find(query)
+    .sort({ createdAt: -1 })
+    .populate("customerId")
+    .populate("createdBy")
+    .populate("items.inventoryId");
+
+  const metrics = await getMemoMetrics();
+
+  return {
+    memos,
+    metrics,
+  };
 }
 
 async function getMemoById(id) {
@@ -33,6 +97,7 @@ async function getMemoById(id) {
   const memo = await Memo.findById(id)
     .populate("customerId")
     .populate("createdBy")
+    .populate("convertedSaleId")
     .populate("items.inventoryId");
   if (!memo) throw new ApiError(404, "Memo not found");
   return memo;
@@ -42,34 +107,54 @@ async function createMemo(data, userId, ipAddress = "") {
   const memoNo = await generateId(Memo, "memoNo", "memo", 5);
 
   const items = [];
+  let overallMemoValue = 0;
+
   for (const item of data.items) {
+    let unitValue = Number(item.value || 0);
+    let caratWeight = Number(item.carat || 0);
+
     if (item.inventoryType === "Gemstone") {
       const stone = await Gemstone.findById(item.inventoryId);
-      if (!stone || stone.status !== "In Stock") {
+      if (!stone || (stone.status !== "In Stock" && stone.status !== "Available")) {
         throw new ApiError(
           400,
-          `Gemstone ${item.inventoryId} is not available (Status: ${stone?.status})`
+          `Gemstone ${stone?.stoneId || item.inventoryId} is not available in stock (Status: ${stone?.status})`
         );
       }
       stone.status = "On Memo";
       await stone.save();
+      if (!unitValue) {
+        unitValue = Number(stone.sellingPrice || (stone.purchasePrice || stone.costPrice || 0) * 1.25);
+      }
+      if (!caratWeight) {
+        caratWeight = Number(stone.carat || 0);
+      }
     } else if (item.inventoryType === "Product") {
       const prod = await Product.findById(item.inventoryId);
-      if (!prod || prod.status !== "In Stock") {
+      if (!prod || (prod.status !== "In Stock" && prod.status !== "Available")) {
         throw new ApiError(
           400,
-          `Product ${item.inventoryId} is not available (Status: ${prod?.status})`
+          `Product ${prod?.productCode || item.inventoryId} is not available in stock (Status: ${prod?.status})`
         );
       }
       prod.status = "On Memo";
       await prod.save();
+      if (!unitValue) {
+        unitValue = Number(prod.sellingPrice || 0);
+      }
     }
+
+    const qty = Number(item.quantity || 1);
+    const itemTotalValue = unitValue * qty;
+    overallMemoValue += itemTotalValue;
 
     items.push({
       inventoryType: item.inventoryType,
       inventoryId: item.inventoryId,
-      quantity: item.quantity || 1,
-      carat: item.carat || 0,
+      quantity: qty,
+      carat: caratWeight,
+      value: unitValue,
+      totalValue: itemTotalValue,
       status: "On Memo",
     });
   }
@@ -77,9 +162,20 @@ async function createMemo(data, userId, ipAddress = "") {
   const memo = await Memo.create({
     memoNo,
     customerId: data.customerId,
-    expectedReturn: data.expectedReturn,
-    remarks: data.remarks || "",
+    issueDate: data.issueDate ? new Date(data.issueDate) : new Date(),
+    expectedReturn: new Date(data.expectedReturn),
+    totalValue: overallMemoValue,
+    status: "With Client",
+    remarks: data.remarks || data.notes || "",
     items,
+    historyLog: [
+      {
+        date: new Date(),
+        action: "Memo Created",
+        details: `Issued ${items.length} item(s) on memo ${memoNo} valued at $${overallMemoValue.toLocaleString()}`,
+        performedBy: userId,
+      },
+    ],
     createdBy: userId,
   });
 
@@ -139,6 +235,13 @@ async function returnMemoItem(memoId, itemId, userId, ipAddress = "") {
     memo.status = "Partially Returned";
   }
 
+  memo.historyLog.push({
+    date: new Date(),
+    action: "Item Returned",
+    details: `Returned item (${item.inventoryType}) back to company stock`,
+    performedBy: userId,
+  });
+
   await memo.save();
 
   await movementService.logMovement({
@@ -186,37 +289,42 @@ async function convertMemoToSale(memoId, itemId, paymentMethod = "Cash", userId,
   const charityPct = settings.charityPercentage || 2.0;
 
   let costPrice = 0;
-  let sellingPrice = 0;
+  let sellingPrice = Number(item.value || 0);
 
   if (item.inventoryType === "Gemstone") {
     const stone = await Gemstone.findById(item.inventoryId);
-    costPrice = stone.purchasePrice;
-    sellingPrice = stone.purchasePrice * 1.25;
+    costPrice = stone.purchasePrice || 0;
+    if (!sellingPrice) sellingPrice = stone.purchasePrice * 1.25;
     stone.status = "Sold";
     await stone.save();
   } else if (item.inventoryType === "Product") {
     const prod = await Product.findById(item.inventoryId);
-    costPrice = prod.costPrice;
-    sellingPrice = prod.sellingPrice;
+    costPrice = prod.costPrice || 0;
+    if (!sellingPrice) sellingPrice = prod.sellingPrice;
     prod.status = "Sold";
     await prod.save();
   }
 
-  const grossProfit = Math.max(0, sellingPrice - costPrice);
+  const totalSaleAmount = sellingPrice * item.quantity;
+  const totalCostAmount = costPrice * item.quantity;
+  const grossProfit = Math.max(0, totalSaleAmount - totalCostAmount);
   const charityAmount = grossProfit * (charityPct / 100);
   const netProfit = Math.max(0, grossProfit - charityAmount);
 
   const sale = await Sale.create({
     invoiceNo,
     customerId: memo.customerId,
-    subtotal: sellingPrice,
-    total: sellingPrice,
+    subtotal: totalSaleAmount,
+    total: totalSaleAmount,
+    amountPaid: totalSaleAmount,
+    balanceDue: 0,
     paymentStatus: "Paid",
     paymentMethod,
     charityPercentage: charityPct,
     charityAmount,
     grossProfit,
     netProfit,
+    notes: `Converted from Consignment / Memo ${memo.memoNo}`,
     createdBy: userId,
   });
 
@@ -228,11 +336,19 @@ async function convertMemoToSale(memoId, itemId, paymentMethod = "Cash", userId,
     sellingPrice,
   });
 
+  memo.convertedSaleId = sale._id;
   const allOnMemo = memo.items.filter((i) => i.status === "On Memo").length;
   if (allOnMemo === 0) {
-    memo.status = "Closed";
+    memo.status = "Sold";
     memo.actualReturn = new Date();
   }
+
+  memo.historyLog.push({
+    date: new Date(),
+    action: "Converted to Sale",
+    details: `Item converted to Sale invoice ${sale.invoiceNo} ($${totalSaleAmount.toLocaleString()})`,
+    performedBy: userId,
+  });
 
   await memo.save();
 
@@ -262,27 +378,31 @@ async function convertMemoToSale(memoId, itemId, paymentMethod = "Cash", userId,
   return getMemoById(memoId);
 }
 
-async function extendMemo(id, newExpectedDate, userId, ipAddress = "") {
+async function extendMemo(id, newExpectedDate, reason = "", userId, ipAddress = "") {
   const memo = await Memo.findById(id);
   if (!memo) throw new ApiError(404, "Memo not found");
 
-  if (memo.status !== "With Client" && memo.status !== "Partially Returned" && memo.status !== "Overdue") {
-    throw new ApiError(400, "Only active or overdue memos can be extended");
-  }
-
   const oldVal = memo.toObject();
-  memo.expectedReturn = new Date(newExpectedDate);
+  const previousReturnDate = memo.expectedReturn;
+  const newReturn = new Date(newExpectedDate);
 
-  const now = new Date();
-  if (memo.expectedReturn > now) {
-    const allOnMemo = memo.items.filter((i) => i.status === "On Memo").length;
-    const allReturned = memo.items.filter((i) => i.status === "Returned" || i.status === "Sold").length;
-    if (allReturned > 0) {
-      memo.status = "Partially Returned";
-    } else {
-      memo.status = "With Client";
-    }
-  }
+  memo.expectedReturn = newReturn;
+  memo.status = "Extended";
+
+  memo.extensionHistory.push({
+    extensionDate: new Date(),
+    previousReturnDate,
+    newReturnDate: newReturn,
+    reason: reason || "Return date extended",
+    createdBy: userId,
+  });
+
+  memo.historyLog.push({
+    date: new Date(),
+    action: "Memo Extended",
+    details: `Return date extended to ${newReturn.toLocaleDateString()}. Reason: ${reason || "Client request"}`,
+    performedBy: userId,
+  });
 
   await memo.save();
 
@@ -302,6 +422,7 @@ async function extendMemo(id, newExpectedDate, userId, ipAddress = "") {
 export default {
   getAllMemos,
   getMemoById,
+  getMemoMetrics,
   createMemo,
   returnMemoItem,
   convertMemoToSale,

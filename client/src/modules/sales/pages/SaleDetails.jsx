@@ -1,19 +1,22 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Printer, FileDown, Loader2 } from "lucide-react";
+import { ArrowLeft, Printer, FileDown, CreditCard, Paperclip, Loader2 } from "lucide-react";
 import { useSale, downloadInvoicePdf } from "../hooks/useSales";
 import { useToast } from "@/contexts/ToastContext";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import DataTable from "@/components/ui/DataTable";
 import logo from "@/assets/logo.png";
+import RecordPaymentModal from "../components/RecordPaymentModal";
 
 import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function SaleDetails() {
   const { id } = useParams();
-  const { sale, items, isLoading, isError } = useSale(id);
+  const { sale, items, paymentHistory = [], isLoading, isError } = useSale(id);
   const { showSuccess, showError } = useToast();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   useEffect(() => {
     if (isError) {
@@ -142,6 +145,14 @@ export default function SaleDetails() {
           <ArrowLeft className="h-4 w-4" /> Back to Sales List
         </Link>
         <div className="flex items-center gap-3">
+          {(sale?.balanceDue ?? 0) > 0 && (
+            <Button
+              onClick={() => setIsPaymentModalOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold w-fit"
+            >
+              <CreditCard className="h-4 w-4 mr-1.5" /> Record Payment
+            </Button>
+          )}
           <Button onClick={handlePrint} variant="outline" className="w-fit">
             <Printer className="h-4 w-4 mr-1.5" /> Print Invoice
           </Button>
@@ -356,11 +367,39 @@ export default function SaleDetails() {
                   </tr>
                 )}
                 <tr className="bg-gray-100 font-bold border-t-2 border-b-2 border-black text-sm">
-                  <td className="py-2.5 px-3 text-black">TOTAL US$:</td>
+                  <td className="py-2.5 px-3 text-black">FINAL PRICE US$:</td>
                   <td className="py-2.5 px-3 text-right font-mono text-black">
                     ${sale.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </td>
                 </tr>
+                <tr className="border-b border-gray-300 text-green-700">
+                  <td className="py-2 px-3 font-semibold">AMOUNT PAID:</td>
+                  <td className="py-2 px-3 text-right font-mono font-bold">
+                    ${(sale.amountPaid ?? sale.total).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+                <tr className="border-b border-gray-300 text-amber-700 font-bold">
+                  <td className="py-2 px-3 font-semibold">BALANCE DUE:</td>
+                  <td className="py-2 px-3 text-right font-mono font-bold">
+                    ${(sale.balanceDue ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+                {/* {sale.grossProfit > 0 && (
+                  <tr className="border-b border-gray-300 text-indigo-700">
+                    <td className="py-2 px-3 font-semibold">EST. PROFIT:</td>
+                    <td className="py-2 px-3 text-right font-mono font-bold">
+                      ${sale.grossProfit.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                )}
+                {sale.charityAmount > 0 && (
+                  <tr className="border-b border-gray-300 text-amber-800">
+                    <td className="py-2 px-3 font-semibold">CHARITY DONATION ({sale.charityPercentage}%):</td>
+                    <td className="py-2 px-3 text-right font-mono font-bold">
+                      ${sale.charityAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                )} */}
               </tbody>
             </table>
           </div>
@@ -389,6 +428,66 @@ export default function SaleDetails() {
           </div>
         </div> */}
       </div>
+
+      {/* Payment History Ledger Section (Hidden on Print) */}
+      <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm print:hidden space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-bold text-gray-900">Payment Transaction History ({paymentHistory.length})</h3>
+            <p className="text-xs text-gray-500">Every payment transaction for invoice {sale.invoiceNo} is recorded separately.</p>
+          </div>
+          {(sale?.balanceDue ?? 0) > 0 && (
+            <Button size="sm" onClick={() => setIsPaymentModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
+              + Record Payment
+            </Button>
+          )}
+        </div>
+
+        <DataTable
+          headers={["Payment ID", "Date", "Amount Paid", "Payment Method", "Notes / Ref", "Attachment", "Logged By"]}
+          data={paymentHistory}
+          isLoading={false}
+          emptyMessage="No payment transactions logged yet."
+          renderRow={(pay) => (
+            <tr key={pay._id} className="border-b border-gray-100 text-xs sm:text-sm hover:bg-gray-50/50">
+              <td className="px-4 py-3 font-mono font-bold text-primary">{pay.paymentId}</td>
+              <td className="px-4 py-3 text-gray-600">{new Date(pay.paymentDate || pay.createdAt).toLocaleDateString()}</td>
+              <td className="px-4 py-3 font-mono font-bold text-emerald-700">${pay.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+              <td className="px-4 py-3 text-gray-900 font-semibold">{pay.paymentMethod}</td>
+              <td className="px-4 py-3 text-gray-500 max-w-xs truncate">{pay.notes || "—"}</td>
+              <td className="px-4 py-3">
+                {pay.attachments && pay.attachments.length > 0 ? (
+                  <div className="flex items-center gap-1.5">
+                    {pay.attachments.map((att, idx) => (
+                      <a
+                        key={idx}
+                        href={att.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline bg-primary/10 px-2 py-0.5 rounded border border-primary/20"
+                        title={att.name}
+                      >
+                        <Paperclip className="h-3 w-3 shrink-0" />
+                        <span className="truncate max-w-[80px]">{att.name}</span>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-gray-400 text-xs">—</span>
+                )}
+              </td>
+              <td className="px-4 py-3 text-gray-500">{pay.createdBy?.fullName || "System Admin"}</td>
+            </tr>
+          )}
+        />
+      </div>
+
+      {/* Record Payment Modal */}
+      <RecordPaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        sale={sale}
+      />
     </div>
   );
 }

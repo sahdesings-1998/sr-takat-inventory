@@ -6,13 +6,19 @@ import { useDebounce } from "@/hooks/useDebounce";
 import Input from "@/components/ui/Input";
 import DataTable from "@/components/ui/DataTable";
 import SearchInput from "@/components/ui/SearchInput";
+import FilterPanel from "@/components/ui/FilterPanel";
 import TableActionButton from "@/components/ui/TableActionButton";
 import { Eye, ChevronDown, ChevronUp } from "lucide-react";
 import { SkeletonPageHeader } from "@/components/ui/Skeleton";
 
+import { useMemo } from "react";
+import Select from "@/components/ui/Select";
+
 export default function CostingList() {
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 300);
+  const [categoryFilter, setCategoryFilter] = useState("");
+
   const { products, isLoading, isError } = useProducts({ search });
   const { showError } = useToast();
 
@@ -21,6 +27,32 @@ export default function CostingList() {
       showError("Fetch Failed", "Failed to fetch products for costing analysis.");
     }
   }, [isError, showError]);
+
+  // Extract dynamic category options
+  const categoryOptions = useMemo(() => {
+    const catsSet = new Set();
+    (products || []).forEach((p) => {
+      if (p.category) catsSet.add(p.category);
+    });
+    return [{ value: "", label: "All Categories" }].concat(
+      Array.from(catsSet).sort().map((c) => ({ value: c, label: c }))
+    );
+  }, [products]);
+
+  // Client-side filtering across category
+  const filteredProducts = useMemo(() => {
+    return (products || []).filter((p) => {
+      if (categoryFilter && p.category !== categoryFilter) return false;
+      return true;
+    });
+  }, [products, categoryFilter]);
+
+  const activeFilterCount = (search ? 1 : 0) + (categoryFilter ? 1 : 0);
+
+  const handleResetFilters = () => {
+    setSearchInput("");
+    setCategoryFilter("");
+  };
 
   const headers = [
     "Product Code",
@@ -34,37 +66,89 @@ export default function CostingList() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="page-container space-y-0">
       {isLoading && !products?.length ? (
         <SkeletonPageHeader showButton={false} />
       ) : (
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 font-display">Costing Engine</h1>
-          <p className="text-sm text-gray-600 mt-1 font-medium">
-            Material Cost + Production Cost + Other Cost = Total Cost &rarr; Selling Price &rarr; Gross Profit &rarr; Charity (20%) &rarr; Net Profit
+        <div className="border-b border-gray-200/80 pb-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Costing Engine</h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+            Material Cost + Production Cost + Other Cost = Total Cost &rarr; Selling Price &rarr; Gross Profit &rarr; Charity (2%) &rarr; Net Profit
           </p>
         </div>
       )}
 
-      <div className="flex items-center gap-4 bg-white p-4 rounded-[20px] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.015)] w-full md:w-[480px]">
-        <SearchInput
-          placeholder="Filter by product code or name..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          onClear={() => setSearchInput("")}
-          containerClassName="w-full"
-          id="costing-search"
-        />
-        {search && (
-          <span className="text-xs text-gray-400 font-medium shrink-0">
-            {products.length} result{products.length !== 1 ? "s" : ""}
-          </span>
-        )}
+      {/* Main Search & Filters Card with Mobile Collapsible Accordion */}
+      <FilterPanel
+        activeFilterCount={activeFilterCount}
+        onReset={handleResetFilters}
+        title="Costing Filters"
+        chips={
+          activeFilterCount > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-gray-100 text-xs">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mr-1">
+                Active Filters:
+              </span>
+
+              {search && (
+                <span className="inline-flex items-center gap-1 bg-primary/10 text-primary font-semibold px-2.5 py-1 rounded-full border border-primary/20">
+                  Search: "{search}"
+                  <button onClick={() => setSearchInput("")}>✕</button>
+                </span>
+              )}
+              {categoryFilter && (
+                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-800 font-semibold px-2.5 py-1 rounded-full border border-gray-200">
+                  Category: {categoryFilter}
+                  <button onClick={() => setCategoryFilter("")}>✕</button>
+                </span>
+              )}
+
+              <button onClick={handleResetFilters} className="text-xs font-bold text-danger hover:underline ml-auto">
+                Clear All
+              </button>
+            </div>
+          )
+        }
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+          {/* Filter 1: Search (Always First) */}
+          <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-2">
+            <label className="text-xs sm:text-sm font-semibold text-gray-700 tracking-tight select-none">
+              Search Costing Products
+            </label>
+            <SearchInput
+              placeholder="Search product code or name..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onClear={() => setSearchInput("")}
+              className="w-full"
+              id="costing-search"
+            />
+          </div>
+
+          {/* Filter 2: Category */}
+          <Select
+            label="Category"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            options={categoryOptions}
+            containerClassName="w-full"
+          />
+        </div>
+      </FilterPanel>
+
+      {/* Results Counter Summary */}
+      <div className="flex items-center justify-between text-xs text-gray-500 font-medium px-1">
+        <span>
+          Showing <strong className="text-gray-900 font-bold">{filteredProducts.length}</strong> of{" "}
+          <strong className="text-gray-900">{products.length}</strong> products
+        </span>
+        {activeFilterCount > 0 && <span className="text-primary font-semibold">Filtered results active</span>}
       </div>
 
       <DataTable
         headers={headers}
-        data={products}
+        data={filteredProducts}
         isLoading={isLoading}
         emptyMessage="No products listed for costing."
         renderRow={(prod) => (

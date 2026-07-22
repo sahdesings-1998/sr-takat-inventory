@@ -49,6 +49,28 @@ const materialIssuedSchema = new Schema({
   },
 });
 
+const materialUsedSchema = new Schema({
+  materialId: {
+    type: Schema.Types.ObjectId,
+    ref: "Material",
+    required: true,
+  },
+  quantity: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  usedBy: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  usedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const materialReturnedSchema = new Schema({
   materialId: {
     type: Schema.Types.ObjectId,
@@ -60,10 +82,20 @@ const materialReturnedSchema = new Schema({
     required: true,
     min: 0,
   },
+  returnedToStockQuantity: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  wastageQuantity: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
   wastageType: {
     type: String,
     required: true,
-    enum: ["returnedToStock", "scrapRecovery", "writeOff"],
+    enum: ["returnedToStock", "scrapRecovery", "writeOff", "damaged"],
   },
   returnedBy: {
     type: Schema.Types.ObjectId,
@@ -83,6 +115,11 @@ const jobCardSchema = new Schema(
       required: true,
       unique: true,
       trim: true,
+    },
+    productType: {
+      type: String,
+      enum: ["Ring", "Necklace", "Bracelet", "Watch", "Brooch", "Earrings", "Custom"],
+      default: "Custom",
     },
     productId: {
       type: Schema.Types.ObjectId,
@@ -121,6 +158,10 @@ const jobCardSchema = new Schema(
     },
     materialsIssued: {
       type: [materialIssuedSchema],
+      default: [],
+    },
+    materialsUsed: {
+      type: [materialUsedSchema],
       default: [],
     },
     materialsReturned: {

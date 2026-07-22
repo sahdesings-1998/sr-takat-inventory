@@ -15,17 +15,19 @@ import { SkeletonDetailCard, Skeleton } from "@/components/ui/Skeleton";
 
 export default function JobCardDetails() {
   const { id } = useParams();
-  const { jobCard, isLoading, isError, updateStage, issueMaterial, returnMaterial } =
+  const { jobCard, isLoading, isError, updateStage, issueMaterial, recordUsage, returnMaterial } =
     useJobCard(id);
   const { materials } = useMaterials();
   const { showSuccess, showError } = useToast();
 
   const [stageOpen, setStageOpen] = useState(false);
   const [issueOpen, setIssueOpen] = useState(false);
+  const [usageOpen, setUsageOpen] = useState(false);
   const [returnOpen, setReturnOpen] = useState(false);
 
   const [isSubmittingStage, setIsSubmittingStage] = useState(false);
   const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
+  const [isSubmittingUsage, setIsSubmittingUsage] = useState(false);
   const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
 
   const [selectedStageName, setSelectedStageName] = useState("Design");
@@ -35,8 +37,13 @@ export default function JobCardDetails() {
   const [selectedMatId, setSelectedMatId] = useState("");
   const [issueQty, setIssueQty] = useState("");
 
+  const [usageMatId, setUsageMatId] = useState("");
+  const [usageQty, setUsageQty] = useState("");
+
   const [returnMatId, setReturnMatId] = useState("");
   const [returnQty, setReturnQty] = useState("");
+  const [returnToStockQty, setReturnToStockQty] = useState("");
+  const [wastageLossQty, setWastageLossQty] = useState("");
   const [returnWastage, setReturnWastage] = useState("returnedToStock");
 
   useEffect(() => {
@@ -46,7 +53,7 @@ export default function JobCardDetails() {
   }, [isError, showError]);
 
   if (isLoading) return (
-    <div className="flex flex-col gap-6">
+    <div className="page-container space-y-5">
       <div className="flex flex-col gap-3">
         <Skeleton className="h-4 w-28 rounded-md" />
         <div className="flex items-center justify-between gap-4">
@@ -61,6 +68,7 @@ export default function JobCardDetails() {
       <SkeletonDetailCard rows={6} cols={1} title={false} />
     </div>
   );
+
   if (isError || !jobCard)
     return (
       <div className="text-center p-8 bg-white border border-gray-100 rounded-xl text-sm font-semibold text-gray-500 shadow-sm">
@@ -104,6 +112,8 @@ export default function JobCardDetails() {
       });
       showSuccess("Material Issued", "Material has been issued to the job card successfully!");
       setIssueOpen(false);
+      setIssueQty("");
+      setSelectedMatId("");
     } catch (err) {
       showError("Issue Failed", err?.response?.data?.message || "Failed to issue material.");
     } finally {
@@ -111,19 +121,47 @@ export default function JobCardDetails() {
     }
   };
 
+  const handleUsageSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setIsSubmittingUsage(true);
+      await recordUsage({
+        materialId: usageMatId,
+        quantity: Number(usageQty),
+      });
+      showSuccess("Material Usage Recorded", "Final used quantity saved for manufacturing reconciliation.");
+      setUsageOpen(false);
+      setUsageQty("");
+      setUsageMatId("");
+    } catch (err) {
+      showError("Usage Record Failed", err?.response?.data?.message || "Failed to record used material.");
+    } finally {
+      setIsSubmittingUsage(false);
+    }
+  };
+
   const handleReturnSubmit = async (e) => {
     e.preventDefault();
     try {
       setIsSubmittingReturn(true);
+      const totalQty = Number(returnQty || 0);
+      const stockQty = Number(returnToStockQty || (returnWastage === "returnedToStock" ? totalQty : 0));
+      const wasteQty = Number(wastageLossQty || (returnWastage !== "returnedToStock" ? totalQty : 0));
+
       await returnMaterial({
         materialId: returnMatId,
-        quantity: Number(returnQty),
+        quantity: totalQty,
+        returnedToStockQuantity: stockQty,
+        wastageQuantity: wasteQty,
         wastageType: returnWastage,
       });
-      showSuccess("Material Logged", "Returned material/scrap details saved.");
+      showSuccess("Material Reconciled", "Returned material to stock and wastage details logged.");
       setReturnOpen(false);
+      setReturnQty("");
+      setReturnToStockQty("");
+      setWastageLossQty("");
     } catch (err) {
-      showError("Return Failed", err?.response?.data?.message || "Failed to return material.");
+      showError("Reconciliation Failed", err?.response?.data?.message || "Failed to process material return.");
     } finally {
       setIsSubmittingReturn(false);
     }
@@ -157,120 +195,165 @@ export default function JobCardDetails() {
     label: `${m.materialCode} - ${m.materialName} (Stock: ${m.quantity} ${m.unit})`,
   }));
 
+  // Reconciled Material Ledger Mapping
+  const materialLedger = {};
+  (jobCard.materialsIssued || []).forEach((item) => {
+    const matId = item.materialId?._id || item.materialId;
+    if (!matId) return;
+    if (!materialLedger[matId]) {
+      materialLedger[matId] = {
+        mat: item.materialId,
+        issued: 0,
+        used: 0,
+        returnedToStock: 0,
+        wastage: 0,
+      };
+    }
+    materialLedger[matId].issued += Number(item.quantity || 0);
+  });
+
+  (jobCard.materialsUsed || []).forEach((item) => {
+    const matId = item.materialId?._id || item.materialId;
+    if (!matId) return;
+    if (!materialLedger[matId]) {
+      materialLedger[matId] = {
+        mat: item.materialId,
+        issued: 0,
+        used: 0,
+        returnedToStock: 0,
+        wastage: 0,
+      };
+    }
+    materialLedger[matId].used += Number(item.quantity || 0);
+  });
+
+  (jobCard.materialsReturned || []).forEach((item) => {
+    const matId = item.materialId?._id || item.materialId;
+    if (!matId) return;
+    if (!materialLedger[matId]) {
+      materialLedger[matId] = {
+        mat: item.materialId,
+        issued: 0,
+        used: 0,
+        returnedToStock: 0,
+        wastage: 0,
+      };
+    }
+    materialLedger[matId].returnedToStock += Number(item.returnedToStockQuantity ?? (item.wastageType === "returnedToStock" ? item.quantity : 0));
+    materialLedger[matId].wastage += Number(item.wastageQuantity ?? (item.wastageType !== "returnedToStock" ? item.quantity : 0));
+  });
+
+  const ledgerRows = Object.values(materialLedger);
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="page-container space-y-5">
       <div>
         <Link
           to="/production"
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to Job Cards
+          <ArrowLeft className="h-4 w-4" /> Back to Production Jobs
         </Link>
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+      {/* Header Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-2xs">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900 font-display">Job Card #{jobCard.jobNo}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 font-display">Job Card #{jobCard.jobNo}</h1>
             <Badge variant={jobCard.status === "Completed" ? "success" : "warning"}>
               {jobCard.status}
             </Badge>
           </div>
-          <p className="mt-1 text-sm text-gray-500">
-            Product:{" "}
-            <span className="font-semibold text-gray-900">{jobCard.productId?.name || "—"}</span> |
-            Due Date:{" "}
-            <span className="font-semibold text-gray-900">
-              {jobCard.expectedDate ? new Date(jobCard.expectedDate).toLocaleDateString() : "—"}
-            </span>
-          </p>
+          <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm text-gray-600">
+            <div>
+              <span className="font-semibold text-gray-500">Product:</span>{" "}
+              <span className="font-bold text-gray-900">{jobCard.productId?.name || "—"}</span>
+            </div>
+            <div>
+              <span className="font-semibold text-gray-500">Type:</span>{" "}
+              <span className="font-bold text-gray-900">{jobCard.productType || jobCard.productId?.category || "Jewellery"}</span>
+            </div>
+            <div>
+              <span className="font-semibold text-gray-500">Start Date:</span>{" "}
+              <span className="font-bold text-gray-900">{jobCard.startDate ? new Date(jobCard.startDate).toLocaleDateString() : "—"}</span>
+            </div>
+            <div>
+              <span className="font-semibold text-gray-500">Expected Date:</span>{" "}
+              <span className="font-bold text-gray-900">{jobCard.expectedDate ? new Date(jobCard.expectedDate).toLocaleDateString() : "—"}</span>
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => setIssueOpen(true)}>
-            <Hammer className="h-4 w-4" /> Issue Materials
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => setIssueOpen(true)} className="text-xs sm:text-sm">
+            <Hammer className="h-4 w-4 mr-1" /> Issue Materials
           </Button>
-          <Button variant="outline" onClick={() => setReturnOpen(true)}>
-            <RefreshCw className="h-4 w-4" /> Return & Wastage
+          <Button variant="outline" onClick={() => setUsageOpen(true)} className="text-xs sm:text-sm">
+            Record Final Used
+          </Button>
+          <Button variant="outline" onClick={() => setReturnOpen(true)} className="text-xs sm:text-sm">
+            <RefreshCw className="h-4 w-4 mr-1" /> Reconcile / Return
           </Button>
         </div>
       </div>
 
-      {/* Production Stage Tracking Timeline */}
-      <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col gap-4">
-        <h3 className="font-semibold text-gray-900 font-display">
-          Manufacturing Lifecycle Timeline
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mt-2">
+      {/* Production Stage Tracking Timeline (7 Stages) */}
+      <div className="bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-gray-900 text-sm sm:text-base font-display">
+            Jewelry Manufacturing Stage Progress
+          </h3>
+          <span className="text-xs text-gray-500">Click any stage to update notes or status</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
           {STAGES.map((stg) => (
             <button
               key={stg}
               onClick={() => handleOpenStage(stg)}
-              className="p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 transition-colors text-center cursor-pointer shadow-sm hover:shadow"
+              className="p-3.5 rounded-xl border border-gray-200/80 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 transition-colors text-center cursor-pointer shadow-2xs"
             >
-              <span className="text-xs font-semibold text-gray-800">{stg}</span>
+              <span className="text-xs font-bold text-gray-800">{stg}</span>
               <Badge variant={getStageBadgeVariant(stg)}>{getStageStatus(stg)}</Badge>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Materials Ledger splits */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Materials Issued */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
-          <div className="p-5 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-900">Materials Issued to Artisan</h3>
+      {/* Material Flow & Reconciliation Table */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden space-y-3">
+        <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="font-bold text-gray-900 text-sm sm:text-base">Material Tracking &amp; Automated Reconciliation</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Formula: Issued Qty − Final Used Qty = Remaining Qty &rarr; Disposition (Returned to Stock vs Wastage/Loss)</p>
           </div>
-          <DataTable
-            headers={["Material", "Issued Qty", "Issued Date"]}
-            data={jobCard.materialsIssued || []}
-            emptyMessage="No metals/settings issued yet."
-            renderRow={(row, idx) => (
-              <tr key={idx} className="border-b border-gray-100 text-xs sm:text-sm">
-                <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 break-words min-w-0 text-xs sm:text-sm">
-                  {row.materialId
-                    ? `${row.materialId.materialCode} - ${row.materialId.materialName}`
-                    : "—"}
-                </td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 whitespace-nowrap text-xs sm:text-sm">{row.quantity}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
-                  {row.issuedAt ? new Date(row.issuedAt).toLocaleDateString() : "—"}
-                </td>
-              </tr>
-            )}
-          />
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => setIssueOpen(true)}>+ Issue Material</Button>
+          </div>
         </div>
 
-        {/* Materials Returned */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
-          <div className="p-5 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-900">Materials Returned / Wastage Logs</h3>
-          </div>
-          <DataTable
-            headers={["Material", "Qty", "Wastage Classification", "Returned Date"]}
-            data={jobCard.materialsReturned || []}
-            emptyMessage="No metal/scrap returned yet."
-            renderRow={(row, idx) => (
-              <tr key={idx} className="border-b border-gray-100 text-xs sm:text-sm">
-                <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 break-words min-w-0 text-xs sm:text-sm">
-                  {row.materialId
-                    ? `${row.materialId.materialCode} - ${row.materialId.materialName}`
-                    : "—"}
-                </td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 whitespace-nowrap text-xs sm:text-sm">{row.quantity}</td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 text-xs sm:text-sm">
-                  <Badge variant={row.wastageType === "writeOff" ? "danger" : row.wastageType === "scrapRecovery" ? "warning" : "success"}>
-                    {row.wastageType}
-                  </Badge>
-                </td>
-                <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
-                  {row.returnedAt ? new Date(row.returnedAt).toLocaleDateString() : "—"}
-                </td>
+        <DataTable
+          headers={["Material Code & Name", "Issued Qty", "Final Used Qty", "Remaining Qty", "Returned to Stock", "Wastage / Loss"]}
+          data={ledgerRows}
+          emptyMessage="No material issued to this production job yet."
+          renderRow={(row, idx) => {
+            const matName = row.mat ? `${row.mat.materialCode} - ${row.mat.materialName}` : "Material";
+            const unit = row.mat?.unit || "units";
+            const remaining = Math.max(0, row.issued - row.used);
+
+            return (
+              <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                <td className="px-4 py-3.5 text-xs sm:text-sm font-bold text-gray-900">{matName}</td>
+                <td className="px-4 py-3.5 text-xs sm:text-sm font-semibold text-primary">{row.issued} {unit}</td>
+                <td className="px-4 py-3.5 text-xs sm:text-sm font-semibold text-gray-800">{row.used} {unit}</td>
+                <td className="px-4 py-3.5 text-xs sm:text-sm font-bold text-amber-600">{remaining} {unit}</td>
+                <td className="px-4 py-3.5 text-xs sm:text-sm text-green-600 font-semibold">{row.returnedToStock} {unit}</td>
+                <td className="px-4 py-3.5 text-xs sm:text-sm text-rose-600 font-semibold">{row.wastage} {unit}</td>
               </tr>
-            )}
-          />
-        </div>
+            );
+          }}
+        />
       </div>
 
       {/* Update Stage Modal */}
@@ -291,22 +374,23 @@ export default function JobCardDetails() {
             ]}
           />
           <Textarea
-            label="Stage Notes / Remarks"
+            label="Stage Production Notes"
             value={stageNotes}
             onChange={(e) => setStageNotes(e.target.value)}
+            placeholder="Log craftsmanship updates, setting details, polishing notes..."
           />
 
           <div className="flex justify-end gap-3 mt-2">
             <Button variant="outline" onClick={() => setStageOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" isLoading={isSubmittingStage}>Save Status</Button>
+            <Button type="submit" isLoading={isSubmittingStage}>Save Stage Status</Button>
           </div>
         </form>
       </Modal>
 
       {/* Issue Material Modal */}
-      <Modal isOpen={issueOpen} onClose={() => setIssueOpen(false)} title="Issue Material to Job Card">
+      <Modal isOpen={issueOpen} onClose={() => setIssueOpen(false)} title="Issue Material from Inventory">
         <form onSubmit={handleIssueSubmit} className="flex flex-col gap-4">
           <Select
             label="Select Material *"
@@ -318,6 +402,7 @@ export default function JobCardDetails() {
           <Input
             label="Quantity to Issue *"
             type="number"
+            step="0.01"
             value={issueQty}
             onChange={(e) => setIssueQty(e.target.value)}
             required
@@ -332,8 +417,36 @@ export default function JobCardDetails() {
         </form>
       </Modal>
 
-      {/* Return Material Modal */}
-      <Modal isOpen={returnOpen} onClose={() => setReturnOpen(false)} title="Log Returned Material & Scrap">
+      {/* Record Final Used Modal */}
+      <Modal isOpen={usageOpen} onClose={() => setUsageOpen(false)} title="Record Final Used Quantity">
+        <form onSubmit={handleUsageSubmit} className="flex flex-col gap-4">
+          <Select
+            label="Select Material *"
+            value={usageMatId}
+            onChange={(e) => setUsageMatId(e.target.value)}
+            options={materialOptions}
+            required
+          />
+          <Input
+            label="Final Quantity Used in Manufacturing *"
+            type="number"
+            step="0.01"
+            value={usageQty}
+            onChange={(e) => setUsageQty(e.target.value)}
+            required
+          />
+
+          <div className="flex justify-end gap-3 mt-2">
+            <Button variant="outline" onClick={() => setUsageOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={isSubmittingUsage}>Record Usage</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Reconcile Remaining / Return Modal */}
+      <Modal isOpen={returnOpen} onClose={() => setReturnOpen(false)} title="Reconcile Remaining Material & Wastage">
         <form onSubmit={handleReturnSubmit} className="flex flex-col gap-4">
           <Select
             label="Select Material *"
@@ -343,20 +456,40 @@ export default function JobCardDetails() {
             required
           />
           <Input
-            label="Quantity *"
+            label="Total Remaining Quantity to Reconcile *"
             type="number"
+            step="0.01"
             value={returnQty}
             onChange={(e) => setReturnQty(e.target.value)}
             required
           />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Quantity Returned to Stock"
+              type="number"
+              step="0.01"
+              value={returnToStockQty}
+              onChange={(e) => setReturnToStockQty(e.target.value)}
+              placeholder="Adds back to inventory"
+            />
+            <Input
+              label="Quantity Lost / Wasted"
+              type="number"
+              step="0.01"
+              value={wastageLossQty}
+              onChange={(e) => setWastageLossQty(e.target.value)}
+              placeholder="Recorded as loss"
+            />
+          </div>
           <Select
             label="Wastage Classification *"
             value={returnWastage}
             onChange={(e) => setReturnWastage(e.target.value)}
             options={[
-              { value: "returnedToStock", label: "Returned to Stock (Reusable)" },
-              { value: "scrapRecovery", label: "Scrap Recovery (Refine gold)" },
-              { value: "writeOff", label: "Write-off / Scrap Loss (Melt wastage)" },
+              { value: "returnedToStock", label: "Returned to Stock (Reusable stock)" },
+              { value: "scrapRecovery", label: "Scrap Recovery (Gold refinement)" },
+              { value: "writeOff", label: "Write-off / Scrap Loss (Melt loss)" },
+              { value: "damaged", label: "Damaged Material" },
             ]}
           />
 
@@ -364,7 +497,7 @@ export default function JobCardDetails() {
             <Button variant="outline" onClick={() => setReturnOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" isLoading={isSubmittingReturn}>Log Return</Button>
+            <Button type="submit" isLoading={isSubmittingReturn}>Process Reconciliation</Button>
           </div>
         </form>
       </Modal>

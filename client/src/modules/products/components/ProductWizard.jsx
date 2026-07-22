@@ -259,7 +259,7 @@ export default function ProductWizard({ initialData = null, isEditing = false, o
   const executeSubmit = handleSubmit(handleFormSubmit, handleFormError);
 
   return (
-    <div className="w-full space-y-6 pb-20 md:pb-0">
+    <div className="w-full space-y-0">
       {/* Horizontal Stepper */}
       <WizardStepper
         activeStep={activeStep}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,6 +17,7 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import SearchInput from "@/components/ui/SearchInput";
+import FilterPanel from "@/components/ui/FilterPanel";
 import TableActionButton from "@/components/ui/TableActionButton";
 import { SkeletonPageHeader } from "@/components/ui/Skeleton";
 
@@ -51,6 +52,9 @@ export default function CustomerList() {
       phone: "",
       address: "",
       companyName: "",
+      country: "",
+      whatsApp: "",
+      customerType: "Private Client",
       status: "active",
       notes: "",
     },
@@ -64,6 +68,9 @@ export default function CustomerList() {
       phone: "",
       address: "",
       companyName: "",
+      country: "",
+      whatsApp: "",
+      customerType: "Private Client",
       status: "active",
       notes: "",
     });
@@ -80,6 +87,9 @@ export default function CustomerList() {
       phone: customer.phone,
       address: customer.address || "",
       companyName: customer.companyName || "",
+      country: customer.country || "",
+      whatsApp: customer.whatsApp || "",
+      customerType: customer.customerType || "Private Client",
       status: customer.status || "active",
       notes: customer.notes || "",
     });
@@ -122,41 +132,117 @@ export default function CustomerList() {
 
   const headers = ["Name", "Company", "Phone", "Email", "Status", "Actions"];
 
+  const [statusFilter, setStatusFilter] = useState("");
+
+  const filteredCustomers = useMemo(() => {
+    return (customers || []).filter((cust) => {
+      if (statusFilter && cust.status !== statusFilter) return false;
+      return true;
+    });
+  }, [customers, statusFilter]);
+
+  const activeFilterCount = (search ? 1 : 0) + (statusFilter ? 1 : 0);
+
+  const handleResetFilters = () => {
+    setSearchInput("");
+    setStatusFilter("");
+  };
+
+  const statusOptions = [
+    { value: "", label: "All Statuses" },
+    { value: "active", label: "Active" },
+    { value: "inactive", label: "Inactive" },
+  ];
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="page-container space-y-0">
       {isLoading && !customers?.length ? (
         <SkeletonPageHeader />
       ) : (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between border-b border-gray-200/80 pb-0">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 font-display">Customers</h1>
-            <p className="text-sm text-gray-600 mt-1 font-medium">Manage client profiles including customer type, purchase history, memo history, and outstanding amounts</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Customers</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+              Manage client profiles including customer type, purchase history, memo history, and outstanding amounts
+            </p>
           </div>
-          <Button onClick={handleOpenAdd} className="w-fit">
-            <Plus className="h-4 w-4" /> Add Customer
+          <Button onClick={handleOpenAdd} className="w-fit" icon={<Plus className="h-4 w-4" />}>
+            Add Customer
           </Button>
         </div>
       )}
 
-      <div className="flex items-center gap-4 bg-white p-4 rounded-[20px] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
-        <SearchInput
-          placeholder="Search by name, company, phone, email..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          onClear={() => setSearchInput("")}
-          containerClassName="max-w-md w-full"
-          id="customers-search"
-        />
-        {search && (
-          <span className="text-xs text-gray-400 font-medium shrink-0">
-            {customers.length} result{customers.length !== 1 ? "s" : ""}
-          </span>
-        )}
+      {/* Main Search & Filters Card with Mobile Collapsible Accordion */}
+      <FilterPanel
+        activeFilterCount={activeFilterCount}
+        onReset={handleResetFilters}
+        title="Customer Filters"
+        chips={
+          activeFilterCount > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-gray-100 text-xs">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mr-1">
+                Active Filters:
+              </span>
+
+              {search && (
+                <span className="inline-flex items-center gap-1 bg-primary/10 text-primary font-semibold px-2.5 py-1 rounded-full border border-primary/20">
+                  Search: "{search}"
+                  <button onClick={() => setSearchInput("")}>✕</button>
+                </span>
+              )}
+              {statusFilter && (
+                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-800 font-semibold px-2.5 py-1 rounded-full border border-gray-200">
+                  Status: {statusFilter}
+                  <button onClick={() => setStatusFilter("")}>✕</button>
+                </span>
+              )}
+
+              <button onClick={handleResetFilters} className="text-xs font-bold text-danger hover:underline ml-auto">
+                Clear All
+              </button>
+            </div>
+          )
+        }
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+          {/* Filter 1: Search (Always First) */}
+          <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-2">
+            <label className="text-xs sm:text-sm font-semibold text-gray-700 tracking-tight select-none">
+              Search Customers
+            </label>
+            <SearchInput
+              placeholder="Search name, company, phone, email..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onClear={() => setSearchInput("")}
+              className="w-full"
+              id="customers-search"
+            />
+          </div>
+
+          {/* Filter 2: Status */}
+          <Select
+            label="Status"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            options={statusOptions}
+            containerClassName="w-full"
+          />
+        </div>
+      </FilterPanel>
+
+      {/* Results Counter Summary */}
+      <div className="flex items-center justify-between text-xs text-gray-500 font-medium px-1">
+        <span>
+          Showing <strong className="text-gray-900 font-bold">{filteredCustomers.length}</strong> of{" "}
+          <strong className="text-gray-900">{customers.length}</strong> customers
+        </span>
+        {activeFilterCount > 0 && <span className="text-primary font-semibold">Filtered results active</span>}
       </div>
 
       <DataTable
         headers={headers}
-        data={customers}
+        data={filteredCustomers}
         isLoading={isLoading}
         emptyMessage="No customers found"
         renderRow={(customer) => (
@@ -337,6 +423,7 @@ export default function CustomerList() {
               { value: "Dealer", label: "Dealer" },
               { value: "Wholesaler", label: "Wholesaler" },
               { value: "VIP", label: "VIP" },
+              { value: "Other", label: "Other" },
             ]}
             {...register("customerType")}
           />

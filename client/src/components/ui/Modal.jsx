@@ -87,7 +87,7 @@ export function Modal({ isOpen, onClose, title, children, className }) {
         </div>
 
         {/* Scrollable Modal Content */}
-        <div className="px-6 pb-5 md:px-7 md:pb-6 overflow-y-auto flex-1">{children}</div>
+        <div className="px-6 pb-0 md:px-7 md:pb-6 overflow-y-auto flex-1">{children}</div>
       </div>
     </div>,
     document.body

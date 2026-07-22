@@ -42,7 +42,7 @@ const customerSchema = new Schema(
     },
     customerType: {
       type: String,
-      enum: ["Private Client", "Dealer", "Wholesaler", "VIP"],
+      enum: ["Private Client", "Dealer", "Wholesaler", "VIP", "Other"],
       default: "Private Client",
     },
     status: {

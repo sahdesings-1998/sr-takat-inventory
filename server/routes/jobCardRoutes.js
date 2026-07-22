@@ -18,6 +18,11 @@ router.post(
   jobCardController.issueMaterials
 );
 router.post(
+  "/:id/materials-used",
+  requirePermission("production.update"),
+  jobCardController.recordMaterialUsage
+);
+router.post(
   "/:id/materials-returned",
   requirePermission("production.update"),
   jobCardController.returnMaterials

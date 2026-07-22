@@ -56,7 +56,7 @@ export default function TabSales({ product }) {
   const statusVariant = SELLING_STATUS_VARIANT[product?.sellingStatus] || "neutral";
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-0">
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2 pl-3 border-l-[3px] border-emerald-400/60 text-emerald-600">

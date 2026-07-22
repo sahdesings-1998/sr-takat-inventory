@@ -18,7 +18,7 @@ export function useSuppliers(params) {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => suppliersApi.update(id, data),
-    onSuccess: () => {
+    onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       queryClient.invalidateQueries({ queryKey: ["supplier", id] });
     },
@@ -46,15 +46,27 @@ export function useSuppliers(params) {
 }
 
 export function useSupplier(id) {
+  const queryClient = useQueryClient();
+
   const supplierQuery = useQuery({
     queryKey: ["supplier", id],
     queryFn: () => suppliersApi.getById(id),
     enabled: !!id,
   });
 
+  const recordPaymentMutation = useMutation({
+    mutationFn: (paymentData) => suppliersApi.recordPayment(id, paymentData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["supplier", id] });
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+    },
+  });
+
   return {
     supplier: supplierQuery.data?.data,
     isLoading: supplierQuery.isLoading,
     isError: supplierQuery.isError,
+    recordSupplierPayment: recordPaymentMutation.mutateAsync,
+    isRecordingPayment: recordPaymentMutation.isPending,
   };
 }

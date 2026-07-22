@@ -56,7 +56,7 @@ export default function TabMedia({ product, onPreviewDoc }) {
   const images = product?.imageUrls || [];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-0">
       {/* Image Gallery */}
       {images.length > 0 && (
         <Card>

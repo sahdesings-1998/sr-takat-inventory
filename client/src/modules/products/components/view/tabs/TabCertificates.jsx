@@ -29,7 +29,7 @@ export default function TabCertificates({ product, onPreviewDoc }) {
   const labVariant = LAB_VARIANTS[product?.laboratory] || "neutral";
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-0">
       {/* Certificate Status Banner */}
       <div className={`flex items-center gap-3 p-4 rounded-2xl border ${hasCert ? "bg-emerald-50 border-emerald-200" : "bg-gray-50 border-gray-200"}`}>
         <ShieldCheck className={`h-6 w-6 shrink-0 ${hasCert ? "text-emerald-600" : "text-gray-400"}`} />

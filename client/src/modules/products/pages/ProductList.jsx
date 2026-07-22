@@ -1,12 +1,28 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Edit2, Eye, Image as ImageIcon, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Edit2,
+  Eye,
+  Image as ImageIcon,
+  ChevronDown,
+  ChevronUp,
+  Trash2,
+  Filter,
+  RotateCcw,
+  SlidersHorizontal,
+  X,
+  Sparkles,
+  Tag,
+  Check,
+} from "lucide-react";
 import { useProducts } from "../hooks/useProducts";
 import { useAuditLogs } from "@/modules/dashboard/hooks/useReports";
 import { useToast } from "@/contexts/ToastContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import Button from "@/components/ui/Button";
 import Select from "@/components/ui/Select";
+import FilterPanel from "@/components/ui/FilterPanel";
 import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import SearchInput from "@/components/ui/SearchInput";
@@ -20,59 +36,77 @@ const catalogTabs = [
   { key: "history", label: "Product History / Audit" },
 ];
 
-const categoryOptions = [
-  { value: "", label: "All Categories" },
-  { value: "Gemstone", label: "Gemstone" },
-  { value: "Jewellery", label: "Jewellery" },
-  { value: "Watch", label: "Watch" },
-  { value: "Custom Product", label: "Custom Product" },
-  { value: "Accessory", label: "Accessory" },
-  { value: "Ring", label: "Ring" },
-  { value: "Necklace", label: "Necklace" },
-  { value: "Earrings", label: "Earrings" },
-  { value: "Bracelet", label: "Bracelet" },
-  { value: "Pendant", label: "Pendant" },
-  { value: "Other", label: "Other" },
+const DEFAULT_CATEGORIES = [
+  "Gemstone",
+  "Jewellery",
+  "Watch",
+  "Custom Product",
+  "Ring",
+  "Necklace",
+  "Earrings",
+  "Bracelet",
+  "Pendant",
+  "Accessory",
+  "Other",
 ];
 
-const statusOptions = [
-  { value: "", label: "All Statuses" },
-  { value: "Draft", label: "Draft" },
-  { value: "Available", label: "Available" },
-  { value: "Reserved", label: "Reserved" },
-  { value: "On Consignment", label: "On Consignment" },
-  { value: "On Memo", label: "On Memo" },
-  { value: "In Production", label: "In Production" },
-  { value: "Sold", label: "Sold" },
-  { value: "In Stock", label: "In Stock" },
-  { value: "Archived", label: "Archived" },
+const DEFAULT_STATUSES = [
+  "Available",
+  "In Stock",
+  "Reserved",
+  "On Consignment",
+  "On Memo",
+  "In Production",
+  "Draft",
+  "Sold",
+  "Returned",
+  "Archived",
+];
+
+const PRICE_RANGE_OPTIONS = [
+  { value: "", label: "All Price Ranges" },
+  { value: "under_500", label: "Under $500" },
+  { value: "500_2000", label: "$500 – $2,000" },
+  { value: "2000_5000", label: "$2,000 – $5,000" },
+  { value: "above_5000", label: "Above $5,000" },
+];
+
+const STOCK_STATUS_OPTIONS = [
+  { value: "", label: "All Stock Status" },
+  { value: "in_stock", label: "In Stock (Qty > 0)" },
+  { value: "out_of_stock", label: "Out of Stock (Qty = 0)" },
 ];
 
 export default function ProductList() {
   const navigate = useNavigate();
+  const { showError, showSuccess } = useToast();
+
+  // Search & Filter State
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 300);
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [subCategoryFilter, setSubCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [brandFilter, setBrandFilter] = useState("");
+  const [stockStatusFilter, setStockStatusFilter] = useState("");
+  const [priceRangeFilter, setPriceRangeFilter] = useState("");
+
+  // Catalog tab & modal state
   const [activeCatalogTab, setActiveCatalogTab] = useState("catalog");
   const [selectedProductId, setSelectedProductId] = useState("");
   const [previewImage, setPreviewImage] = useState(null);
   const [expandedProductIds, setExpandedProductIds] = useState([]);
   const [deleteProductTarget, setDeleteProductTarget] = useState(null);
 
+  // Fetch all products (unfiltered from API so we can compute dynamic options & instant multi-filtering)
+  const { products: allProducts, isLoading, isError, deleteProduct, isDeleting } = useProducts();
+  const { data: logsData, isLoading: isLogsLoading, isError: isLogsError } = useAuditLogs();
+
   const toggleProductAccordion = (id) => {
     setExpandedProductIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
-
-  const { products, isLoading, isError, deleteProduct, isDeleting } = useProducts({
-    search,
-    category: categoryFilter,
-    status: statusFilter,
-  });
-  const { data: logsData, isLoading: isLogsLoading, isError: isLogsError } = useAuditLogs();
-  const { showError, showSuccess } = useToast();
 
   const handleInitiateDelete = (product) => {
     setDeleteProductTarget(product);
@@ -85,11 +119,158 @@ export default function ProductList() {
       showSuccess("Deleted", `"${deleteProductTarget.name || "Product"}" has been removed.`);
       setDeleteProductTarget(null);
     } catch (err) {
-      console.error("[ProductDelete] Failed to delete product from list:", err);
+      console.error("[ProductDelete] Failed to delete product:", err);
       showError("Delete Failed", err?.response?.data?.message || "Failed to delete product. Please try again.");
     }
   };
 
+  // Dynamically extract filter options from actual product database records
+  const dynamicFilterOptions = useMemo(() => {
+    const categoriesSet = new Set(DEFAULT_CATEGORIES);
+    const subCategoriesSet = new Set();
+    const statusesSet = new Set(DEFAULT_STATUSES);
+    const brandsSet = new Set();
+
+    (allProducts || []).forEach((p) => {
+      if (p.category) categoriesSet.add(p.category);
+      if (p.subCategory) subCategoriesSet.add(p.subCategory);
+      if (p.status) statusesSet.add(p.status);
+      if (p.brand) brandsSet.add(p.brand);
+    });
+
+    const categoryOpts = [{ value: "", label: "All Categories" }].concat(
+      Array.from(categoriesSet).sort().map((c) => ({ value: c, label: c }))
+    );
+
+    const subCategoryOpts = [{ value: "", label: "All Sub-Categories" }].concat(
+      Array.from(subCategoriesSet).sort().map((sc) => ({ value: sc, label: sc }))
+    );
+
+    const statusOpts = [{ value: "", label: "All Statuses" }].concat(
+      Array.from(statusesSet).sort().map((s) => ({ value: s, label: s }))
+    );
+
+    const brandOpts = [{ value: "", label: "All Brands" }].concat(
+      Array.from(brandsSet).sort().map((b) => ({ value: b, label: b }))
+    );
+
+    return { categoryOpts, subCategoryOpts, statusOpts, brandOpts };
+  }, [allProducts]);
+
+  // Combined Multi-Field Client-Side Filter Engine
+  const filteredProducts = useMemo(() => {
+    if (!allProducts) return [];
+
+    return allProducts.filter((p) => {
+      // 1. Search Query Match
+      if (search) {
+        const q = search.toLowerCase();
+        const nameMatch = (p.name || "").toLowerCase().includes(q);
+        const stockMatch = (p.stockNo || "").toLowerCase().includes(q);
+        const codeMatch = (p.productCode || "").toLowerCase().includes(q);
+        const skuMatch = (p.sku || "").toLowerCase().includes(q);
+        const barcodeMatch = (p.barcode || "").toLowerCase().includes(q);
+        const brandMatch = (p.brand || "").toLowerCase().includes(q);
+        const subCatMatch = (p.subCategory || "").toLowerCase().includes(q);
+        const materialMatch = (p.material || "").toLowerCase().includes(q);
+        const gemTypeMatch = (p.gemstoneType || "").toLowerCase().includes(q);
+
+        if (
+          !nameMatch &&
+          !stockMatch &&
+          !codeMatch &&
+          !skuMatch &&
+          !barcodeMatch &&
+          !brandMatch &&
+          !subCatMatch &&
+          !materialMatch &&
+          !gemTypeMatch
+        ) {
+          return false;
+        }
+      }
+
+      // 2. Category Filter
+      if (categoryFilter && p.category !== categoryFilter) {
+        return false;
+      }
+
+      // 3. Sub-Category Filter
+      if (subCategoryFilter && p.subCategory !== subCategoryFilter) {
+        return false;
+      }
+
+      // 4. Status Filter
+      if (statusFilter && p.status !== statusFilter) {
+        return false;
+      }
+
+      // 5. Brand Filter
+      if (brandFilter && p.brand !== brandFilter) {
+        return false;
+      }
+
+      // 6. Stock Status Filter
+      if (stockStatusFilter) {
+        const qty = Number(p.quantity || 0);
+        if (stockStatusFilter === "in_stock" && qty <= 0) return false;
+        if (stockStatusFilter === "out_of_stock" && qty > 0) return false;
+      }
+
+      // 7. Price Range Filter
+      if (priceRangeFilter) {
+        const price = Number(p.sellingPrice || 0);
+        if (priceRangeFilter === "under_500" && price >= 500) return false;
+        if (priceRangeFilter === "500_2000" && (price < 500 || price > 2000)) return false;
+        if (priceRangeFilter === "2000_5000" && (price < 2000 || price > 5000)) return false;
+        if (priceRangeFilter === "above_5000" && price <= 5000) return false;
+      }
+
+      return true;
+    });
+  }, [
+    allProducts,
+    search,
+    categoryFilter,
+    subCategoryFilter,
+    statusFilter,
+    brandFilter,
+    stockStatusFilter,
+    priceRangeFilter,
+  ]);
+
+  // Count active non-empty filters
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (categoryFilter) count++;
+    if (subCategoryFilter) count++;
+    if (statusFilter) count++;
+    if (brandFilter) count++;
+    if (stockStatusFilter) count++;
+    if (priceRangeFilter) count++;
+    if (search) count++;
+    return count;
+  }, [
+    categoryFilter,
+    subCategoryFilter,
+    statusFilter,
+    brandFilter,
+    stockStatusFilter,
+    priceRangeFilter,
+    search,
+  ]);
+
+  const handleResetFilters = () => {
+    setSearchInput("");
+    setCategoryFilter("");
+    setSubCategoryFilter("");
+    setStatusFilter("");
+    setBrandFilter("");
+    setStockStatusFilter("");
+    setPriceRangeFilter("");
+  };
+
+  // Audit Logs derivation
   const logs = useMemo(() => logsData?.data || [], [logsData]);
   const productLogs = useMemo(
     () => logs.filter((log) => String(log.entity || "").toLowerCase().includes("product")),
@@ -104,12 +285,8 @@ export default function ProductList() {
   );
 
   useEffect(() => {
-    if (isError) {
-      showError("Fetch Failed", "Failed to fetch products.");
-    }
-    if (isLogsError) {
-      showError("Fetch Failed", "Failed to fetch product audit logs.");
-    }
+    if (isError) showError("Fetch Failed", "Failed to fetch products.");
+    if (isLogsError) showError("Fetch Failed", "Failed to fetch product audit logs.");
   }, [isError, isLogsError, showError]);
 
   const getStatusVariant = (status) => {
@@ -132,7 +309,7 @@ export default function ProductList() {
   const headers = [
     "Product",
     "Category",
-    "Stock",
+    "Stock Qty",
     "Cost Price",
     "Selling Price",
     "Margin",
@@ -140,14 +317,14 @@ export default function ProductList() {
     "Actions",
   ];
 
-  if (isLoading && products.length === 0) {
+  if (isLoading && (allProducts || []).length === 0) {
     return <SkeletonPageHeader />;
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container space-y-0">
       {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200/80 pb-5">
+      <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between border-b border-gray-200/80 pb-0">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Product Management</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">
@@ -155,7 +332,7 @@ export default function ProductList() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <Link to="/products/add">
             <Button variant="primary" icon={<Plus className="h-4 w-4" />}>
               Add Product
@@ -172,7 +349,7 @@ export default function ProductList() {
             type="button"
             onClick={() => setActiveCatalogTab(tab.key)}
             className={`pb-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeCatalogTab === tab.key
-              ? "border-primary text-primary"
+              ? "border-accent text-accent"
               : "border-transparent text-gray-400 hover:text-gray-700"
               }`}
           >
@@ -182,40 +359,162 @@ export default function ProductList() {
       </div>
 
       {activeCatalogTab === "catalog" ? (
-        <>
-          {/* Filters & Search Controls */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs">
-            <SearchInput
-              placeholder="Search stock #, product code, name..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full sm:w-80"
-            />
+        <div className="space-y-4">
+          {/* Main Search & Filters Card with Mobile Collapsible Accordion */}
+          <FilterPanel
+            activeFilterCount={activeFilterCount}
+            onReset={handleResetFilters}
+            title="Product Filters"
+            chips={
+              activeFilterCount > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-gray-100 text-xs">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mr-1 flex items-center gap-1">
+                    <Filter className="h-3 w-3" /> Active Filters:
+                  </span>
 
-            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                  {search && (
+                    <span className="inline-flex items-center gap-1 bg-primary/10 text-primary font-semibold px-2.5 py-1 rounded-full border border-primary/20">
+                      Search: "{search}"
+                      <button onClick={() => setSearchInput("")} className="hover:text-primary-dark">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+
+                  {categoryFilter && (
+                    <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-800 font-semibold px-2.5 py-1 rounded-full border border-gray-200">
+                      Category: {categoryFilter}
+                      <button onClick={() => setCategoryFilter("")} className="hover:text-gray-950">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+
+                  {subCategoryFilter && (
+                    <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-800 font-semibold px-2.5 py-1 rounded-full border border-gray-200">
+                      Sub-Category: {subCategoryFilter}
+                      <button onClick={() => setSubCategoryFilter("")} className="hover:text-gray-950">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+
+                  {statusFilter && (
+                    <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-800 font-semibold px-2.5 py-1 rounded-full border border-gray-200">
+                      Status: {statusFilter}
+                      <button onClick={() => setStatusFilter("")} className="hover:text-gray-950">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+
+                  {brandFilter && (
+                    <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-800 font-semibold px-2.5 py-1 rounded-full border border-gray-200">
+                      Brand: {brandFilter}
+                      <button onClick={() => setBrandFilter("")} className="hover:text-gray-950">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+
+                  {stockStatusFilter && (
+                    <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-800 font-semibold px-2.5 py-1 rounded-full border border-gray-200">
+                      Stock: {STOCK_STATUS_OPTIONS.find((o) => o.value === stockStatusFilter)?.label}
+                      <button onClick={() => setStockStatusFilter("")} className="hover:text-gray-950">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+
+                  <button
+                    onClick={handleResetFilters}
+                    className="text-xs font-bold text-danger hover:underline ml-auto flex items-center gap-1"
+                  >
+                    <RotateCcw className="h-3 w-3" /> Clear All
+                  </button>
+                </div>
+              )
+            }
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-end">
+              {/* Filter 1: Search (Always First) */}
+              <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-3 xl:col-span-2">
+                <label className="text-xs sm:text-sm font-semibold text-gray-700 tracking-tight select-none">
+                  Search Products
+                </label>
+                <SearchInput
+                  placeholder="Search name, stock #, SKU, barcode, brand..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Filter 2: Category */}
               <Select
+                label="Category"
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                options={categoryOptions}
-                containerClassName="w-full sm:w-44"
+                options={dynamicFilterOptions.categoryOpts}
+                containerClassName="w-full"
               />
 
+              {/* Filter 3: Sub-Category */}
               <Select
+                label="Sub-Category"
+                value={subCategoryFilter}
+                onChange={(e) => setSubCategoryFilter(e.target.value)}
+                options={dynamicFilterOptions.subCategoryOpts}
+                containerClassName="w-full"
+              />
+
+              {/* Filter 4: Status */}
+              <Select
+                label="Status"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                options={statusOptions}
-                containerClassName="w-full sm:w-44"
+                options={dynamicFilterOptions.statusOpts}
+                containerClassName="w-full"
+              />
+
+              {/* Filter 5: Brand */}
+              <Select
+                label="Brand"
+                value={brandFilter}
+                onChange={(e) => setBrandFilter(e.target.value)}
+                options={dynamicFilterOptions.brandOpts}
+                containerClassName="w-full"
+              />
+
+              {/* Filter 6: Stock Availability */}
+              <Select
+                label="Stock Availability"
+                value={stockStatusFilter}
+                onChange={(e) => setStockStatusFilter(e.target.value)}
+                options={STOCK_STATUS_OPTIONS}
+                containerClassName="w-full"
               />
             </div>
+          </FilterPanel>
+
+          {/* Results Counter Summary */}
+          <div className="flex items-center justify-between text-xs text-gray-500 font-medium px-1">
+            <span>
+              Showing <strong className="text-gray-900 font-bold">{filteredProducts.length}</strong> of{" "}
+              <strong className="text-gray-900">{allProducts.length}</strong> products
+            </span>
+            {activeFilterCount > 0 && (
+              <span className="text-primary font-semibold">Filtered results active</span>
+            )}
           </div>
 
           {/* Desktop Table View (768px and above) */}
           <div className="hidden md:block bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden">
             <DataTable
               headers={headers}
-              data={products}
+              data={filteredProducts}
               isLoading={isLoading}
-              emptyMessage="No products match your search criteria."
+              emptyMessage="No products match your search or filter criteria."
               renderRow={(prod) => {
                 const coverImage = prod.imageUrls && prod.imageUrls.length > 0 ? prod.imageUrls[0] : null;
                 const marginVal = Number(prod.margin || 0);
@@ -251,8 +550,7 @@ export default function ProductList() {
                     <td className="py-3.5 px-4 font-mono text-gray-700">${(prod.totalCost || prod.costPrice || 0).toFixed(2)}</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-primary">${(prod.sellingPrice || 0).toFixed(2)}</td>
                     <td className="py-3.5 px-4">
-                      <span className={`font-mono font-bold px-2 py-0.5 rounded-md text-xs ${marginVal >= 0 ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"
-                        }`}>
+                      <span className={`font-mono font-bold px-2 py-0.5 rounded-md text-xs ${marginVal >= 0 ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
                         {marginVal.toFixed(1)}%
                       </span>
                     </td>
@@ -283,12 +581,18 @@ export default function ProductList() {
 
           {/* Mobile Accordion View (below 768px) */}
           <div className="md:hidden space-y-3">
-            {products.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center text-gray-400 text-sm">
-                No products match your search criteria.
+            {filteredProducts.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center text-gray-400 text-sm space-y-2">
+                <p className="font-bold text-gray-700">No products match your criteria</p>
+                <p className="text-xs text-gray-500">Try loosening your search terms or clearing applied filters.</p>
+                {activeFilterCount > 0 && (
+                  <Button variant="outline" size="sm" onClick={handleResetFilters} icon={<RotateCcw className="h-3.5 w-3.5" />} className="mt-2">
+                    Reset Filters
+                  </Button>
+                )}
               </div>
             ) : (
-              products.map((prod) => {
+              filteredProducts.map((prod) => {
                 const isExpanded = expandedProductIds.includes(prod._id);
                 const coverImage = prod.imageUrls?.[0];
                 const marginVal = Number(prod.margin || 0);
@@ -298,7 +602,7 @@ export default function ProductList() {
                     key={prod._id}
                     className="rounded-2xl border border-gray-200 bg-white shadow-2xs overflow-hidden transition-all duration-200"
                   >
-                    {/* Accordion Header - Click to expand/collapse */}
+                    {/* Accordion Header */}
                     <div
                       onClick={() => toggleProductAccordion(prod._id)}
                       className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-gray-50/70 transition-colors select-none"
@@ -319,7 +623,7 @@ export default function ProductList() {
                           <h4 className="font-bold text-sm text-gray-900 line-clamp-1">
                             {prod.name || "Untitled Product"}
                           </h4>
-                          <div className="flex items-center gap-1.5 mt-0.5">
+                          <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                             <span className="text-[11px] font-mono text-gray-400">
                               #{prod.stockNo || prod.productCode || "NO-STOCK"}
                             </span>
@@ -350,7 +654,6 @@ export default function ProductList() {
                     {/* Accordion Expanded Content */}
                     {isExpanded && (
                       <div className="border-t border-gray-100 bg-gray-50/50 p-3.5 space-y-3 animate-in fade-in duration-150">
-                        {/* 4 Key Metrics Grid */}
                         <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                           <div className="p-2.5 rounded-xl bg-white border border-gray-100">
                             <span className="text-gray-400 text-[10px] font-bold block uppercase tracking-wider">Selling Price</span>
@@ -375,7 +678,6 @@ export default function ProductList() {
                           </div>
                         </div>
 
-                        {/* Extra Specifications if present */}
                         {(prod.subCategory || prod.brand || prod.warehouse) && (
                           <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-600 pt-1">
                             {prod.subCategory && (
@@ -396,7 +698,6 @@ export default function ProductList() {
                           </div>
                         )}
 
-                        {/* Quick Actions Footer */}
                         <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-200/60">
                           <Link to={`/products/${prod._id}`} className="flex-1 sm:flex-none">
                             <Button variant="outline" size="sm" icon={<Eye className="h-3.5 w-3.5" />} className="w-full justify-center text-xs">
@@ -425,7 +726,7 @@ export default function ProductList() {
               })
             )}
           </div>
-        </>
+        </div>
       ) : (
         /* History & Audit Logs View */
         <div className="space-y-4 bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs">
@@ -441,7 +742,7 @@ export default function ProductList() {
               value={selectedProductId}
               onChange={(e) => setSelectedProductId(e.target.value)}
               containerClassName="w-full sm:w-72"
-              options={[{ value: "", label: "All Products" }, ...products.map((p) => ({ value: p._id, label: `${p.name || p.stockNo} (#${p.stockNo})` }))]}
+              options={[{ value: "", label: "All Products" }, ...allProducts.map((p) => ({ value: p._id, label: `${p.name || p.stockNo} (#${p.stockNo})` }))]}
             />
           </div>
 

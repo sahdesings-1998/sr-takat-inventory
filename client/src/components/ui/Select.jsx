@@ -40,9 +40,11 @@ export const Select = forwardRef(function Select(
           aria-invalid={Boolean(error)}
           {...props}
         >
-          <option value="" disabled>
-            {placeholder}
-          </option>
+          {placeholder && !options.some((opt) => opt.value === "") && (
+            <option value="" disabled>
+              {placeholder}
+            </option>
+          )}
           {options.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}

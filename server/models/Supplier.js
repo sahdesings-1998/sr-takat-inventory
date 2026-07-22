@@ -25,6 +25,21 @@ const supplierSchema = new Schema(
       trim: true,
       required: [true, "Phone number is required"],
     },
+    whatsApp: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    country: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    supplierType: {
+      type: String,
+      enum: ["Gemstone Supplier", "Metal Dealer", "Component Supplier", "Artisan / Workshop", "Other"],
+      default: "Gemstone Supplier",
+    },
     address: {
       type: String,
       trim: true,

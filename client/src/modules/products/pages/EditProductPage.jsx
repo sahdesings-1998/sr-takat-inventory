@@ -56,9 +56,9 @@ export default function EditProductPage() {
   }
 
   return (
-    <div className="page-container ">
+    <div className="page-container space-y-0">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200/80 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200/80 pb-0">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"

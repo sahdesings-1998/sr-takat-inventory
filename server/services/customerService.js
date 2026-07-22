@@ -1,5 +1,7 @@
 import Customer from "../models/Customer.js";
 import Sale from "../models/Sale.js";
+import SaleItem from "../models/SaleItem.js";
+import Payment from "../models/Payment.js";
 import Memo from "../models/Memo.js";
 import ApiError from "../utils/ApiError.js";
 
@@ -49,29 +51,84 @@ async function deleteCustomer(id, userId) {
 }
 
 async function getCustomerHistory(id) {
-  await getCustomerById(id);
+  const customer = await getCustomerById(id);
 
   const sales = await Sale.find({ customerId: id }).sort({ createdAt: -1 });
   const memos = await Memo.find({ customerId: id }).sort({ createdAt: -1 });
 
-  let totalBusiness = 0;
-  let outstandingAmount = 0;
+  const saleIds = sales.map((s) => s._id);
+  const saleItems = await SaleItem.find({ saleId: { $in: saleIds } }).populate("inventoryId");
+
+  let totalPurchaseAmount = 0;
+  let totalAmountPaid = 0;
+  let totalOutstandingBalance = 0;
 
   sales.forEach((sale) => {
-    totalBusiness += sale.total;
-    if (sale.paymentStatus === "Unpaid") {
-      outstandingAmount += sale.total;
-    } else if (sale.paymentStatus === "Partially Paid") {
-      // Assume 50% unpaid for partially paid status as fallback
-      outstandingAmount += sale.total * 0.5;
+    totalPurchaseAmount += Number(sale.total || 0);
+    const paid = Number(sale.amountPaid ?? (sale.paymentStatus === "Paid" ? sale.total : 0));
+    const balance = Number(sale.balanceDue ?? Math.max(0, sale.total - paid));
+    totalAmountPaid += paid;
+    totalOutstandingBalance += balance;
+  });
+
+  const purchasedProducts = [];
+  const purchasedGemstones = [];
+
+  saleItems.forEach((item) => {
+    const parentSale = sales.find((s) => s._id.toString() === item.saleId.toString());
+    const invoiceNo = parentSale ? parentSale.invoiceNo : "N/A";
+    const date = parentSale ? parentSale.createdAt : item.createdAt;
+
+    if (item.inventoryType === "Product" && item.inventoryId) {
+      purchasedProducts.push({
+        _id: item._id,
+        productId: item.inventoryId._id,
+        code: item.inventoryId.productCode || item.inventoryId.sku,
+        name: item.inventoryId.name,
+        category: item.inventoryId.category,
+        quantity: item.quantity,
+        sellingPrice: item.sellingPrice,
+        invoiceNo,
+        date,
+      });
+    } else if (item.inventoryType === "Gemstone" && item.inventoryId) {
+      purchasedGemstones.push({
+        _id: item._id,
+        stoneId: item.inventoryId.stoneId,
+        gemstone: item.inventoryId.gemstone,
+        carat: item.inventoryId.carat,
+        cut: item.inventoryId.cut,
+        color: item.inventoryId.color,
+        quantity: item.quantity,
+        sellingPrice: item.sellingPrice,
+        invoiceNo,
+        date,
+      });
     }
   });
 
+  const paymentHistory = await Payment.find({ customerId: id }).sort({ paymentDate: -1, createdAt: -1 }).populate("createdBy");
+
+  const outstandingSales = sales.filter((s) => Number(s.balanceDue || 0) > 0.001);
+  const partiallyPaidCount = sales.filter((s) => s.paymentStatus === "Partially Paid").length;
+  const unpaidCount = sales.filter((s) => s.paymentStatus === "Unpaid").length;
+
   return {
-    totalBusiness,
-    outstandingAmount,
+    customer,
+    totalBusiness: totalPurchaseAmount,
+    totalPurchaseAmount,
+    totalAmountPaid,
+    totalOutstandingBalance,
+    outstandingAmount: totalOutstandingBalance,
+    partiallyPaidCount,
+    unpaidCount,
     sales,
     memos,
+    saleItems,
+    purchasedProducts,
+    purchasedGemstones,
+    outstandingSales,
+    paymentHistory,
   };
 }
 

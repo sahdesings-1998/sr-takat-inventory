@@ -5,6 +5,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useToast } from "@/contexts/ToastContext";
 import Button from "@/components/ui/Button";
 import SearchInput from "@/components/ui/SearchInput";
+import FilterPanel from "@/components/ui/FilterPanel";
 import Select from "@/components/ui/Select";
 import DataTable from "@/components/ui/DataTable";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -102,17 +103,17 @@ export function ExpenseManagement() {
   const totalExpense = expenseStats?.totalExpense || 0;
 
   return (
-    <div className="space-y-6">
+    <div className="page-container space-y-0">
       {isLoading && !expenses?.length ? (
         <SkeletonPageHeader />
       ) : (
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between border-b border-gray-200/80 pb-0">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 font-display">Expense Management</h1>
-            <p className="text-sm text-gray-600 mt-1 font-medium">Track and manage all business expenses with filtering and reports.</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Expense Management</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">Track and manage all business expenses with filtering and reports.</p>
           </div>
-          <Button onClick={handleOpenModal} className="w-fit flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Add Expense
+          <Button onClick={handleOpenModal} className="w-fit flex items-center gap-2" icon={<Plus className="w-4 h-4" />}>
+            Add Expense
           </Button>
         </div>
       )}
@@ -124,28 +125,20 @@ export function ExpenseManagement() {
       />
 
       <div className="space-y-4">
-        <div className="rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-[0_12px_32px_rgba(15,23,42,0.05)] sm:p-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-primary">Quick filters</p>
-              <p className="text-sm text-slate-500">Refine expense records with search, date range, category, and status.</p>
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchInput("");
-                setSelectedCategory("");
-                setSelectedStatus("");
-                setStartDate("");
-                setEndDate("");
-              }}
-              className="h-11 w-full sm:w-auto"
-            >
-              Clear filters
-            </Button>
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_repeat(4,minmax(0,1fr))_auto]">
+        <FilterPanel
+          activeFilterCount={
+            (search ? 1 : 0) + (selectedCategory ? 1 : 0) + (selectedStatus ? 1 : 0) + (startDate ? 1 : 0) + (endDate ? 1 : 0)
+          }
+          onReset={() => {
+            setSearchInput("");
+            setSelectedCategory("");
+            setSelectedStatus("");
+            setStartDate("");
+            setEndDate("");
+          }}
+          title="Expense Filters"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-end">
             <div className="min-w-0">
               <SearchInput
                 label="Search"
@@ -161,7 +154,7 @@ export function ExpenseManagement() {
               <DatePicker
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                label="From"
+                label="From Date"
                 containerClassName="w-full"
               />
             </div>
@@ -169,7 +162,7 @@ export function ExpenseManagement() {
               <DatePicker
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                label="To"
+                label="To Date"
                 containerClassName="w-full"
               />
             </div>
@@ -179,7 +172,7 @@ export function ExpenseManagement() {
                 placeholder="All categories"
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                options={[{ value: "", label: "All Categories" }, ...EXPENSE_CATEGORIES]}
+                options={[{ label: "All Categories", value: "" }, ...EXPENSE_CATEGORIES]}
                 containerClassName="w-full"
               />
             </div>
@@ -189,12 +182,12 @@ export function ExpenseManagement() {
                 placeholder="All statuses"
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                options={[{ value: "", label: "All Statuses" }, ...STATUS_OPTIONS]}
+                options={[{ label: "All Statuses", value: "" }, ...STATUS_OPTIONS]}
                 containerClassName="w-full"
               />
             </div>
           </div>
-        </div>
+        </FilterPanel>
 
         <DataTable
           headers={["Date", "Category", "Description", "Vendor", "Amount", "Payment", "Status", "Actions"]}

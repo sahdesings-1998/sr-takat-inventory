@@ -6,6 +6,8 @@ import { useMaterials } from "../hooks/useInventory";
 import { materialSchema } from "../validation/inventorySchema";
 import { useToast } from "@/contexts/ToastContext";
 import Button from "@/components/ui/Button";
+import SearchInput from "@/components/ui/SearchInput";
+import FilterPanel from "@/components/ui/FilterPanel";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Modal from "@/components/ui/Modal";
@@ -138,46 +140,107 @@ export default function MaterialList() {
     "Actions",
   ];
 
+  const activeFilterCount = (search ? 1 : 0) + (categoryFilter ? 1 : 0);
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setCategoryFilter("");
+  };
+
+  const categoryOptions = [
+    { value: "", label: "All Categories" },
+    { value: "Gold", label: "Gold" },
+    { value: "Silver", label: "Silver" },
+    { value: "Platinum", label: "Platinum" },
+    { value: "Setting", label: "Setting" },
+    { value: "Findings", label: "Findings" },
+    { value: "Packaging", label: "Packaging" },
+    { value: "Other", label: "Other" },
+  ];
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="page-container space-y-0">
       {isLoading && !materials?.length ? (
         <SkeletonPageHeader />
       ) : (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between border-b border-gray-200/80 pb-0">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 font-display">Raw Materials &amp; Metals</h1>
-            <p className="text-sm text-gray-600 mt-1 font-medium">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Raw Materials &amp; Metals</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
               Track gold, silver, platinum, settings, components, straps, and other raw materials used in manufacturing
             </p>
           </div>
-          <Button onClick={handleOpenAdd} className="w-fit">
-            <Plus className="h-4 w-4" /> Add Material
+          <Button onClick={handleOpenAdd} className="w-fit" icon={<Plus className="h-4 w-4" />}>
+            Add Material
           </Button>
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-        <Input
-          placeholder="Search materials..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          containerClassName="flex-1 w-full"
-        />
-        <Select
-          placeholder="All Categories"
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          containerClassName="w-full sm:w-48"
-          options={[
-            { value: "Gold", label: "Gold" },
-            { value: "Silver", label: "Silver" },
-            { value: "Platinum", label: "Platinum" },
-            { value: "Setting", label: "Setting" },
-            { value: "Findings", label: "Findings" },
-            { value: "Packaging", label: "Packaging" },
-            { value: "Other", label: "Other" },
-          ]}
-        />
+      {/* Main Search & Filters Card with Mobile Collapsible Accordion */}
+      <FilterPanel
+        activeFilterCount={activeFilterCount}
+        onReset={handleResetFilters}
+        title="Material Filters"
+        chips={
+          activeFilterCount > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-gray-100 text-xs">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mr-1">
+                Active Filters:
+              </span>
+
+              {search && (
+                <span className="inline-flex items-center gap-1 bg-primary/10 text-primary font-semibold px-2.5 py-1 rounded-full border border-primary/20">
+                  Search: "{search}"
+                  <button onClick={() => setSearch("")}>✕</button>
+                </span>
+              )}
+              {categoryFilter && (
+                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-800 font-semibold px-2.5 py-1 rounded-full border border-gray-200">
+                  Category: {categoryFilter}
+                  <button onClick={() => setCategoryFilter("")}>✕</button>
+                </span>
+              )}
+
+              <button onClick={handleResetFilters} className="text-xs font-bold text-danger hover:underline ml-auto">
+                Clear All
+              </button>
+            </div>
+          )
+        }
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+          {/* Filter 1: Search (Always First) */}
+          <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-2">
+            <label className="text-xs sm:text-sm font-semibold text-gray-700 tracking-tight select-none">
+              Search Raw Materials
+            </label>
+            <SearchInput
+              placeholder="Search code, name, category, location..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onClear={() => setSearch("")}
+              className="w-full"
+              id="materials-search"
+            />
+          </div>
+
+          {/* Filter 2: Category */}
+          <Select
+            label="Category"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            options={categoryOptions}
+            containerClassName="w-full"
+          />
+        </div>
+      </FilterPanel>
+
+      {/* Results Counter Summary */}
+      <div className="flex items-center justify-between text-xs text-gray-500 font-medium px-1">
+        <span>
+          Showing <strong className="text-gray-900 font-bold">{materials.length}</strong> raw materials
+        </span>
+        {activeFilterCount > 0 && <span className="text-primary font-semibold">Filtered results active</span>}
       </div>
 
       <DataTable

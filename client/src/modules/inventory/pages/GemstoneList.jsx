@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Edit2, Trash2, ArrowRightLeft, Image as ImageIcon, ChevronDown, ChevronUp } from "lucide-react";
@@ -20,6 +20,7 @@ import Badge from "@/components/ui/Badge";
 import SearchInput from "@/components/ui/SearchInput";
 import TableActionButton from "@/components/ui/TableActionButton";
 import ImageUploader from "@/components/ui/ImageUploader";
+import FilterPanel from "@/components/ui/FilterPanel";
 import DocumentPreviewModal from "@/components/ui/DocumentPreviewModal";
 
 export default function GemstoneList() {
@@ -220,56 +221,177 @@ export default function GemstoneList() {
     "Actions",
   ];
 
+  const [typeFilter, setTypeFilter] = useState("");
+  const [originFilter, setOriginFilter] = useState("");
+
+  // Extract dynamic filter options from gemstone inventory
+  const { typeOpts, originOpts } = useMemo(() => {
+    const typesSet = new Set();
+    const originsSet = new Set();
+    (gemstones || []).forEach((g) => {
+      if (g.gemstone) typesSet.add(g.gemstone);
+      if (g.origin) originsSet.add(g.origin);
+    });
+
+    const tOpts = [{ value: "", label: "All Gemstone Types" }].concat(
+      Array.from(typesSet).sort().map((t) => ({ value: t, label: t }))
+    );
+    const oOpts = [{ value: "", label: "All Origins" }].concat(
+      Array.from(originsSet).sort().map((o) => ({ value: o, label: o }))
+    );
+
+    return { typeOpts: tOpts, originOpts: oOpts };
+  }, [gemstones]);
+
+  // Client-side filtering across type, origin, and status
+  const filteredGemstones = useMemo(() => {
+    if (!gemstones) return [];
+    return gemstones.filter((g) => {
+      if (typeFilter && g.gemstone !== typeFilter) return false;
+      if (originFilter && g.origin !== originFilter) return false;
+      return true;
+    });
+  }, [gemstones, typeFilter, originFilter]);
+
+  const activeFilterCount = (search ? 1 : 0) + (statusFilter ? 1 : 0) + (typeFilter ? 1 : 0) + (originFilter ? 1 : 0);
+
+  const handleResetFilters = () => {
+    setSearchInput("");
+    setStatusFilter("");
+    setTypeFilter("");
+    setOriginFilter("");
+  };
+
+  const statusOptions = [
+    { value: "", label: "All Statuses" },
+    { value: "In Stock", label: "In Stock" },
+    { value: "Reserved", label: "Reserved" },
+    { value: "In Production", label: "In Production" },
+    { value: "On Memo", label: "On Memo" },
+    { value: "Sold", label: "Sold" },
+    { value: "Damaged", label: "Damaged" },
+    { value: "Missing", label: "Missing" },
+  ];
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="page-container space-y-0">
       {isLoading && !gemstones?.length ? (
         <SkeletonPageHeader />
       ) : (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between border-b border-gray-200/80 pb-0">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 font-display">Individual Gemstone Stock</h1>
-            <p className="text-sm text-gray-600 mt-1 font-medium">Track individual stones by ID, type, origin, carat weight, certificate, and status lifecycle</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Individual Gemstone Stock</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+              Track individual stones by ID, type, origin, carat weight, certificate, and status lifecycle
+            </p>
           </div>
-          <Button onClick={handleOpenAdd} className="w-fit">
-            <Plus className="h-4 w-4" /> Add Gemstone
+          <Button onClick={handleOpenAdd} className="w-fit" icon={<Plus className="h-4 w-4" />}>
+            Add Gemstone
           </Button>
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-4 rounded-[20px] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
-        <SearchInput
-          placeholder="Search by ID, type, variety, shape, origin..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          onClear={() => setSearchInput("")}
-          containerClassName="flex-1 w-full"
-          id="gemstones-search"
-        />
-        <Select
-          placeholder="All Statuses"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          containerClassName="w-full sm:w-48"
-          options={[
-            { value: "In Stock", label: "In Stock" },
-            { value: "Reserved", label: "Reserved" },
-            { value: "In Production", label: "In Production" },
-            { value: "On Memo", label: "On Memo" },
-            { value: "Sold", label: "Sold" },
-            { value: "Damaged", label: "Damaged" },
-            { value: "Missing", label: "Missing" },
-          ]}
-        />
-        {(search || statusFilter) && (
-          <span className="text-xs text-gray-400 font-medium shrink-0">
-            {gemstones.length} result{gemstones.length !== 1 ? "s" : ""}
-          </span>
-        )}
+      {/* Main Search & Filters Card with Mobile Collapsible Accordion */}
+      <FilterPanel
+        activeFilterCount={activeFilterCount}
+        onReset={handleResetFilters}
+        title="Gemstone Filters"
+        chips={
+          activeFilterCount > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-gray-100 text-xs">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mr-1">
+                Active Filters:
+              </span>
+
+              {search && (
+                <span className="inline-flex items-center gap-1 bg-primary/10 text-primary font-semibold px-2.5 py-1 rounded-full border border-primary/20">
+                  Search: "{search}"
+                  <button onClick={() => setSearchInput("")}>✕</button>
+                </span>
+              )}
+              {typeFilter && (
+                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-800 font-semibold px-2.5 py-1 rounded-full border border-gray-200">
+                  Type: {typeFilter}
+                  <button onClick={() => setTypeFilter("")}>✕</button>
+                </span>
+              )}
+              {originFilter && (
+                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-800 font-semibold px-2.5 py-1 rounded-full border border-gray-200">
+                  Origin: {originFilter}
+                  <button onClick={() => setOriginFilter("")}>✕</button>
+                </span>
+              )}
+              {statusFilter && (
+                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-800 font-semibold px-2.5 py-1 rounded-full border border-gray-200">
+                  Status: {statusFilter}
+                  <button onClick={() => setStatusFilter("")}>✕</button>
+                </span>
+              )}
+
+              <button onClick={handleResetFilters} className="text-xs font-bold text-danger hover:underline ml-auto">
+                Clear All
+              </button>
+            </div>
+          )
+        }
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+          {/* Filter 1: Search (Always First) */}
+          <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-1">
+            <label className="text-xs sm:text-sm font-semibold text-gray-700 tracking-tight select-none">
+              Search Gemstones
+            </label>
+            <SearchInput
+              placeholder="Search ID, type, variety, shape, origin..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onClear={() => setSearchInput("")}
+              className="w-full"
+              id="gemstones-search"
+            />
+          </div>
+
+          {/* Filter 2: Gemstone Type */}
+          <Select
+            label="Gemstone Type"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            options={typeOpts}
+            containerClassName="w-full"
+          />
+
+          {/* Filter 3: Origin */}
+          <Select
+            label="Origin"
+            value={originFilter}
+            onChange={(e) => setOriginFilter(e.target.value)}
+            options={originOpts}
+            containerClassName="w-full"
+          />
+
+          {/* Filter 4: Status */}
+          <Select
+            label="Status"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            options={statusOptions}
+            containerClassName="w-full"
+          />
+        </div>
+      </FilterPanel>
+
+      {/* Results Count Summary */}
+      <div className="flex items-center justify-between text-xs text-gray-500 font-medium px-1">
+        <span>
+          Showing <strong className="text-gray-900 font-bold">{filteredGemstones.length}</strong> of{" "}
+          <strong className="text-gray-900">{gemstones.length}</strong> gemstones
+        </span>
+        {activeFilterCount > 0 && <span className="text-primary font-semibold">Filtered results active</span>}
       </div>
 
       <DataTable
         headers={headers}
-        data={gemstones}
+        data={filteredGemstones}
         isLoading={isLoading}
         emptyMessage="No gemstones found"
         renderRow={(stone) => (

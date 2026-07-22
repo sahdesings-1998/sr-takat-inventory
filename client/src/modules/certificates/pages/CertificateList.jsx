@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plus, Trash2, ExternalLink, FileText, Award, ChevronDown, ChevronUp, Upload, X } from "lucide-react";
 import { useCertificates } from "../hooks/useCertificates";
 import { useGemstones } from "@/modules/inventory/hooks/useInventory";
@@ -20,12 +20,21 @@ import { SkeletonPageHeader } from "@/components/ui/Skeleton";
 import DocumentPreviewModal from "@/components/ui/DocumentPreviewModal";
 
 
+import SearchInput from "@/components/ui/SearchInput";
+import FilterPanel from "@/components/ui/FilterPanel";
+import { useDebounce } from "@/hooks/useDebounce";
+
 export default function CertificateList() {
   const { certificates, isLoading, isError, createCertificate, deleteCertificate, isCreating } = useCertificates();
   const { gemstones } = useGemstones();
   const { products } = useProducts();
   const { settings } = useSettings();
   const { showSuccess, showError } = useToast();
+
+  const [searchInput, setSearchInput] = useState("");
+  const search = useDebounce(searchInput, 300);
+  const [labFilter, setLabFilter] = useState("");
+  const [entityTypeFilter, setEntityTypeFilter] = useState("");
 
   const [isOpen, setIsOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, isLoading: false });
@@ -62,8 +71,8 @@ export default function CertificateList() {
     // Format size label
     let sizeLabel = "N/A";
     if (cert.bytes) {
-      sizeLabel = cert.bytes > 1024 * 1024 
-        ? `${(cert.bytes / 1024 / 1024).toFixed(2)} MB` 
+      sizeLabel = cert.bytes > 1024 * 1024
+        ? `${(cert.bytes / 1024 / 1024).toFixed(2)} MB`
         : `${(cert.bytes / 1024).toFixed(1)} KB`;
     }
 
@@ -153,26 +162,152 @@ export default function CertificateList() {
     }
   }, [form.entityType, gemstones, products, form.entityId]);
 
+  // Dynamic lab options
+  const labOptions = useMemo(() => {
+    const labsSet = new Set(["GIA", "IGI", "GRS", "SSEF", "GUBELIN", "AIGS", "Lotus"]);
+    (certificates || []).forEach((c) => {
+      if (c.lab) labsSet.add(c.lab);
+    });
+    return [{ value: "", label: "All Laboratories" }].concat(
+      Array.from(labsSet).sort().map((l) => ({ value: l, label: l }))
+    );
+  }, [certificates]);
+
+  const entityTypeOptions = [
+    { value: "", label: "All Asset Types" },
+    { value: "Gemstone", label: "Gemstone" },
+    { value: "Product", label: "Product" },
+  ];
+
+  // Client-side filtering
+  const filteredCertificates = useMemo(() => {
+    return (certificates || []).filter((cert) => {
+      if (search) {
+        const q = search.toLowerCase();
+        const matchNo = (cert.certificateNo || "").toLowerCase().includes(q);
+        const matchLab = (cert.lab || "").toLowerCase().includes(q);
+        const matchReport = (cert.reportType || "").toLowerCase().includes(q);
+        if (!matchNo && !matchLab && !matchReport) return false;
+      }
+      if (labFilter && cert.lab !== labFilter) return false;
+      if (entityTypeFilter && cert.entityType !== entityTypeFilter) return false;
+      return true;
+    });
+  }, [certificates, search, labFilter, entityTypeFilter]);
+
+  const activeFilterCount = (search ? 1 : 0) + (labFilter ? 1 : 0) + (entityTypeFilter ? 1 : 0);
+
+  const handleResetFilters = () => {
+    setSearchInput("");
+    setLabFilter("");
+    setEntityTypeFilter("");
+  };
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="page-container space-y-0">
       {isLoading && !certificates?.length ? (
         <SkeletonPageHeader />
       ) : (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between border-b border-gray-200/80 pb-0">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 font-display">Laboratory Certificates</h1>
-            <p className="text-sm text-gray-600 mt-1 font-medium">Manage laboratory grading and identification reports linked to inventory assets</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Laboratory Certificates</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+              Manage laboratory grading and identification reports linked to inventory assets
+            </p>
           </div>
-          <Button onClick={handleOpenAdd} className="w-fit">
-            <Plus className="h-4.5 w-4.5" /> Upload Certificate
+          <Button onClick={handleOpenAdd} className="w-fit" icon={<Plus className="h-4 w-4" />}>
+            Upload Certificate
           </Button>
         </div>
       )}
 
+      {/* Main Search & Filters Card with Mobile Collapsible Accordion */}
+      <FilterPanel
+        activeFilterCount={activeFilterCount}
+        onReset={handleResetFilters}
+        title="Certificate Filters"
+        chips={
+          activeFilterCount > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-gray-100 text-xs">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mr-1">
+                Active Filters:
+              </span>
+
+              {search && (
+                <span className="inline-flex items-center gap-1 bg-primary/10 text-primary font-semibold px-2.5 py-1 rounded-full border border-primary/20">
+                  Search: "{search}"
+                  <button onClick={() => setSearchInput("")}>✕</button>
+                </span>
+              )}
+              {labFilter && (
+                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-800 font-semibold px-2.5 py-1 rounded-full border border-gray-200">
+                  Lab: {labFilter}
+                  <button onClick={() => setLabFilter("")}>✕</button>
+                </span>
+              )}
+              {entityTypeFilter && (
+                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-800 font-semibold px-2.5 py-1 rounded-full border border-gray-200">
+                  Type: {entityTypeFilter}
+                  <button onClick={() => setEntityTypeFilter("")}>✕</button>
+                </span>
+              )}
+
+              <button onClick={handleResetFilters} className="text-xs font-bold text-danger hover:underline ml-auto">
+                Clear All
+              </button>
+            </div>
+          )
+        }
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+          {/* Filter 1: Search (Always First) */}
+          <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-1">
+            <label className="text-xs sm:text-sm font-semibold text-gray-700 tracking-tight select-none">
+              Search Certificates
+            </label>
+            <SearchInput
+              placeholder="Search cert no, lab, report type..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onClear={() => setSearchInput("")}
+              className="w-full"
+              id="certs-search"
+            />
+          </div>
+
+          {/* Filter 2: Laboratory */}
+          <Select
+            label="Laboratory"
+            value={labFilter}
+            onChange={(e) => setLabFilter(e.target.value)}
+            options={labOptions}
+            containerClassName="w-full"
+          />
+
+          {/* Filter 3: Linked Asset Type */}
+          <Select
+            label="Asset Type"
+            value={entityTypeFilter}
+            onChange={(e) => setEntityTypeFilter(e.target.value)}
+            options={entityTypeOptions}
+            containerClassName="w-full"
+          />
+        </div>
+      </FilterPanel>
+
+      {/* Results Counter Summary */}
+      <div className="flex items-center justify-between text-xs text-gray-500 font-medium px-1">
+        <span>
+          Showing <strong className="text-gray-900 font-bold">{filteredCertificates.length}</strong> of{" "}
+          <strong className="text-gray-900">{certificates.length}</strong> certificates
+        </span>
+        {activeFilterCount > 0 && <span className="text-primary font-semibold">Filtered results active</span>}
+      </div>
+
       <Card>
         <DataTable
           headers={["Certificate No", "Lab", "Report Type", "Issue Date", "Linked Asset", "Report File", "Actions"]}
-          data={certificates}
+          data={filteredCertificates}
           isLoading={isLoading}
           emptyMessage="No certificates registered in the system."
           renderRow={(cert) => (

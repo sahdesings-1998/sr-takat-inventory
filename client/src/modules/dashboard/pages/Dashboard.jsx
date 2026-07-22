@@ -294,7 +294,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="page-container space-y-0">
 
       {/* ── Welcome Banner ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4">

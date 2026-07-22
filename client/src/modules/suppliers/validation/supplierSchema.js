@@ -23,6 +23,11 @@ export const supplierSchema = z.object({
     .trim()
     .min(1, "Phone number is required")
     .max(20, "Phone number is too long"),
+  whatsApp: z.string().trim().optional().or(z.literal("")),
+  country: z.string().trim().optional().or(z.literal("")),
+  supplierType: z
+    .enum(["Gemstone Supplier", "Metal Dealer", "Component Supplier", "Artisan / Workshop", "Other"])
+    .default("Gemstone Supplier"),
   address: z
     .string()
     .trim()

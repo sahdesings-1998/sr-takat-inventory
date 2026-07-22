@@ -78,7 +78,7 @@ export default function TabComponents({ product, components, addComponent, delet
   }, 0);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-0">
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2 pl-3 border-l-[3px] border-amber-400/60 text-amber-600">
@@ -116,8 +116,8 @@ export default function TabComponents({ product, components, addComponent, delet
                           ? comp.sourceType === "Material"
                             ? `${comp.sourceId.materialCode} — ${comp.sourceId.materialName}`
                             : comp.sourceType === "Gemstone"
-                            ? `${comp.sourceId.stoneId} — ${comp.sourceId.gemstone}`
-                            : `${comp.sourceId.lotId} — ${comp.sourceId.gemstone}`
+                              ? `${comp.sourceId.stoneId} — ${comp.sourceId.gemstone}`
+                              : `${comp.sourceId.lotId} — ${comp.sourceId.gemstone}`
                           : <span className="text-gray-400 italic">Linked item deleted</span>}
                       </td>
                       <td className="px-5 py-4 text-sm text-gray-700 whitespace-nowrap">{comp.quantity}</td>

@@ -39,6 +39,11 @@ const materialSchema = new Schema(
       min: 0,
       default: 0,
     },
+    supplierId: {
+      type: Schema.Types.ObjectId,
+      ref: "Supplier",
+      default: null,
+    },
     location: {
       type: String,
       required: [true, "Location is required"],

@@ -86,9 +86,16 @@ export const generateSalePDF = async (req, res, next) => {
   }
 };
 
+export const recordPayment = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const result = await saleService.recordPayment(id, req.body, req.user._id, req.ip);
+  sendSuccess(res, { message: "Payment recorded successfully", data: result });
+});
+
 export default {
   getSales,
   getSale,
   createSale,
   generateSalePDF,
+  recordPayment,
 };

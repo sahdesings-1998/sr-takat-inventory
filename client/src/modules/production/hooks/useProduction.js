@@ -56,6 +56,13 @@ export function useJobCard(id) {
     },
   });
 
+  const recordUsageMutation = useMutation({
+    mutationFn: (data) => productionApi.recordUsage(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jobcard", id] });
+    },
+  });
+
   const returnMaterialMutation = useMutation({
     mutationFn: (data) => productionApi.returnMaterial(id, data),
     onSuccess: () => {
@@ -70,6 +77,7 @@ export function useJobCard(id) {
     updateJobCard: updateMutation.mutateAsync,
     updateStage: updateStageMutation.mutateAsync,
     issueMaterial: issueMaterialMutation.mutateAsync,
+    recordUsage: recordUsageMutation.mutateAsync,
     returnMaterial: returnMaterialMutation.mutateAsync,
   };
 }

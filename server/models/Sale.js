@@ -21,7 +21,45 @@ const saleSchema = new Schema(
       min: 0,
       default: 0,
     },
+    discountType: {
+      type: String,
+      enum: ["fixed", "percentage"],
+      default: "fixed",
+    },
+    discountValue: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     discount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    isTaxEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    taxPercentage: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    taxAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    isGstEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    gstPercentage: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    gstAmount: {
       type: Number,
       default: 0,
       min: 0,
@@ -37,10 +75,23 @@ const saleSchema = new Schema(
       min: 0,
       default: 0,
     },
+    amountPaid: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    balanceDue: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     paymentStatus: {
       type: String,
-      enum: ["Unpaid", "Partially Paid", "Paid"],
-      default: "Unpaid",
+      enum: ["Unpaid", "Partially Paid", "Paid", "Overdue"],
+      default: "Paid",
+    },
+    dueDate: {
+      type: Date,
     },
     charityPercentage: {
       type: Number,
@@ -64,7 +115,7 @@ const saleSchema = new Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["Cash", "Bank Transfer", "Credit Card", "Cheque", "Other"],
+      enum: ["Cash", "Bank Transfer", "Credit Card", "Cheque", "Crypto", "Other"],
       default: "Cash",
     },
     notes: {

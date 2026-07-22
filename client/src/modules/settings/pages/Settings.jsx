@@ -268,10 +268,10 @@ export default function Settings() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 font-display">System Settings</h1>
-        <p className="text-sm text-gray-600 mt-1 font-medium">Configure global parameters, ID prefixes, and manage system users & access roles</p>
+    <div className="page-container space-y-0">
+      <div className="border-b border-gray-200/80 pb-0">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">System Settings</h1>
+        <p className="text-xs sm:text-sm text-gray-500 mt-1">Configure global parameters, ID prefixes, and manage system users & access roles</p>
       </div>
 
       {/* Tabs */}

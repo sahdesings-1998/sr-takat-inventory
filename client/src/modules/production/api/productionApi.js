@@ -9,6 +9,8 @@ export const productionApi = {
     apiClient.patch(`/job-cards/${id}/status`, data).then((res) => res.data),
   issueMaterial: (id, data) =>
     apiClient.post(`/job-cards/${id}/materials-issued`, data).then((res) => res.data),
+  recordUsage: (id, data) =>
+    apiClient.post(`/job-cards/${id}/materials-used`, data).then((res) => res.data),
   returnMaterial: (id, data) =>
     apiClient.post(`/job-cards/${id}/materials-returned`, data).then((res) => res.data),
 };

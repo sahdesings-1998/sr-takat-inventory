@@ -23,6 +23,15 @@ const memoItemSchema = new Schema({
     type: Number,
     default: 0,
   },
+  value: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  totalValue: {
+    type: Number,
+    default: 0,
+  },
   status: {
     type: String,
     enum: ["On Memo", "Returned", "Sold"],
@@ -32,6 +41,21 @@ const memoItemSchema = new Schema({
     type: Date,
     default: null,
   },
+});
+
+const extensionHistorySchema = new Schema({
+  extensionDate: { type: Date, default: Date.now },
+  previousReturnDate: { type: Date },
+  newReturnDate: { type: Date, required: true },
+  reason: { type: String, trim: true, default: "" },
+  createdBy: { type: Schema.Types.ObjectId, ref: "User" },
+});
+
+const memoHistoryLogSchema = new Schema({
+  date: { type: Date, default: Date.now },
+  action: { type: String, required: true },
+  details: { type: String, default: "" },
+  performedBy: { type: Schema.Types.ObjectId, ref: "User" },
 });
 
 const memoSchema = new Schema(
@@ -60,9 +84,13 @@ const memoSchema = new Schema(
       type: Date,
       default: null,
     },
+    totalValue: {
+      type: Number,
+      default: 0,
+    },
     status: {
       type: String,
-      enum: ["With Client", "Partially Returned", "Fully Returned", "Overdue", "Closed"],
+      enum: ["With Client", "Extended", "Partially Returned", "Fully Returned", "Overdue", "Sold", "Closed"],
       default: "With Client",
     },
     items: {
@@ -72,6 +100,18 @@ const memoSchema = new Schema(
         (val) => val.length > 0,
         "A memo must have at least one item",
       ],
+    },
+    convertedSaleId: {
+      type: Schema.Types.ObjectId,
+      ref: "Sale",
+    },
+    extensionHistory: {
+      type: [extensionHistorySchema],
+      default: [],
+    },
+    historyLog: {
+      type: [memoHistoryLogSchema],
+      default: [],
     },
     remarks: {
       type: String,
@@ -89,7 +129,7 @@ const memoSchema = new Schema(
 // Indexes
 memoSchema.index({ status: 1 });
 memoSchema.index({ customerId: 1 });
-memoSchema.index({ status: 1, expectedReturn: 1 }); // compound
+memoSchema.index({ status: 1, expectedReturn: 1 });
 
 const Memo = mongoose.model("Memo", memoSchema);
 

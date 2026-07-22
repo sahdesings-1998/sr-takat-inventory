@@ -36,6 +36,12 @@ export const issueMaterials = catchAsync(async (req, res) => {
   sendSuccess(res, { message: "Materials issued to job card", data: job });
 });
 
+export const recordMaterialUsage = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const job = await jobCardService.recordMaterialUsage(id, req.body, req.user._id);
+  sendSuccess(res, { message: "Material usage recorded for job card", data: job });
+});
+
 export const returnMaterials = catchAsync(async (req, res) => {
   const { id } = req.params;
   const job = await jobCardService.returnMaterials(id, req.body, req.user._id);
@@ -49,5 +55,6 @@ export default {
   updateJobCard,
   updateJobCardStage,
   issueMaterials,
+  recordMaterialUsage,
   returnMaterials,
 };

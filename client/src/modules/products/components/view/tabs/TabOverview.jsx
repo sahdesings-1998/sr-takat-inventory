@@ -28,7 +28,7 @@ const STATUS_VARIANT = {
 
 export default function TabOverview({ product }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-0">
       {/* General Info */}
       <Card>
         <CardHeader>

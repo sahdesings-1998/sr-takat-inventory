@@ -31,10 +31,17 @@ export const deleteSupplier = catchAsync(async (req, res) => {
   sendSuccess(res, { message: "Supplier deleted successfully" });
 });
 
+export const recordSupplierPayment = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const supplier = await supplierService.recordSupplierPayment(id, req.body, req.user._id, req.ip);
+  sendSuccess(res, { message: "Supplier payment recorded successfully", data: supplier });
+});
+
 export default {
   getSuppliers,
   getSupplier,
   createSupplier,
   updateSupplier,
   deleteSupplier,
+  recordSupplierPayment,
 };

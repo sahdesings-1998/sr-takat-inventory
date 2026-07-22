@@ -11,5 +11,6 @@ router.get("/", requirePermission("sales.view"), saleController.getSales);
 router.get("/:id", requirePermission("sales.view"), saleController.getSale);
 router.get("/:id/pdf", requirePermission("sales.view"), saleController.generateSalePDF);
 router.post("/", requirePermission("sales.create"), saleController.createSale);
+router.post("/:id/payments", requirePermission("sales.create"), saleController.recordPayment);
 
 export default router;

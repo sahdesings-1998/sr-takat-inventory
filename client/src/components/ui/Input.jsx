@@ -1,4 +1,4 @@
-import { forwardRef, useRef, useState } from "react";
+import { forwardRef, useRef, useState, isValidElement } from "react";
 import { Eye, EyeOff, X } from "lucide-react";
 import { cn } from "@/utils/cn";
 
@@ -7,9 +7,25 @@ import { cn } from "@/utils/cn";
  * Supports:
  *  - password show/hide toggle
  *  - clearable: shows an X button inside the input when it has a value
+ *  - leftIcon: renders icon on the left inside the input without forwarding to DOM
  */
 const Input = forwardRef(function Input(
-  { label, hint, error, type = "text", className, id, containerClassName, clearable, onClear, onChange, value, ...props },
+  {
+    label,
+    hint,
+    error,
+    type = "text",
+    className,
+    id,
+    containerClassName,
+    clearable,
+    onClear,
+    onChange,
+    value,
+    leftIcon,
+    rightIcon,
+    ...props
+  },
   forwardedRef
 ) {
   const [showPassword, setShowPassword] = useState(false);
@@ -42,7 +58,22 @@ const Input = forwardRef(function Input(
           {label}
         </label>
       )}
-      <div className="relative">
+      <div className="relative flex items-center">
+        {leftIcon && (
+          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400 shrink-0">
+            {isValidElement(leftIcon) ? (
+              leftIcon
+            ) : typeof leftIcon === "function" ? (
+              (() => {
+                const LeftIconComp = leftIcon;
+                return <LeftIconComp className="h-4 w-4 text-gray-400" />;
+              })()
+            ) : (
+              leftIcon
+            )}
+          </div>
+        )}
+
         <input
           ref={ref}
           id={inputId}
@@ -57,6 +88,7 @@ const Input = forwardRef(function Input(
             error
               ? "border-danger/60 focus:ring-danger/20 focus:border-danger/60"
               : "border-gray-200",
+            leftIcon ? "pl-10" : "",
             prClass,
             className
           )}

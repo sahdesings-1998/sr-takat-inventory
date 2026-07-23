@@ -1,21 +1,19 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   CreditCard,
-  Building2,
-  Phone,
-  Mail,
-  MapPin,
+  Plus,
+  Eye,
   FileText,
-  DollarSign,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle2,
+  Truck,
   Paperclip,
+  CheckCircle2,
+  AlertCircle,
+  Package,
   Gem,
   Coins,
-  Package,
+  Download,
 } from "lucide-react";
 import { useSupplier } from "../hooks/useSuppliers";
 import { useToast } from "@/contexts/ToastContext";
@@ -29,9 +27,11 @@ import Badge from "@/components/ui/Badge";
 import Card, { CardHeader, CardBody } from "@/components/ui/Card";
 import TableActionButton from "@/components/ui/TableActionButton";
 import { SkeletonDetailCard, Skeleton } from "@/components/ui/Skeleton";
+import purchaseInvoiceApi from "../api/purchaseInvoiceApi";
 
 export default function SupplierDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { supplier, isLoading, isError, recordSupplierPayment, isRecordingPayment } = useSupplier(id);
   const { showSuccess, showError } = useToast();
 
@@ -44,6 +44,7 @@ export default function SupplierDetails() {
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
   const [attachments, setAttachments] = useState([]);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState("");
 
   useEffect(() => {
     if (isError) {
@@ -67,7 +68,8 @@ export default function SupplierDetails() {
       </div>
     );
 
-  const handleOpenPaymentModal = () => {
+  const handleOpenPaymentModal = (invoiceId = "") => {
+    setSelectedInvoiceId(invoiceId);
     setPaymentAmount(supplier.outstandingBalance ? supplier.outstandingBalance.toString() : "");
     setPaymentMethod("Bank Transfer");
     setPaymentDate(new Date().toISOString().split("T")[0]);
@@ -108,6 +110,7 @@ export default function SupplierDetails() {
 
     try {
       await recordSupplierPayment({
+        purchaseInvoiceId: selectedInvoiceId || undefined,
         amount: amt,
         paymentMethod,
         paymentDate,
@@ -121,13 +124,30 @@ export default function SupplierDetails() {
     }
   };
 
-  const getStatusVariant = (status) => {
-    switch (status) {
+  const handleDownloadPDF = async (invId, invNo) => {
+    try {
+      const blob = await purchaseInvoiceApi.getPDFBuffer(invId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Purchase_Invoice_${invNo}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      showError("PDF Error", "Failed to download purchase invoice PDF.");
+    }
+  };
+
+  const getStatusVariant = (st) => {
+    switch (st) {
       case "Paid":
+      case "Confirmed":
         return "success";
       case "Partially Paid":
         return "warning";
       case "Unpaid":
+      case "Cancelled":
         return "danger";
       default:
         return "neutral";
@@ -135,10 +155,12 @@ export default function SupplierDetails() {
   };
 
   const tabs = [
-    { id: "overview", label: "Overview & Payable Ledger", count: null },
-    { id: "gemstones", label: "Gemstone Purchases", count: supplier.gemstonePurchases?.length || 0 },
-    { id: "metals", label: "Metal Purchases", count: supplier.metalPurchases?.length || 0 },
-    { id: "components", label: "Component Purchases", count: supplier.componentPurchases?.length || 0 },
+    { id: "overview", label: "Overview & Summary", count: null },
+    { id: "invoices", label: "Purchase Invoices", count: supplier.purchaseInvoices?.length || 0 },
+    { id: "stockInward", label: "Stock Movements", count: supplier.stockMovements?.length || 0 },
+    { id: "gemstones", label: "Gemstones", count: supplier.gemstonePurchases?.length || 0 },
+    { id: "metals", label: "Metals", count: supplier.metalPurchases?.length || 0 },
+    { id: "components", label: "Components", count: supplier.componentPurchases?.length || 0 },
     { id: "payments", label: "Payment History", count: supplier.paymentHistory?.length || 0 },
   ];
 
@@ -163,7 +185,7 @@ export default function SupplierDetails() {
                 {supplier.status}
               </Badge>
             </div>
-            <p className="text-xs sm:text-sm text-gray-500 mt-1 font-medium flex items-center gap-3">
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 font-medium flex items-center gap-3 flex-wrap">
               <span>Contact: <strong className="text-gray-900">{supplier.contactName || "—"}</strong></span>
               <span>•</span>
               <span>Phone: <strong className="text-gray-900">{supplier.phone}</strong></span>
@@ -172,20 +194,30 @@ export default function SupplierDetails() {
             </p>
           </div>
 
-          <Button
-            onClick={handleOpenPaymentModal}
-            disabled={!supplier.outstandingBalance || supplier.outstandingBalance <= 0}
-            className="w-fit bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-            icon={<CreditCard className="h-4 w-4" />}
-          >
-            Record Payment
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => navigate(`/purchase-invoices/new?supplierId=${supplier._id}`)}
+              className="bg-primary hover:bg-primary/90 text-white font-bold"
+              icon={<Plus className="h-4 w-4" />}
+            >
+              Create Purchase Invoice
+            </Button>
+
+            <Button
+              onClick={() => handleOpenPaymentModal()}
+              disabled={!supplier.outstandingBalance || supplier.outstandingBalance <= 0}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              icon={<CreditCard className="h-4 w-4" />}
+            >
+              Record Payment
+            </Button>
+          </div>
         </div>
 
         {/* Executive Payable Metrics Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-1">
           <div>
-            <span className="text-gray-400 block font-semibold text-[11px] uppercase">Total Purchases</span>
+            <span className="text-gray-400 block font-semibold text-[11px] uppercase">Total Purchase Value</span>
             <span className="font-mono text-xl font-bold text-gray-900">${(supplier.totalPurchaseAmount || 0).toLocaleString()}</span>
           </div>
           <div>
@@ -290,58 +322,87 @@ export default function SupplierDetails() {
             ))}
           </div>
 
-          {/* TAB 1: Overview & Payable Ledger */}
+          {/* TAB 1: Overview & Summary */}
           {activeTab === "overview" && (
             <div className="space-y-4">
-              <Card>
-                <CardHeader className="py-3 flex justify-between items-center">
-                  <h3 className="text-xs sm:text-sm font-bold text-gray-900">Purchases &amp; Payment Ledger Summary</h3>
-                </CardHeader>
-                <CardBody className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="p-4 rounded-xl bg-purple-50/50 border border-purple-100">
-                      <span className="text-xs text-purple-900 font-bold block">Gemstone Purchases</span>
-                      <span className="font-mono text-lg font-bold text-purple-700">${(supplier.gemstoneTotal || 0).toLocaleString()}</span>
-                      <span className="text-[11px] text-gray-500 block mt-1">{supplier.gemstonePurchases?.length || 0} Gemstones</span>
+              {/* Purchase Summary & Payment Summary Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Card className="p-4 bg-white">
+                  <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3">Purchase Summary</h3>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between py-1 border-b border-gray-100">
+                      <span className="text-gray-500 font-medium">Total Purchase Value:</span>
+                      <span className="font-mono font-bold text-gray-900">${(supplier.totalPurchaseAmount || 0).toLocaleString()}</span>
                     </div>
-
-                    <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-100">
-                      <span className="text-xs text-amber-900 font-bold block">Metal Purchases</span>
-                      <span className="font-mono text-lg font-bold text-amber-700">${(supplier.metalTotal || 0).toLocaleString()}</span>
-                      <span className="text-[11px] text-gray-500 block mt-1">{supplier.metalPurchases?.length || 0} Metals (Gold/Silver/Platinum)</span>
+                    <div className="flex justify-between py-1 border-b border-gray-100">
+                      <span className="text-gray-500 font-medium">Total Confirmed Purchases:</span>
+                      <span className="font-mono font-bold text-primary">{supplier.totalPurchasesCount || 0}</span>
                     </div>
-
-                    <div className="p-4 rounded-xl bg-sky-50/50 border border-sky-100">
-                      <span className="text-xs text-sky-900 font-bold block">Component Purchases</span>
-                      <span className="font-mono text-lg font-bold text-sky-700">${(supplier.componentTotal || 0).toLocaleString()}</span>
-                      <span className="text-[11px] text-gray-500 block mt-1">{supplier.componentPurchases?.length || 0} Findings/Settings</span>
+                    <div className="flex justify-between py-1">
+                      <span className="text-gray-500 font-medium">Total Items Purchased:</span>
+                      <span className="font-mono font-bold text-gray-900">{supplier.totalItemsPurchased || 0}</span>
                     </div>
                   </div>
-                </CardBody>
-              </Card>
+                </Card>
 
-              {/* Payment History Preview */}
+                <Card className="p-4 bg-white">
+                  <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3">Payment Summary</h3>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between py-1 border-b border-gray-100">
+                      <span className="text-gray-500 font-medium">Total Amount Paid:</span>
+                      <span className="font-mono font-bold text-emerald-700">${(supplier.totalPaidAmount || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-gray-100">
+                      <span className="text-gray-500 font-medium">Total Outstanding Balance:</span>
+                      <span className="font-mono font-bold text-rose-700">${(supplier.outstandingBalance || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-gray-500 font-medium">Unpaid / Partially Paid Invoices:</span>
+                      <span className="font-mono font-bold text-amber-700">
+                        {(supplier.unpaidInvoicesCount || 0) + (supplier.partiallyPaidInvoicesCount || 0)}
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Purchase Invoices Preview */}
               <Card>
                 <CardHeader className="py-3 flex justify-between items-center">
-                  <h3 className="text-xs sm:text-sm font-bold text-gray-900">Recent Supplier Payments</h3>
-                  {supplier.outstandingBalance > 0 && (
-                    <Button size="sm" onClick={handleOpenPaymentModal} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
-                      + Record Payment
-                    </Button>
-                  )}
+                  <h3 className="text-xs sm:text-sm font-bold text-gray-900">Recent Purchase Invoices</h3>
+                  <Button
+                    size="sm"
+                    onClick={() => navigate(`/purchase-invoices/new?supplierId=${supplier._id}`)}
+                    className="bg-primary hover:bg-primary/90 text-white font-bold"
+                  >
+                    + Create Purchase Invoice
+                  </Button>
                 </CardHeader>
                 <DataTable
-                  headers={["Payment No", "Amount Paid", "Payment Method", "Date", "Notes"]}
-                  data={(supplier.paymentHistory || []).slice(0, 5)}
+                  headers={["Invoice #", "Supplier Bill #", "Date", "Final Total", "Paid", "Outstanding", "Status", "Payment", "Actions"]}
+                  data={(supplier.purchaseInvoices || []).slice(0, 5)}
                   isLoading={false}
-                  emptyMessage="No payments recorded for this supplier yet."
-                  renderRow={(pmt) => (
-                    <tr key={pmt._id} className="border-b border-gray-100 text-xs sm:text-sm">
-                      <td className="px-4 py-3 font-mono font-bold text-primary">{pmt.paymentNo}</td>
-                      <td className="px-4 py-3 font-mono font-bold text-emerald-700">${pmt.amount?.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-gray-800 font-medium">{pmt.paymentMethod}</td>
-                      <td className="px-4 py-3 text-gray-500">{new Date(pmt.paymentDate).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{pmt.notes || "—"}</td>
+                  emptyMessage="No purchase invoices created for this supplier yet."
+                  renderRow={(inv) => (
+                    <tr key={inv._id} className="border-b border-gray-100 text-xs sm:text-sm hover:bg-gray-50/50">
+                      <td className="px-4 py-3 font-mono font-bold text-primary">
+                        <Link to={`/purchase-invoices/${inv._id}`} className="hover:underline">
+                          {inv.invoiceNumber}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-gray-600">{inv.supplierInvoiceNumber || "—"}</td>
+                      <td className="px-4 py-3 text-gray-500">{new Date(inv.purchaseDate).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 font-mono font-bold text-gray-900">${(inv.finalTotal || 0).toLocaleString()}</td>
+                      <td className="px-4 py-3 font-mono font-bold text-emerald-700">${(inv.paidAmount || 0).toLocaleString()}</td>
+                      <td className="px-4 py-3 font-mono font-bold text-rose-700">${(inv.outstandingBalance || 0).toLocaleString()}</td>
+                      <td className="px-4 py-3"><Badge variant={getStatusVariant(inv.status)}>{inv.status}</Badge></td>
+                      <td className="px-4 py-3"><Badge variant={getStatusVariant(inv.paymentStatus)}>{inv.paymentStatus}</Badge></td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <TableActionButton title="View Invoice" icon={<Eye className="h-3.5 w-3.5" />} onClick={() => navigate(`/purchase-invoices/${inv._id}`)} />
+                          <TableActionButton title="Download PDF" icon={<Download className="h-3.5 w-3.5 text-sky-600" />} onClick={() => handleDownloadPDF(inv._id, inv.invoiceNumber)} />
+                        </div>
+                      </td>
                     </tr>
                   )}
                 />
@@ -349,7 +410,84 @@ export default function SupplierDetails() {
             </div>
           )}
 
-          {/* TAB 2: Gemstone Purchases */}
+          {/* TAB 2: Purchase Invoices */}
+          {activeTab === "invoices" && (
+            <Card>
+              <CardHeader className="py-3 flex justify-between items-center">
+                <h3 className="text-xs sm:text-sm font-bold text-gray-900">All Supplier Purchase Invoices ({supplier.purchaseInvoices?.length || 0})</h3>
+                <Button
+                  size="sm"
+                  onClick={() => navigate(`/purchase-invoices/new?supplierId=${supplier._id}`)}
+                  className="bg-primary hover:bg-primary/90 text-white font-bold"
+                >
+                  + Create Purchase Invoice
+                </Button>
+              </CardHeader>
+              <DataTable
+                headers={["Invoice #", "Supplier Bill #", "Purchase Date", "Items", "Final Total", "Paid Amount", "Outstanding", "Status", "Payment", "Actions"]}
+                data={supplier.purchaseInvoices || []}
+                isLoading={false}
+                emptyMessage="No purchase invoices for this supplier."
+                renderRow={(inv) => (
+                  <tr key={inv._id} className="border-b border-gray-100 text-xs sm:text-sm hover:bg-gray-50/50">
+                    <td className="px-4 py-3 font-mono font-bold text-primary">
+                      <Link to={`/purchase-invoices/${inv._id}`} className="hover:underline">
+                        {inv.invoiceNumber}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-gray-600">{inv.supplierInvoiceNumber || "—"}</td>
+                    <td className="px-4 py-3 text-gray-500">{new Date(inv.purchaseDate).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 font-semibold">{inv.items?.length || 0} items</td>
+                    <td className="px-4 py-3 font-mono font-bold text-gray-900">${(inv.finalTotal || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3 font-mono font-bold text-emerald-700">${(inv.paidAmount || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3 font-mono font-bold text-rose-700">${(inv.outstandingBalance || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3"><Badge variant={getStatusVariant(inv.status)}>{inv.status}</Badge></td>
+                    <td className="px-4 py-3"><Badge variant={getStatusVariant(inv.paymentStatus)}>{inv.paymentStatus}</Badge></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <TableActionButton title="View Invoice" icon={<Eye className="h-3.5 w-3.5" />} onClick={() => navigate(`/purchase-invoices/${inv._id}`)} />
+                        {inv.status === "Confirmed" && inv.outstandingBalance > 0 && (
+                          <TableActionButton title="Record Payment" icon={<CreditCard className="h-3.5 w-3.5 text-emerald-600" />} onClick={() => handleOpenPaymentModal(inv._id)} />
+                        )}
+                        <TableActionButton title="Download PDF" icon={<Download className="h-3.5 w-3.5 text-sky-600" />} onClick={() => handleDownloadPDF(inv._id, inv.invoiceNumber)} />
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              />
+            </Card>
+          )}
+
+          {/* TAB 3: Stock Inward Movements */}
+          {activeTab === "stockInward" && (
+            <Card>
+              <CardHeader className="py-3">
+                <h3 className="text-xs sm:text-sm font-bold text-gray-900">Stock Inward / Reversal Audit Logs ({supplier.stockMovements?.length || 0})</h3>
+              </CardHeader>
+              <DataTable
+                headers={["Action", "Type", "Quantity", "Unit Cost", "Prev Stock", "Updated Stock", "Date", "Remarks"]}
+                data={supplier.stockMovements || []}
+                isLoading={false}
+                emptyMessage="No stock movements recorded for this supplier."
+                renderRow={(mv) => (
+                  <tr key={mv._id} className="border-b border-gray-100 text-xs sm:text-sm hover:bg-gray-50/50">
+                    <td className="px-4 py-3">
+                      <Badge variant={mv.action === "Stock Inward" ? "success" : "danger"}>{mv.action}</Badge>
+                    </td>
+                    <td className="px-4 py-3 font-bold text-gray-800">{mv.inventoryType}</td>
+                    <td className="px-4 py-3 font-mono font-bold text-emerald-700">{mv.quantity > 0 ? `+${mv.quantity}` : mv.quantity} {mv.unit}</td>
+                    <td className="px-4 py-3 font-mono text-gray-700">${(mv.cost || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3 font-mono text-gray-500">{mv.previousStock}</td>
+                    <td className="px-4 py-3 font-mono font-bold text-gray-900">{mv.updatedStock}</td>
+                    <td className="px-4 py-3 text-gray-500">{new Date(mv.movementDate).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{mv.remarks || "—"}</td>
+                  </tr>
+                )}
+              />
+            </Card>
+          )}
+
+          {/* TAB 4: Gemstone Purchases */}
           {activeTab === "gemstones" && (
             <Card>
               <CardHeader className="py-3 flex justify-between items-center">
@@ -381,7 +519,7 @@ export default function SupplierDetails() {
             </Card>
           )}
 
-          {/* TAB 3: Metal Purchases */}
+          {/* TAB 5: Metal Purchases */}
           {activeTab === "metals" && (
             <Card>
               <CardHeader className="py-3 flex justify-between items-center">
@@ -408,7 +546,7 @@ export default function SupplierDetails() {
             </Card>
           )}
 
-          {/* TAB 4: Component Purchases */}
+          {/* TAB 6: Component Purchases */}
           {activeTab === "components" && (
             <Card>
               <CardHeader className="py-3 flex justify-between items-center">
@@ -435,13 +573,13 @@ export default function SupplierDetails() {
             </Card>
           )}
 
-          {/* TAB 5: Payment History */}
+          {/* TAB 7: Payment History */}
           {activeTab === "payments" && (
             <Card>
               <CardHeader className="py-3 flex justify-between items-center">
                 <h3 className="text-xs sm:text-sm font-bold text-gray-900">Supplier Payment Ledger ({supplier.paymentHistory?.length || 0})</h3>
                 {supplier.outstandingBalance > 0 && (
-                  <Button size="sm" onClick={handleOpenPaymentModal} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
+                  <Button size="sm" onClick={() => handleOpenPaymentModal()} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
                     + Record Payment
                   </Button>
                 )}

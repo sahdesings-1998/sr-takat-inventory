@@ -19,6 +19,8 @@ const inventoryMovementSchema = new Schema(
       required: true,
       enum: [
         "Purchase",
+        "Stock Inward",
+        "Stock Reversal",
         "Issue to Production",
         "Return from Production",
         "Release on Memo",
@@ -45,13 +47,40 @@ const inventoryMovementSchema = new Schema(
       required: true,
       default: 0,
     },
+    unit: {
+      type: String,
+      trim: true,
+      default: "pcs",
+    },
+    cost: {
+      type: Number,
+      default: 0,
+    },
+    previousStock: {
+      type: Number,
+      default: 0,
+    },
+    updatedStock: {
+      type: Number,
+      default: 0,
+    },
     weight: {
       type: Number,
       default: 0,
     },
+    supplierId: {
+      type: Schema.Types.ObjectId,
+      ref: "Supplier",
+      default: null,
+    },
+    purchaseInvoiceId: {
+      type: Schema.Types.ObjectId,
+      ref: "PurchaseInvoice",
+      default: null,
+    },
     referenceType: {
       type: String,
-      enum: ["JobCard", "Memo", "Sale", "User", "Supplier", "None"],
+      enum: ["JobCard", "Memo", "Sale", "User", "Supplier", "PurchaseInvoice", "None"],
       default: "None",
     },
     referenceId: {

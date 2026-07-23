@@ -1,4 +1,4 @@
-import { forwardRef, useState, useRef } from "react";
+import { forwardRef, useState, useRef, isValidElement } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/utils/cn";
 
@@ -13,10 +13,11 @@ const VARIANT_STYLES = {
 
 /**
  * Reusable Action Button for Data Tables — with per-row loading spinner and click protection.
+ * Supports passing either a component (icon={Eye}) or a JSX element (icon={<Eye className="..." />}).
  */
 const TableActionButton = forwardRef(function TableActionButton(
   {
-    icon: Icon,
+    icon,
     label,
     onClick,
     isLoading: controlledIsLoading = false,
@@ -63,6 +64,17 @@ const TableActionButton = forwardRef(function TableActionButton(
 
   const actionTitle = title || label;
 
+  const renderIcon = () => {
+    if (isValidElement(icon)) {
+      return icon;
+    }
+    if (typeof icon === "function" || (typeof icon === "object" && icon !== null && (icon.render || icon.$$typeof))) {
+      const IconComp = icon;
+      return <IconComp className="h-4 w-4 shrink-0" />;
+    }
+    return null;
+  };
+
   return (
     <button
       ref={ref}
@@ -82,10 +94,10 @@ const TableActionButton = forwardRef(function TableActionButton(
     >
       {isLoading ? (
         <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden="true" />
-      ) : Icon ? (
-        <Icon className="h-4 w-4 shrink-0" />
-      ) : null}
-      {(showLabel || !Icon) && (
+      ) : (
+        renderIcon()
+      )}
+      {(showLabel || !icon) && (
         <span className="truncate">{isLoading ? "..." : label}</span>
       )}
     </button>

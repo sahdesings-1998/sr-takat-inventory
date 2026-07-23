@@ -15,6 +15,11 @@ const supplierPaymentSchema = new Schema(
       ref: "Supplier",
       required: true,
     },
+    purchaseInvoiceId: {
+      type: Schema.Types.ObjectId,
+      ref: "PurchaseInvoice",
+      default: null,
+    },
     amount: {
       type: Number,
       required: true,

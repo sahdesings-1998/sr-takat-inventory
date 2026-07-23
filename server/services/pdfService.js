@@ -4,6 +4,7 @@ import puppeteer from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import { generateMemoHTML } from "../templates/memoTemplate.js";
 import { generateInvoiceHTML } from "../templates/invoiceTemplate.js";
+import { generatePurchaseInvoiceHTML } from "../templates/purchaseInvoiceTemplate.js";
 
 /**
  * Resolves the browser executable path based on environment:
@@ -78,7 +79,7 @@ async function getExecutablePath() {
 /**
  * Renders an invoice or memorandum HTML template to a PDF Buffer using puppeteer-core + @sparticuz/chromium.
  * @param {Object} invoiceData Invoice/Memo document data object
- * @param {String} documentType "invoice" | "memo"
+ * @param {String} documentType "invoice" | "memo" | "purchase_invoice"
  * @returns {Promise<Buffer>} PDF Binary Buffer
  */
 export async function generateInvoicePDFBuffer(invoiceData, documentType = "invoice") {
@@ -91,9 +92,13 @@ export async function generateInvoicePDFBuffer(invoiceData, documentType = "invo
 
   let htmlContent = "";
   try {
-    htmlContent = documentType === "memo"
-      ? generateMemoHTML(invoiceData)
-      : generateInvoiceHTML(invoiceData);
+    if (documentType === "purchase_invoice") {
+      htmlContent = generatePurchaseInvoiceHTML(invoiceData);
+    } else if (documentType === "memo") {
+      htmlContent = generateMemoHTML(invoiceData);
+    } else {
+      htmlContent = generateInvoiceHTML(invoiceData);
+    }
     console.log(`[pdfService] HTML template rendered successfully (${htmlContent.length} characters)`);
   } catch (err) {
     console.error(`[pdfService] HTML Template Rendering Error:`, err);

@@ -149,3 +149,34 @@ test('getDashboardSummary derives charity from configured percentage and memo co
     Settings.getSettings = originalSettingsGetSettings;
   }
 });
+
+test('getProfitReport and getCharityReport calculate gross/net profit and 20% charity correctly', async () => {
+  const originalSaleFind = Sale.find;
+  const originalSettingsGetSettings = Settings.getSettings;
+
+  try {
+    Sale.find = () => createQueryResult([
+      { _id: 's1', invoiceNo: 'INV-1001', total: 1000, grossProfit: 400, charityAmount: 80, netProfit: 320, paymentStatus: 'Paid', customerId: { fullName: 'Customer A' } },
+      { _id: 's2', invoiceNo: 'INV-1002', total: 2000, grossProfit: 1000, charityAmount: 200, netProfit: 800, paymentStatus: 'Paid', customerId: { fullName: 'Customer B' } },
+    ]);
+    Settings.getSettings = async () => ({ charityPercentage: 20 });
+
+    const profitData = await reportService.getProfitReport();
+    assert.equal(profitData.length, 2);
+    assert.equal(profitData[0].totalRevenue, 1000);
+    assert.equal(profitData[0].cogs, 600);
+    assert.equal(profitData[0].grossProfit, 400);
+    assert.equal(profitData[0].charityAmount, 80);
+    assert.equal(profitData[0].netProfit, 320);
+
+    const charityData = await reportService.getCharityReport();
+    assert.equal(charityData.length, 2);
+    assert.equal(charityData[0].charityPercentage, 20);
+    assert.equal(charityData[0].charityAmount, 80);
+    assert.equal(charityData[1].charityAmount, 200);
+  } finally {
+    Sale.find = originalSaleFind;
+    Settings.getSettings = originalSettingsGetSettings;
+  }
+});
+

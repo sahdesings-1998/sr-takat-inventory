@@ -75,7 +75,7 @@ export default function TabSpecifications({ product }) {
     product.sellingPricePerCarat].some(hasValue);
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-5">
       {/* Gemstone Specifications */}
       <SectionCard
         icon={Gem}

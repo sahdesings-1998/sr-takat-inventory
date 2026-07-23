@@ -15,12 +15,17 @@ import {
   AlertCircle,
   FileSpreadsheet,
   Gem,
+  HeartHandshake,
+  Calculator,
 } from "lucide-react";
 import {
   useInventoryValuation,
   useGemstoneStockReport,
   useJewelleryStockReport,
   useSalesReport,
+  useProfitReport,
+  useCharityReport,
+  useProductCostReport,
   useMemoReport,
   useSupplierPurchaseReport,
   useIncomeReport,
@@ -41,11 +46,14 @@ import ExcelJS from "exceljs";
 
 const REPORT_TABS = [
   { id: "sales", label: "Sales Report", icon: DollarSign },
-  { id: "purchases", label: "Supplier Purchases", icon: ShoppingBag },
+  { id: "profit", label: "Profit Report", icon: TrendingUp },
+  { id: "charity", label: "Charity Report", icon: HeartHandshake },
   { id: "inventory-valuation", label: "Stock Valuation", icon: TrendingUp },
   { id: "gemstone-stock", label: "Gemstone Stock", icon: Package },
   { id: "jewellery-stock", label: "Jewellery Stock", icon: Package },
+  { id: "product-cost", label: "Product Cost Breakdown", icon: Calculator },
   { id: "memo", label: "Consignment (Memos)", icon: ArrowRightLeft },
+  { id: "purchases", label: "Supplier Purchases", icon: ShoppingBag },
   { id: "income", label: "Income Ledger", icon: TrendingUp },
   { id: "expenses", label: "Expense Ledger", icon: TrendingUp },
   { id: "stock-movement", label: "Stock Movement Log", icon: Clock },
@@ -160,6 +168,9 @@ export default function Reports() {
 
   // Load report data dynamically based on active tab
   const salesQuery = useSalesReport(activeParams);
+  const profitQuery = useProfitReport(activeParams);
+  const charityQuery = useCharityReport(activeParams);
+  const productCostQuery = useProductCostReport(activeParams);
   const purchasesQuery = useSupplierPurchaseReport(activeParams);
   const valuationQuery = useInventoryValuation(activeParams);
   const gemstoneQuery = useGemstoneStockReport(activeParams);
@@ -172,6 +183,9 @@ export default function Reports() {
   const activeQuery = useMemo(() => {
     switch (activeTab) {
       case "sales": return salesQuery;
+      case "profit": return profitQuery;
+      case "charity": return charityQuery;
+      case "product-cost": return productCostQuery;
       case "purchases": return purchasesQuery;
       case "inventory-valuation": return valuationQuery;
       case "gemstone-stock": return gemstoneQuery;
@@ -182,7 +196,22 @@ export default function Reports() {
       case "stock-movement": return movementQuery;
       default: return salesQuery;
     }
-  }, [activeTab, salesQuery, purchasesQuery, valuationQuery, gemstoneQuery, jewelleryQuery, memoQuery, incomeQuery, expenseQuery, movementQuery]);
+  }, [
+    activeTab,
+    salesQuery,
+    profitQuery,
+    charityQuery,
+    productCostQuery,
+    purchasesQuery,
+    valuationQuery,
+    gemstoneQuery,
+    jewelleryQuery,
+    memoQuery,
+    incomeQuery,
+    expenseQuery,
+    movementQuery,
+  ]);
+
 
   const reportData = activeQuery.data || [];
   const isLoading = activeQuery.isLoading;
@@ -214,17 +243,17 @@ export default function Reports() {
   const isFilterVisible = (filterName) => {
     switch (filterName) {
       case "dateRange":
-        return ["sales", "purchases", "memo", "income", "expenses", "stock-movement"].includes(activeTab);
+        return ["sales", "profit", "charity", "product-cost", "purchases", "memo", "income", "expenses", "stock-movement"].includes(activeTab);
       case "status":
-        return ["sales", "gemstone-stock", "jewellery-stock", "memo", "income", "expenses"].includes(activeTab);
+        return ["sales", "profit", "charity", "gemstone-stock", "jewellery-stock", "memo", "income", "expenses"].includes(activeTab);
       case "category":
-        return ["inventory-valuation", "jewellery-stock", "expenses"].includes(activeTab);
+        return ["inventory-valuation", "jewellery-stock", "product-cost", "expenses"].includes(activeTab);
       case "customer":
-        return ["sales", "memo"].includes(activeTab);
+        return ["sales", "profit", "charity", "memo"].includes(activeTab);
       case "supplier":
         return ["purchases", "gemstone-stock"].includes(activeTab);
       case "paymentMethod":
-        return ["sales", "income", "expenses"].includes(activeTab);
+        return ["sales", "profit", "income", "expenses"].includes(activeTab);
       case "search":
         return true;
       default:
@@ -235,6 +264,8 @@ export default function Reports() {
   const getStatusOptions = () => {
     switch (activeTab) {
       case "sales":
+      case "profit":
+      case "charity":
         return [
           { value: "All", label: "All Payment Statuses" },
           { value: "Paid", label: "Paid" },
@@ -288,11 +319,15 @@ export default function Reports() {
           { value: "Material", label: "Raw Materials" },
         ];
       case "jewellery-stock":
+      case "product-cost":
         return [
           { value: "All", label: "All Categories" },
           { value: "Jewellery", label: "Jewellery" },
           { value: "Watch", label: "Watches" },
           { value: "Custom Product", label: "Custom Products" },
+          { value: "Ring", label: "Rings" },
+          { value: "Necklace", label: "Necklaces" },
+          { value: "Earrings", label: "Earrings" },
         ];
       case "expenses":
         return [
@@ -333,6 +368,41 @@ export default function Reports() {
           "Gross Profit": formatCurrency(totalGross),
           "Net Profit": formatCurrency(totalNet),
           "Charity Allocation": formatCurrency(totalCharity),
+        };
+      }
+      case "profit": {
+        const totalRev = Array.isArray(reportData) ? reportData.reduce((sum, r) => sum + (r.totalRevenue || 0), 0) : 0;
+        const totalCogs = Array.isArray(reportData) ? reportData.reduce((sum, r) => sum + (r.cogs || 0), 0) : 0;
+        const totalGross = Array.isArray(reportData) ? reportData.reduce((sum, r) => sum + (r.grossProfit || 0), 0) : 0;
+        const totalNet = Array.isArray(reportData) ? reportData.reduce((sum, r) => sum + (r.netProfit || 0), 0) : 0;
+        const avgGrossMargin = totalRev > 0 ? ((totalGross / totalRev) * 100).toFixed(1) + "%" : "0%";
+        return {
+          "Total Revenue": formatCurrency(totalRev),
+          "Total COGS": formatCurrency(totalCogs),
+          "Gross Profit": formatCurrency(totalGross),
+          "Net Profit": formatCurrency(totalNet),
+          "Gross Margin": avgGrossMargin,
+        };
+      }
+      case "charity": {
+        const totalCharity = Array.isArray(reportData) ? reportData.reduce((sum, r) => sum + (r.charityAmount || 0), 0) : 0;
+        const totalGross = Array.isArray(reportData) ? reportData.reduce((sum, r) => sum + (r.grossProfit || 0), 0) : 0;
+        return {
+          "Total Charity Allocated": formatCurrency(totalCharity),
+          "Allocation Rate": "20%",
+          "Gross Profit Base": formatCurrency(totalGross),
+          "Contributing Sales": Array.isArray(reportData) ? reportData.length : 0,
+        };
+      }
+      case "product-cost": {
+        const totalCost = Array.isArray(reportData) ? reportData.reduce((sum, r) => sum + (r.costPrice || r.totalCost || 0), 0) : 0;
+        const totalSelling = Array.isArray(reportData) ? reportData.reduce((sum, r) => sum + (r.sellingPrice || 0), 0) : 0;
+        const avgMargin = totalSelling > 0 ? (((totalSelling - totalCost) / totalSelling) * 100).toFixed(1) + "%" : "0%";
+        return {
+          "Total Inventory Cost": formatCurrency(totalCost),
+          "Total Retail Value": formatCurrency(totalSelling),
+          "Est. Gross Profit": formatCurrency(totalSelling - totalCost),
+          "Avg Profit Margin": avgMargin,
         };
       }
       case "purchases": {
@@ -418,7 +488,7 @@ export default function Reports() {
     const l = label.toLowerCase();
     if (l.includes("revenue") || l.includes("spent") || l.includes("income")) return DollarSign;
     if (l.includes("profit") || l.includes("valuation") || l.includes("value")) return TrendingUp;
-    if (l.includes("charity")) return Percent;
+    if (l.includes("charity") || l.includes("rate")) return Percent;
     if (l.includes("count") || l.includes("pieces") || l.includes("items") || l.includes("consignments")) return Package;
     if (l.includes("carat")) return Gem;
     return DollarSign;
@@ -427,7 +497,7 @@ export default function Reports() {
   const getMetricIconBg = (label) => {
     const l = label.toLowerCase();
     if (l.includes("profit") || l.includes("realized") || l.includes("valuation")) return "bg-success/10 text-success";
-    if (l.includes("charity") || l.includes("expense") || l.includes("overdue")) return "bg-danger/10 text-danger";
+    if (l.includes("charity") || l.includes("expense") || l.includes("overdue") || l.includes("cogs")) return "bg-danger/10 text-danger";
     return "bg-primary/10 text-primary";
   };
 
@@ -445,6 +515,30 @@ export default function Reports() {
           { key: "grossProfit", label: "Gross Profit" },
           { key: "netProfit", label: "Net Profit" },
           { key: "charityAmount", label: "Charity" },
+        ];
+      case "profit":
+        return [
+          { key: "invoiceNo", label: "Invoice No" },
+          { key: "customer", label: "Customer" },
+          { key: "date", label: "Date" },
+          { key: "paymentStatus", label: "Status" },
+          { key: "totalRevenue", label: "Total Revenue" },
+          { key: "cogs", label: "COGS" },
+          { key: "grossProfit", label: "Gross Profit" },
+          { key: "charityAmount", label: "Charity (20%)" },
+          { key: "netProfit", label: "Net Profit" },
+          { key: "netMargin", label: "Net Margin %" },
+        ];
+      case "charity":
+        return [
+          { key: "invoiceNo", label: "Invoice No" },
+          { key: "customer", label: "Customer" },
+          { key: "date", label: "Date" },
+          { key: "paymentStatus", label: "Status" },
+          { key: "total", label: "Invoice Total" },
+          { key: "grossProfit", label: "Gross Profit Base" },
+          { key: "charityPercentage", label: "Allocation Rate" },
+          { key: "charityAmount", label: "Charity Amount" },
         ];
       case "purchases":
         return [
@@ -479,6 +573,20 @@ export default function Reports() {
           { key: "status", label: "Status" },
           { key: "costPrice", label: "Cost Price" },
           { key: "sellingPrice", label: "Retail Price" },
+          { key: "margin", label: "Est. Margin" },
+        ];
+      case "product-cost":
+        return [
+          { key: "productCode", label: "Stock No / Code" },
+          { key: "name", label: "Product Name" },
+          { key: "category", label: "Category" },
+          { key: "materialCost", label: "Material Cost" },
+          { key: "manufacturingCost", label: "Labor Cost" },
+          { key: "otherCosts", label: "Other Cost" },
+          { key: "costPrice", label: "Total Cost" },
+          { key: "sellingPrice", label: "Retail Price" },
+          { key: "grossProfit", label: "Est. Profit" },
+          { key: "margin", label: "Margin %" },
         ];
       case "memo":
         return [
@@ -542,10 +650,23 @@ export default function Reports() {
     return reportData.map((item, idx) => {
       const row = { ...item, original: item, indexId: item._id || String(idx) };
       if (activeTab === "sales") {
-        row.customerName = item.customerId?.fullName || "—";
+        row.customerName = item.customerId?.fullName || item.customerName || "—";
+        row.dateStr = formatDate(item.createdAt);
+      } else if (activeTab === "profit" || activeTab === "charity") {
+        row.customerName = item.customerId?.fullName || item.customerName || "—";
         row.dateStr = formatDate(item.createdAt);
       } else if (activeTab === "gemstone-stock") {
         row.supplierName = item.supplierId?.companyName || "—";
+      } else if (activeTab === "jewellery-stock") {
+        row.margin = (row.sellingPrice || 0) - (row.costPrice || 0);
+      } else if (activeTab === "product-cost") {
+        row.materialCost = item.materialCost || item.costBreakdown?.materials?.gold || 0;
+        row.manufacturingCost = item.manufacturingCost || item.costBreakdown?.production?.polishing || 0;
+        row.otherCosts = item.otherCosts || 0;
+        row.costPrice = item.costPrice || item.totalCost || 0;
+        row.sellingPrice = item.sellingPrice || 0;
+        row.grossProfit = (row.sellingPrice || 0) - (row.costPrice || 0);
+        row.margin = row.sellingPrice > 0 ? (((row.sellingPrice - row.costPrice) / row.sellingPrice) * 100).toFixed(1) : 0;
       } else if (activeTab === "memo") {
         row.customerName = item.customerId?.fullName || "—";
         row.issueDateStr = formatDate(item.createdAt);
@@ -562,6 +683,7 @@ export default function Reports() {
       return row;
     });
   }, [reportData, activeTab, isLoading, isError]);
+
 
   // Sorting
   const sortedData = useMemo(() => {
@@ -611,10 +733,13 @@ export default function Reports() {
   const getMobileTitle = (row) => {
     switch (activeTab) {
       case "sales": return `Invoice: ${row.invoiceNo}`;
+      case "profit": return `Profit: ${row.invoiceNo}`;
+      case "charity": return `Charity: ${row.invoiceNo}`;
       case "purchases": return row.supplierName;
       case "inventory-valuation": return row.category;
       case "gemstone-stock": return `Stone: ${row.stoneId}`;
       case "jewellery-stock": return row.name || row.productCode;
+      case "product-cost": return `Cost: ${row.productCode}`;
       case "memo": return `Memo: ${row.memoNo}`;
       case "income": return row.description;
       case "expenses": return row.description;
@@ -626,10 +751,13 @@ export default function Reports() {
   const getMobileSubtitle = (row) => {
     switch (activeTab) {
       case "sales": return `${row.customerName} | ${row.dateStr}`;
+      case "profit": return `${row.customerName} | Net: ${formatCurrency(row.netProfit)}`;
+      case "charity": return `${row.customerName} | Allocation: ${formatCurrency(row.charityAmount)}`;
       case "purchases": return `Contact: ${row.contact || "—"}`;
       case "inventory-valuation": return "Valuation Details";
       case "gemstone-stock": return `${row.gemstone} (${row.variety})`;
       case "jewellery-stock": return `Code: ${row.productCode} | Cat: ${row.category}`;
+      case "product-cost": return `${row.name} | Total Cost: ${formatCurrency(row.costPrice)}`;
       case "memo": return `${row.customerName} | Issued: ${row.issueDateStr}`;
       case "income": return `${row.category} | ${row.dateStr}`;
       case "expenses": return `${row.category} | ${row.dateStr}`;
@@ -641,6 +769,8 @@ export default function Reports() {
   const getMobileBadge = (row) => {
     switch (activeTab) {
       case "sales":
+      case "profit":
+      case "charity":
         return (
           <Badge variant={row.paymentStatus === "Paid" ? "success" : row.paymentStatus === "Partially Paid" ? "warning" : "danger"}>
             {row.paymentStatus}
@@ -682,15 +812,45 @@ export default function Reports() {
             <div className={itemStyle}><span className={labelStyle}>Tax:</span><span className={valStyle}>{formatCurrency(row.tax)}</span></div>
             <div className={itemStyle}><span className={labelStyle}>Total:</span><span className={valStyle}>{formatCurrency(row.total)}</span></div>
             <div className={itemStyle}><span className={labelStyle}>Gross Profit:</span><span className={valStyle + " text-emerald-600"}>{formatCurrency(row.grossProfit)}</span></div>
-            <div className={itemStyle}><span className={labelStyle}>Charity (2%):</span><span className={valStyle + " text-rose-500"}>{formatCurrency(row.charityAmount)}</span></div>
+            <div className={itemStyle}><span className={labelStyle}>Charity (20%):</span><span className={valStyle + " text-rose-500"}>{formatCurrency(row.charityAmount)}</span></div>
             <div className={itemStyle}><span className={labelStyle}>Net Profit:</span><span className={valStyle + " text-emerald-600"}>{formatCurrency(row.netProfit)}</span></div>
+          </>
+        );
+      case "profit":
+        return (
+          <>
+            <div className={itemStyle}><span className={labelStyle}>Total Revenue:</span><span className={valStyle}>{formatCurrency(row.totalRevenue)}</span></div>
+            <div className={itemStyle}><span className={labelStyle}>COGS:</span><span className={valStyle}>{formatCurrency(row.cogs)}</span></div>
+            <div className={itemStyle}><span className={labelStyle}>Gross Profit:</span><span className={valStyle + " text-emerald-600"}>{formatCurrency(row.grossProfit)}</span></div>
+            <div className={itemStyle}><span className={labelStyle}>Charity Allocation (20%):</span><span className={valStyle + " text-rose-500"}>{formatCurrency(row.charityAmount)}</span></div>
+            <div className={itemStyle}><span className={labelStyle}>Net Profit:</span><span className={valStyle + " text-emerald-600"}>{formatCurrency(row.netProfit)}</span></div>
+            <div className={itemStyle}><span className={labelStyle}>Net Margin %:</span><span className={valStyle}>{row.netMargin}%</span></div>
+          </>
+        );
+      case "charity":
+        return (
+          <>
+            <div className={itemStyle}><span className={labelStyle}>Gross Profit Base:</span><span className={valStyle}>{formatCurrency(row.grossProfit)}</span></div>
+            <div className={itemStyle}><span className={labelStyle}>Allocation Rate:</span><span className={valStyle}>{row.charityPercentage || 20}%</span></div>
+            <div className={itemStyle}><span className={labelStyle}>Charity Amount:</span><span className={valStyle + " text-rose-500"}>{formatCurrency(row.charityAmount)}</span></div>
+          </>
+        );
+      case "product-cost":
+        return (
+          <>
+            <div className={itemStyle}><span className={labelStyle}>Material Cost:</span><span className={valStyle}>{formatCurrency(row.materialCost)}</span></div>
+            <div className={itemStyle}><span className={labelStyle}>Labor/Manufacturing:</span><span className={valStyle}>{formatCurrency(row.manufacturingCost)}</span></div>
+            <div className={itemStyle}><span className={labelStyle}>Other Cost:</span><span className={valStyle}>{formatCurrency(row.otherCosts)}</span></div>
+            <div className={itemStyle}><span className={labelStyle}>Total Cost:</span><span className={valStyle}>{formatCurrency(row.costPrice)}</span></div>
+            <div className={itemStyle}><span className={labelStyle}>Retail Price:</span><span className={valStyle}>{formatCurrency(row.sellingPrice)}</span></div>
+            <div className={itemStyle}><span className={labelStyle}>Est. Profit:</span><span className={valStyle + " text-emerald-600"}>{formatCurrency(row.grossProfit)}</span></div>
           </>
         );
       case "purchases":
         return (
           <>
             <div className={itemStyle}><span className={labelStyle}>Purchases Count:</span><span className={valStyle}>{row.purchasesCount}</span></div>
-            <div className={itemStyle}><span className={labelStyle}>Total Weight (Carats):</span><span className={valStyle}>{row.totalCarats.toFixed(2)}</span></div>
+            <div className={itemStyle}><span className={labelStyle}>Total Weight (Carats):</span><span className={valStyle}>{(row.totalCarats || 0).toFixed(2)}</span></div>
             <div className={itemStyle}><span className={labelStyle}>Total Spent:</span><span className={valStyle}>{formatCurrency(row.totalSpent)}</span></div>
           </>
         );
@@ -703,7 +863,7 @@ export default function Reports() {
           <>
             <div className={itemStyle}><span className={labelStyle}>Supplier:</span><span className={valStyle}>{row.supplierName}</span></div>
             <div className={itemStyle}><span className={labelStyle}>Shape:</span><span className={valStyle}>{row.shape}</span></div>
-            <div className={itemStyle}><span className={labelStyle}>Weight (Carats):</span><span className={valStyle}>{row.carat.toFixed(2)}</span></div>
+            <div className={itemStyle}><span className={labelStyle}>Weight (Carats):</span><span className={valStyle}>{(row.carat || 0).toFixed(2)}</span></div>
             <div className={itemStyle}><span className={labelStyle}>Pieces:</span><span className={valStyle}>{row.pieces}</span></div>
             <div className={itemStyle}><span className={labelStyle}>Cost Price:</span><span className={valStyle}>{formatCurrency(row.purchasePrice)}</span></div>
           </>
@@ -796,6 +956,24 @@ export default function Reports() {
           keysList = ["invoiceNo", "customerName", "dateStr", "paymentStatus", "paymentMethod", "subtotal", "discount", "tax", "total", "grossProfit", "charityAmount", "netProfit"];
           formatMap = { subtotal: "currency", discount: "currency", tax: "currency", total: "currency", grossProfit: "currency", charityAmount: "currency", netProfit: "currency" };
           alignmentMap = { invoiceNo: "center", dateStr: "center", paymentStatus: "center", paymentMethod: "center" };
+          break;
+        case "profit":
+          headersList = ["Invoice No", "Customer", "Date", "Status", "Payment Method", "Total Revenue", "COGS", "Gross Profit", "Charity Allocation (20%)", "Net Profit", "Net Margin %"];
+          keysList = ["invoiceNo", "customerName", "dateStr", "paymentStatus", "paymentMethod", "totalRevenue", "cogs", "grossProfit", "charityAmount", "netProfit", "netMargin"];
+          formatMap = { totalRevenue: "currency", cogs: "currency", grossProfit: "currency", charityAmount: "currency", netProfit: "currency", netMargin: "decimal" };
+          alignmentMap = { invoiceNo: "center", dateStr: "center", paymentStatus: "center", paymentMethod: "center" };
+          break;
+        case "charity":
+          headersList = ["Invoice No", "Customer", "Date", "Status", "Invoice Total", "Gross Profit Base", "Charity Rate %", "Charity Amount"];
+          keysList = ["invoiceNo", "customerName", "dateStr", "paymentStatus", "total", "grossProfit", "charityPercentage", "charityAmount"];
+          formatMap = { total: "currency", grossProfit: "currency", charityPercentage: "decimal", charityAmount: "currency" };
+          alignmentMap = { invoiceNo: "center", dateStr: "center", paymentStatus: "center" };
+          break;
+        case "product-cost":
+          headersList = ["Stock No / Code", "Product Name", "Category", "Material Cost", "Labor Cost", "Other Cost", "Total Cost Price", "Retail Price", "Est. Profit", "Margin %"];
+          keysList = ["productCode", "name", "category", "materialCost", "manufacturingCost", "otherCosts", "costPrice", "sellingPrice", "grossProfit", "margin"];
+          formatMap = { materialCost: "currency", manufacturingCost: "currency", otherCosts: "currency", costPrice: "currency", sellingPrice: "currency", grossProfit: "currency", margin: "decimal" };
+          alignmentMap = { productCode: "center", category: "center" };
           break;
         case "purchases":
           headersList = ["Supplier Name", "Contact Person", "Purchases Count", "Total Carats", "Total Spent"];
@@ -984,6 +1162,7 @@ export default function Reports() {
       showError("Export Failed", `Excel generation failed: ${err.message}`);
     }
   };
+
 
   return (
     <div className="page-container space-y-0">
@@ -1232,6 +1411,40 @@ export default function Reports() {
                           <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-emerald-600 font-bold">{formatCurrency(row.netProfit)}</td>
                         </>
                       )}
+                      {activeTab === "profit" && (
+                        <>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono font-semibold text-gray-900">{row.invoiceNo}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-medium">{row.customerName}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-500 font-mono text-xs">{row.dateStr}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6">
+                            <Badge variant={row.paymentStatus === "Paid" ? "success" : row.paymentStatus === "Partially Paid" ? "warning" : "danger"}>
+                              {row.paymentStatus}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right font-semibold text-gray-950">{formatCurrency(row.totalRevenue)}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-gray-500">{formatCurrency(row.cogs)}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-emerald-600 font-semibold">{formatCurrency(row.grossProfit)}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-rose-500">{formatCurrency(row.charityAmount)}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-emerald-600 font-bold">{formatCurrency(row.netProfit)}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-primary font-semibold">{row.netMargin}%</td>
+                        </>
+                      )}
+                      {activeTab === "charity" && (
+                        <>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono font-semibold text-gray-900">{row.invoiceNo}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-medium">{row.customerName}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-500 font-mono text-xs">{row.dateStr}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6">
+                            <Badge variant={row.paymentStatus === "Paid" ? "success" : row.paymentStatus === "Partially Paid" ? "warning" : "danger"}>
+                              {row.paymentStatus}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right font-medium">{formatCurrency(row.total)}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-emerald-600 font-semibold">{formatCurrency(row.grossProfit)}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-center font-semibold text-primary">{row.charityPercentage || 20}%</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-rose-500 font-bold">{formatCurrency(row.charityAmount)}</td>
+                        </>
+                      )}
                       {activeTab === "purchases" && (
                         <>
                           <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900">{row.supplierName}</td>
@@ -1272,6 +1485,21 @@ export default function Reports() {
                           </td>
                           <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right font-medium">{formatCurrency(row.costPrice)}</td>
                           <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right font-bold text-gray-950">{formatCurrency(row.sellingPrice)}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right font-semibold text-emerald-600">{formatCurrency((row.sellingPrice || 0) - (row.costPrice || 0))}</td>
+                        </>
+                      )}
+                      {activeTab === "product-cost" && (
+                        <>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono font-semibold text-gray-900">{row.productCode}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-medium">{row.name}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 text-xs">{row.category}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-gray-600">{formatCurrency(row.materialCost)}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-gray-600">{formatCurrency(row.manufacturingCost)}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-gray-500">{formatCurrency(row.otherCosts)}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right font-semibold text-gray-900">{formatCurrency(row.costPrice)}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right font-semibold text-gray-950">{formatCurrency(row.sellingPrice)}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right font-bold text-emerald-600">{formatCurrency(row.grossProfit)}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right font-semibold text-primary">{row.margin}%</td>
                         </>
                       )}
                       {activeTab === "memo" && (
@@ -1351,6 +1579,26 @@ export default function Reports() {
                           <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-emerald-600 font-bold">{formatCurrency(sortedData.reduce((s, r) => s + (r.netProfit || 0), 0))}</td>
                         </>
                       )}
+                      {activeTab === "profit" && (
+                        <>
+                          <td colSpan={3}></td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-gray-950">{formatCurrency(sortedData.reduce((s, r) => s + (r.totalRevenue || 0), 0))}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-gray-500">{formatCurrency(sortedData.reduce((s, r) => s + (r.cogs || 0), 0))}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-emerald-600">{formatCurrency(sortedData.reduce((s, r) => s + (r.grossProfit || 0), 0))}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-rose-500">{formatCurrency(sortedData.reduce((s, r) => s + (r.charityAmount || 0), 0))}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-emerald-600 font-bold">{formatCurrency(sortedData.reduce((s, r) => s + (r.netProfit || 0), 0))}</td>
+                          <td></td>
+                        </>
+                      )}
+                      {activeTab === "charity" && (
+                        <>
+                          <td colSpan={3}></td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right font-medium">{formatCurrency(sortedData.reduce((s, r) => s + (r.total || 0), 0))}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-emerald-600">{formatCurrency(sortedData.reduce((s, r) => s + (r.grossProfit || 0), 0))}</td>
+                          <td></td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right text-rose-500 font-bold">{formatCurrency(sortedData.reduce((s, r) => s + (r.charityAmount || 0), 0))}</td>
+                        </>
+                      )}
                       {activeTab === "purchases" && (
                         <>
                           <td></td>
@@ -1388,8 +1636,24 @@ export default function Reports() {
                           <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right font-bold text-gray-950">
                             {formatCurrency(sortedData.reduce((s, r) => s + (r.sellingPrice || 0), 0))}
                           </td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right font-bold text-emerald-600">
+                            {formatCurrency(sortedData.reduce((s, r) => s + ((r.sellingPrice || 0) - (r.costPrice || 0)), 0))}
+                          </td>
                         </>
                       )}
+                      {activeTab === "product-cost" && (
+                        <>
+                          <td colSpan={2}></td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right">{formatCurrency(sortedData.reduce((s, r) => s + (r.materialCost || 0), 0))}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right">{formatCurrency(sortedData.reduce((s, r) => s + (r.manufacturingCost || 0), 0))}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right">{formatCurrency(sortedData.reduce((s, r) => s + (r.otherCosts || 0), 0))}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right font-semibold">{formatCurrency(sortedData.reduce((s, r) => s + (r.costPrice || 0), 0))}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right font-bold text-gray-950">{formatCurrency(sortedData.reduce((s, r) => s + (r.sellingPrice || 0), 0))}</td>
+                          <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-right font-bold text-emerald-600">{formatCurrency(sortedData.reduce((s, r) => s + (r.grossProfit || 0), 0))}</td>
+                          <td></td>
+                        </>
+                      )}
+
                       {activeTab === "memo" && (
                         <>
                           <td colSpan={3}></td>

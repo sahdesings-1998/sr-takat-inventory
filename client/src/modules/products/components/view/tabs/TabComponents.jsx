@@ -78,7 +78,7 @@ export default function TabComponents({ product, components, addComponent, delet
   }, 0);
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-5">
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2 pl-3 border-l-[3px] border-amber-400/60 text-amber-600">

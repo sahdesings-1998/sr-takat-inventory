@@ -52,6 +52,7 @@ export default function ProductDetails() {
   const {
     product,
     components,
+    salesHistory,
     isLoading,
     isError,
     addComponent,
@@ -164,7 +165,7 @@ export default function ProductDetails() {
       case "media":
         return <TabMedia product={product} onPreviewDoc={handleOpenDocPreview} />;
       case "sales":
-        return <TabSales product={product} />;
+        return <TabSales product={product} salesHistory={salesHistory} />;
       case "history":
         return <TabHistory product={product} />;
       case "documents":

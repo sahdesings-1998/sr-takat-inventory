@@ -67,7 +67,7 @@ export default function TabDocuments({ product, onPreviewDoc }) {
   }
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-5">
       <DocGroup
         icon={ShieldCheck}
         title="Certificates"

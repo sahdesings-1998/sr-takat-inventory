@@ -48,11 +48,15 @@ function StockLevelBadge({ qty, min, reorder }) {
 }
 
 export default function TabInventory({ product }) {
+  const remQty = Number(product?.quantity ?? 0);
+  const soldQty = Number(product?.soldQuantity ?? 0);
+  const origQty = Number(product?.originalQuantity || (remQty + soldQty) || remQty);
+
   return (
-    <div className="space-y-0">
+    <div className="space-y-5">
       {/* Stock Status Banner */}
       <StockLevelBadge
-        qty={product?.quantity}
+        qty={remQty}
         min={product?.minimumStock}
         reorder={product?.reorderLevel}
       />
@@ -79,15 +83,17 @@ export default function TabInventory({ product }) {
         <CardHeader>
           <div className="flex items-center gap-2 pl-3 border-l-[3px] border-emerald-400/60 text-emerald-600">
             <Package className="h-4 w-4" />
-            <h3 className="font-semibold text-gray-900 text-sm">Stock Quantities</h3>
+            <h3 className="font-semibold text-gray-900 text-sm">Stock Quantities & Tracking</h3>
           </div>
         </CardHeader>
         <CardBody>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
             {[
-              { label: "Current Quantity", value: product?.quantity, color: "text-primary" },
-              { label: "Available Qty", value: product?.availableQuantity, color: "text-emerald-600" },
-              { label: "Reserved Qty", value: product?.reservedQuantity, color: "text-amber-600" },
+              { label: "Original Stock", value: origQty, color: "text-sky-700 font-bold" },
+              { label: "Quantity Sold", value: soldQty, color: "text-amber-700 font-bold" },
+              { label: "Remaining Stock", value: remQty, color: "text-emerald-700 font-extrabold" },
+              { label: "Available Qty", value: product?.availableQuantity ?? remQty, color: "text-emerald-600" },
+              { label: "Reserved Qty", value: product?.reservedQuantity ?? 0, color: "text-amber-600" },
               { label: "Minimum Stock", value: product?.minimumStock, color: "text-gray-700" },
               { label: "Maximum Stock", value: product?.maximumStock, color: "text-gray-700" },
               { label: "Reorder Level", value: product?.reorderLevel, color: "text-rose-600" },

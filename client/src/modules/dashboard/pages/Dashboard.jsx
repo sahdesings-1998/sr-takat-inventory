@@ -216,22 +216,22 @@ export default function Dashboard() {
     },
     {
       title: "Total Gemstones",
-      value: `${kpis.totalGemstones} Stones`,
-      subtitle: "Active stones in inventory",
+      value: `${fmtNumber(kpis.totalGemstones)} Stones`,
+      subtitle: "Active gemstones in inventory",
       icon: Gem,
       iconBg: "bg-amber-50 text-amber-600",
     },
     {
       title: "Jewellery Stock",
-      value: `${kpis.jewelleryStock} Items`,
-      subtitle: "Finished jewelry assemblies",
+      value: `${fmtNumber(kpis.jewelleryStock)} Items`,
+      subtitle: "Finished jewellery in stock",
       icon: Package,
       iconBg: "bg-teal-50 text-teal-600",
     },
     {
       title: "Watch Stock",
-      value: `${kpis.watchStock} Items`,
-      subtitle: "Finished watch pieces",
+      value: `${fmtNumber(kpis.watchStock)} Items`,
+      subtitle: "Finished watches in stock",
       icon: Layers,
       iconBg: "bg-purple-50 text-purple-600",
     },
@@ -245,18 +245,25 @@ export default function Dashboard() {
     {
       title: "Selling Value",
       value: fmtMoney(kpis.sellingValue),
-      subtitle: "Total potential retail value",
+      subtitle: "Potential selling value of stock",
       icon: ArrowUpRight,
       iconBg: "bg-blue-50 text-blue-600",
     },
     {
-      title: "On Memo Consign",
+      title: "On Memo",
       value: `${fmtNumber(kpis.memoOnTime + kpis.memoOverdue)} Items`,
       subtitle: `${fmtNumber(kpis.memoOnTime)} On Time · ${fmtNumber(kpis.memoOverdue)} Overdue`,
       icon: Clock,
       iconBg: kpis.memoOverdue > 0 ? "bg-rose-50 text-rose-500 font-semibold" : "bg-gray-50 text-gray-500",
       trend: kpis.memoOverdue > 0 ? "OVERDUE DETECTED" : "All clean",
       trendUp: kpis.memoOverdue > 0 ? false : true,
+    },
+    {
+      title: "Gross Profit",
+      value: fmtMoney(kpis.grossProfit),
+      subtitle: "Profit before charity allocation",
+      icon: TrendingUp,
+      iconBg: "bg-emerald-50 text-emerald-600 font-semibold",
     },
     {
       title: "Charity Allocation (20%)",
@@ -268,7 +275,7 @@ export default function Dashboard() {
     {
       title: "Net Profit",
       value: fmtMoney(kpis.netProfit),
-      subtitle: "Retained profit after charity",
+      subtitle: "Gross Profit - Charity Allocation",
       icon: Percent,
       iconBg: "bg-indigo-50 text-indigo-600",
     },
@@ -445,12 +452,12 @@ export default function Dashboard() {
       {/* ── Widgets Grid (PRD §3.1 requirements) ────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-        {/* 1. Products On Memo (Overdue Highlights) */}
+        {/* 1. Products On Memo */}
         <div className="rounded-[24px] bg-white border border-gray-100/80 shadow-[0_8px_30px_rgba(0,0,0,0.015)] overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
             <div>
-              <h3 className="text-[14px] font-bold text-gray-900 tracking-[-0.02em]">Overdue Memos</h3>
-              <p className="text-[11px] text-gray-400 mt-0.5">Outstanding memos that have passed return date</p>
+              <h3 className="text-[14px] font-bold text-gray-900 tracking-[-0.02em]">Products On Memo</h3>
+              <p className="text-[11px] text-gray-400 mt-0.5">Active & overdue items currently on memo with clients/dealers</p>
             </div>
             {widgets.overdueMemos.length > 0 && (
               <Badge variant="danger">{widgets.overdueMemos.length} Overdue</Badge>
@@ -473,7 +480,7 @@ export default function Dashboard() {
               </div>
             ))}
             {widgets.overdueMemos.length === 0 && (
-              <div className="py-12 text-center text-xs text-gray-400">No overdue memos.</div>
+              <div className="py-12 text-center text-xs text-gray-400 font-medium">No items currently on memo.</div>
             )}
           </div>
         </div>
@@ -499,7 +506,7 @@ export default function Dashboard() {
               </div>
             ))}
             {widgets.pendingProduction.length === 0 && (
-              <div className="py-12 text-center text-xs text-gray-400">No pending production jobs.</div>
+              <div className="py-12 text-center text-xs text-gray-400 font-medium">No pending production jobs.</div>
             )}
           </div>
         </div>
@@ -507,8 +514,8 @@ export default function Dashboard() {
         {/* 3. Recent Stock */}
         <div className="rounded-[24px] bg-white border border-gray-100/80 shadow-[0_8px_30px_rgba(0,0,0,0.015)] overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-100">
-            <h3 className="text-[14px] font-bold text-gray-900 tracking-[-0.02em]">Recent Stock Added</h3>
-            <p className="text-[11px] text-gray-400 mt-0.5">Latest stones and jewelry created</p>
+            <h3 className="text-[14px] font-bold text-gray-900 tracking-[-0.02em]">Recent Stock</h3>
+            <p className="text-[11px] text-gray-400 mt-0.5">Latest stones and finished jewelry added to inventory</p>
           </div>
           <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
             {widgets.recentStock.map((item, idx) => (
@@ -523,15 +530,15 @@ export default function Dashboard() {
               </div>
             ))}
             {widgets.recentStock.length === 0 && (
-              <div className="py-12 text-center text-xs text-gray-400">No stock added recently.</div>
+              <div className="py-12 text-center text-xs text-gray-400 font-medium">No stock added recently.</div>
             )}
           </div>
         </div>
 
-        {/* 4. Missing Certificates / Low Stock */}
+        {/* 4. Low Stock / Missing Certificate */}
         <div className="rounded-[24px] bg-white border border-gray-100/80 shadow-[0_8px_30px_rgba(0,0,0,0.015)] overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-100">
-            <h3 className="text-[14px] font-bold text-gray-900 tracking-[-0.02em]">Missing Certificates / Low Stock</h3>
+            <h3 className="text-[14px] font-bold text-gray-900 tracking-[-0.02em]">Low Stock / Missing Certificate</h3>
             <p className="text-[11px] text-gray-400 mt-0.5">Stones missing certificates or with low inventory counts</p>
           </div>
           <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">

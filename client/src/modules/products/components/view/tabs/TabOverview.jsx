@@ -1,4 +1,4 @@
-import { FileText, Tag } from "lucide-react";
+import { FileText, Tag, Package, ShoppingBag, ArrowRight } from "lucide-react";
 import Card, { CardBody, CardHeader } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 
@@ -27,8 +27,12 @@ const STATUS_VARIANT = {
 };
 
 export default function TabOverview({ product }) {
+  const remQty = Number(product?.quantity ?? 0);
+  const soldQty = Number(product?.soldQuantity ?? 0);
+  const origQty = Number(product?.originalQuantity || (remQty + soldQty) || remQty);
+
   return (
-    <div className="space-y-0">
+    <div className="space-y-5">
       {/* General Info */}
       <Card>
         <CardHeader>
@@ -50,6 +54,48 @@ export default function TabOverview({ product }) {
               <div className="mt-2 flex flex-wrap gap-2">
                 <Badge variant={STATUS_VARIANT[product.status] || "neutral"}>{product.status}</Badge>
               </div>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Stock Quantity & Sales Tracker Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2 pl-3 border-l-[3px] border-emerald-500/60 text-emerald-600">
+            <Package className="h-4 w-4" />
+            <h3 className="font-semibold text-gray-900 text-sm">Stock Quantity & Sales Tracker</h3>
+          </div>
+          <Badge variant={remQty > 0 ? "success" : "danger"}>
+            {remQty > 0 ? `${remQty} Units In Stock` : "Sold Out"}
+          </Badge>
+        </CardHeader>
+        <CardBody className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-4 rounded-2xl bg-sky-50/60 border border-sky-100 space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-sky-700 block">Original Stock Quantity</span>
+              <span className="text-2xl font-extrabold text-sky-950 font-mono">{origQty} <span className="text-xs text-sky-700 font-normal">pcs</span></span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-100 space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 block">Quantity Sold</span>
+              <span className="text-2xl font-extrabold text-amber-950 font-mono">{soldQty} <span className="text-xs text-amber-700 font-normal">pcs</span></span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-100 space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Remaining Stock Quantity</span>
+              <span className="text-2xl font-extrabold text-emerald-950 font-mono">{remQty} <span className="text-xs text-emerald-700 font-normal">pcs</span></span>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200/80 flex items-center justify-between text-xs font-medium text-gray-700">
+            <span className="font-bold text-gray-900">Remaining Stock Formula:</span>
+            <div className="flex items-center gap-1.5 font-mono text-xs">
+              <span className="bg-sky-100 text-sky-800 px-2 py-0.5 rounded font-bold">{origQty} Orig</span>
+              <span>−</span>
+              <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">{soldQty} Sold</span>
+              <span>=</span>
+              <span className="bg-emerald-100 text-emerald-900 px-2.5 py-0.5 rounded font-extrabold">{remQty} Remaining</span>
             </div>
           </div>
         </CardBody>

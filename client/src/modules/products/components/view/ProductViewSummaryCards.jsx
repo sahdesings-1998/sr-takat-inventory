@@ -47,18 +47,12 @@ export default function ProductViewSummaryCards({ product }) {
   const currency = product?.currency || "USD";
   const profit = product?.profit ?? 0;
   const margin = product?.margin ?? 0;
-  const qty = product?.quantity ?? 0;
-  const reserved = product?.reservedQuantity ?? 0;
+  const remQty = product?.quantity ?? 0;
+  const soldQty = product?.soldQuantity ?? 0;
+  const origQty = product?.originalQuantity || (remQty + soldQty) || remQty;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-3">
-      <KpiCard
-        icon={DollarSign}
-        label="Purchase Price"
-        value={fmt(product?.purchasePrice, currency)}
-        iconBg="bg-gray-100"
-        iconColor="text-gray-500"
-      />
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
       <KpiCard
         icon={DollarSign}
         label="Selling Price"
@@ -76,48 +70,38 @@ export default function ProductViewSummaryCards({ product }) {
       />
       <KpiCard
         icon={profit >= 0 ? TrendingUp : TrendingDown}
-        label="Profit"
+        label="Gross Profit"
         value={fmt(profit, currency)}
+        subLabel={margin > 0 ? `Margin: ${margin.toFixed(1)}%` : ""}
         iconBg={profit >= 0 ? "bg-emerald-50" : "bg-rose-50"}
         iconColor={profit >= 0 ? "text-emerald-600" : "text-rose-600"}
         valueColor={profit >= 0 ? "text-emerald-600" : "text-rose-600"}
       />
       <KpiCard
-        icon={Percent}
-        label="Margin"
-        value={margin > 0 ? `${margin.toFixed(1)}%` : "—"}
-        iconBg="bg-violet-50"
-        iconColor="text-violet-600"
-        valueColor={margin > 25 ? "text-emerald-600" : margin > 10 ? "text-amber-600" : "text-gray-600"}
-      />
-      <KpiCard
         icon={Package}
-        label="In Stock"
-        value={qty > 0 ? `${qty} pcs` : "0"}
-        subLabel={qty > 5 ? "Adequate stock" : qty > 0 ? "Low stock" : "Out of stock"}
-        iconBg={qty > 5 ? "bg-emerald-50" : qty > 0 ? "bg-amber-50" : "bg-rose-50"}
-        iconColor={qty > 5 ? "text-emerald-600" : qty > 0 ? "text-amber-600" : "text-rose-600"}
-      />
-      <KpiCard
-        icon={Lock}
-        label="Reserved"
-        value={reserved > 0 ? `${reserved} pcs` : "—"}
-        iconBg="bg-amber-50"
-        iconColor="text-amber-600"
-      />
-      <KpiCard
-        icon={Warehouse}
-        label="Warehouse"
-        value={fmtStr(product?.warehouse)}
+        label="Original Stock"
+        value={`${origQty} pcs`}
+        subLabel="Initial Quantity"
         iconBg="bg-sky-50"
         iconColor="text-sky-600"
       />
       <KpiCard
-        icon={Truck}
-        label="Supplier"
-        value={fmtStr(product?.supplier)}
-        iconBg="bg-purple-50"
-        iconColor="text-purple-600"
+        icon={Package}
+        label="Quantity Sold"
+        value={`${soldQty} pcs`}
+        subLabel="Total Units Sold"
+        iconBg="bg-amber-50"
+        iconColor="text-amber-600"
+        valueColor="text-amber-700 font-bold"
+      />
+      <KpiCard
+        icon={Package}
+        label="Remaining Stock"
+        value={`${remQty} pcs`}
+        subLabel={remQty > 5 ? "Adequate stock" : remQty > 0 ? "Low stock" : "Out of stock"}
+        iconBg={remQty > 5 ? "bg-emerald-50" : remQty > 0 ? "bg-amber-50" : "bg-rose-50"}
+        iconColor={remQty > 5 ? "text-emerald-600" : remQty > 0 ? "text-amber-600" : "text-rose-600"}
+        valueColor={remQty > 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold"}
       />
     </div>
   );

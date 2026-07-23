@@ -249,7 +249,7 @@ export default function TabQrBarcode({ product, updateProduct, isUpdating }) {
             </div>
           </CardHeader>
 
-          <CardBody className="space-y-0 flex-1 flex flex-col justify-between">
+          <CardBody className="space-y-5 flex-1 flex flex-col justify-between">
             {/* Visual Barcode Display */}
             <div className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-inner flex flex-col items-center justify-center min-h-[160px]">
               <div
@@ -320,8 +320,8 @@ export default function TabQrBarcode({ product, updateProduct, isUpdating }) {
                     key={item.label}
                     onClick={() => setQrSize(item.size)}
                     className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${qrSize === item.size
-                        ? "bg-white text-indigo-600 shadow-xs"
-                        : "text-gray-500 hover:text-gray-900"
+                      ? "bg-white text-indigo-600 shadow-xs"
+                      : "text-gray-500 hover:text-gray-900"
                       }`}
                   >
                     {item.label}
@@ -331,7 +331,7 @@ export default function TabQrBarcode({ product, updateProduct, isUpdating }) {
             </div>
           </CardHeader>
 
-          <CardBody className="space-y-0 flex-1 flex flex-col justify-between">
+          <CardBody className="space-y-5 flex-1 flex flex-col justify-between">
             {/* Visual QR Code Display */}
             <div className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-inner flex flex-col items-center justify-center min-h-[160px]">
               <div

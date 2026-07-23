@@ -5,7 +5,10 @@ export const reportsApi = {
   getGemstoneStock: (params) => apiClient.get("/reports/gemstone-stock", { params }).then((res) => res.data.data),
   getJewelleryStock: (params) => apiClient.get("/reports/jewellery-stock", { params }).then((res) => res.data.data),
   getSales: (params) => apiClient.get("/reports/sales", { params }).then((res) => res.data.data),
+  getProfit: (params) => apiClient.get("/reports/profit", { params }).then((res) => res.data.data),
+  getCharity: (params) => apiClient.get("/reports/charity", { params }).then((res) => res.data.data),
   getMemo: (params) => apiClient.get("/reports/memo", { params }).then((res) => res.data.data),
+
   getProductCost: (params) => apiClient.get("/reports/product-cost", { params }).then((res) => res.data.data),
   getStockMovement: (params) => apiClient.get("/reports/stock-movement", { params }).then((res) => res.data.data),
   getSupplierPurchase: (params) => apiClient.get("/reports/supplier-purchase", { params }).then((res) => res.data.data),

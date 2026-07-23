@@ -128,7 +128,7 @@ export default function TabSupplier({ product, updateProduct, isUpdating }) {
     hasValue(product?.supplierNotes);
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-5">
       {/* Outstanding Alert */}
       {!isEditing && hasOutstanding && (
         <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-50 border border-amber-200">

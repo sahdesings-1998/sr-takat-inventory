@@ -2,6 +2,7 @@ import Product from "../models/Product.js";
 import ProductComponent from "../models/ProductComponent.js";
 import Settings from "../models/Settings.js";
 import ApiError from "../utils/ApiError.js";
+import { calculateCostingDetails } from "../utils/costingCalculator.js";
 
 async function getCosting(productId) {
   const product = await Product.findById(productId);
@@ -23,22 +24,33 @@ async function getCosting(productId) {
   });
 
   const settings = await Settings.getSettings();
+  const charityPct = settings.charityPercentage || 20.0;
+
+  const calculationResult = calculateCostingDetails({
+    costBreakdown: product.costBreakdown || {},
+    sellingPrice: product.sellingPrice || 0,
+    recipeMaterialCost,
+    charityPercentage: charityPct,
+  });
 
   return {
     productId,
+    productCode: product.productCode,
+    name: product.name,
+    category: product.category,
     recipeMaterialCost,
-    costBreakdown: product.costBreakdown || {
-      materials: { gemstones: 0, diamonds: 0, gold: 0, watchComponents: 0, strap: 0, other: 0 },
-      production: { cad: 0, casting: 0, stoneSetting: 0, polishing: 0, assembly: 0, qc: 0 },
-      other: { certificate: 0, shipping: 0, insurance: 0, packaging: 0, marketing: 0, commission: 0 },
-      percentageItems: []
-    },
-    charityPercentage: settings.charityPercentage || 2.0,
+    costBreakdown: product.costBreakdown || calculationResult.normalized,
+    charityPercentage: charityPct,
     sellingPrice: product.sellingPrice,
-    costPrice: product.costPrice,
-    grossProfit: product.grossProfit,
-    charityAmount: product.charityAmount,
-    netProfit: product.netProfit,
+    costPrice: calculationResult.totalCost,
+    materialCost: calculationResult.materialCost,
+    productionCost: calculationResult.productionCost,
+    otherCost: calculationResult.otherCost,
+    grossProfit: calculationResult.grossProfit,
+    margin: calculationResult.profitMargin,
+    charityAmount: calculationResult.charityAmount,
+    commissionAmount: calculationResult.commissionAmount,
+    netProfit: calculationResult.netProfit,
     isApproved: product.status === "In Stock" || product.status === "Reserved",
   };
 }
@@ -49,7 +61,6 @@ async function saveCosting(productId, { sellingPrice, costBreakdown }, userId) {
 
   const components = await ProductComponent.find({ productId }).populate("sourceId");
 
-  // 1. Calculate dynamically updated recipe cost
   let recipeMaterialCost = 0;
   components.forEach((comp) => {
     if (comp.sourceType === "Material") {
@@ -63,93 +74,26 @@ async function saveCosting(productId, { sellingPrice, costBreakdown }, userId) {
     }
   });
 
-  // 2. Sum up material breakdown costs
-  const cb = costBreakdown || {
-    materials: { gemstones: 0, diamonds: 0, gold: 0, watchComponents: 0, strap: 0, other: 0 },
-    production: { cad: 0, casting: 0, stoneSetting: 0, polishing: 0, assembly: 0, qc: 0 },
-    other: { certificate: 0, shipping: 0, insurance: 0, packaging: 0, marketing: 0, commission: 0 },
-    percentageItems: []
-  };
-
-  const matSum =
-    (cb.materials?.gemstones || 0) +
-    (cb.materials?.diamonds || 0) +
-    (cb.materials?.gold || 0) +
-    (cb.materials?.watchComponents || 0) +
-    (cb.materials?.strap || 0) +
-    (cb.materials?.other || 0);
-
-  const materialCost = recipeMaterialCost + matSum;
-
-  // 3. Sum up production breakdown costs
-  const productionCost =
-    (cb.production?.cad || 0) +
-    (cb.production?.casting || 0) +
-    (cb.production?.stoneSetting || 0) +
-    (cb.production?.polishing || 0) +
-    (cb.production?.assembly || 0) +
-    (cb.production?.qc || 0);
-
-  // 4. Sum up other breakdown costs
-  const otherCost =
-    (cb.other?.certificate || 0) +
-    (cb.other?.shipping || 0) +
-    (cb.other?.insurance || 0) +
-    (cb.other?.packaging || 0) +
-    (cb.other?.marketing || 0) +
-    (cb.other?.commission || 0);
-
-  const baseCost = materialCost + productionCost + otherCost;
-
-  // 5. Calculate cost-increasing percentage-based items
-  let percentageCostIncreases = 0;
-  const items = cb.percentageItems || [];
-  
-  items.forEach((item) => {
-    if (item.basis === "Material Cost") {
-      item.amount = materialCost * (item.percentage / 100);
-      percentageCostIncreases += item.amount;
-    } else if (item.basis === "Production Cost") {
-      item.amount = productionCost * (item.percentage / 100);
-      percentageCostIncreases += item.amount;
-    } else if (item.basis === "Total Cost") {
-      item.amount = baseCost * (item.percentage / 100);
-      percentageCostIncreases += item.amount;
-    }
-  });
-
-  const finalCostPrice = baseCost + percentageCostIncreases;
-  const finalSellingPrice = Number(sellingPrice || 0);
-
-  // 6. Calculate Gross Profit
-  const grossProfit = Math.max(0, finalSellingPrice - finalCostPrice);
-
-  // 7. Calculate post-selling adjustments (on Selling Price or Gross Profit)
-  let postSellingAdjustments = 0;
-  items.forEach((item) => {
-    if (item.basis === "Selling Price") {
-      item.amount = finalSellingPrice * (item.percentage / 100);
-      postSellingAdjustments += item.amount;
-    } else if (item.basis === "Gross Profit") {
-      item.amount = grossProfit * (item.percentage / 100);
-      postSellingAdjustments += item.amount;
-    }
-  });
-
-  // 8. Charity (20% of Gross Profit by default)
   const settings = await Settings.getSettings();
-  const charityPct = settings.charityPercentage || 2.0;
-  const charityAmount = grossProfit * (charityPct / 100);
+  const charityPct = settings.charityPercentage || 20.0;
+  const finalSellingPrice = Number(sellingPrice ?? product.sellingPrice ?? 0);
 
-  // 9. Net Profit (gross profit minus charity allocation and post selling price adjustments)
-  const netProfit = Math.max(0, grossProfit - charityAmount - postSellingAdjustments);
+  const calc = calculateCostingDetails({
+    costBreakdown: costBreakdown || product.costBreakdown || {},
+    sellingPrice: finalSellingPrice,
+    recipeMaterialCost,
+    charityPercentage: charityPct,
+  });
 
   product.sellingPrice = finalSellingPrice;
-  product.costPrice = finalCostPrice;
-  product.grossProfit = grossProfit;
-  product.charityAmount = charityAmount;
-  product.netProfit = netProfit;
-  product.costBreakdown = cb;
+  product.costPrice = calc.totalCost;
+  product.materialCost = calc.materialCost;
+  product.manufacturingCost = calc.productionCost;
+  product.otherCosts = calc.otherCost;
+  product.grossProfit = calc.grossProfit;
+  product.charityAmount = calc.charityAmount;
+  product.netProfit = calc.netProfit;
+  product.costBreakdown = costBreakdown || calc.normalized;
 
   await product.save();
   return getCosting(productId);
@@ -169,3 +113,4 @@ export default {
   saveCosting,
   approveCosting,
 };
+

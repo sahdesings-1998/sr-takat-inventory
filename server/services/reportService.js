@@ -334,6 +334,84 @@ async function getSalesReport(queryParams = {}) {
   return Sale.find(filter).populate("customerId");
 }
 
+async function getProfitReport(queryParams = {}) {
+  const filter = buildQueryFilter(queryParams, "createdAt");
+  if (queryParams.status && queryParams.status !== "All") {
+    filter.paymentStatus = queryParams.status;
+    delete filter.status;
+  }
+  if (queryParams.paymentMethod && queryParams.paymentMethod !== "All") {
+    filter.paymentMethod = queryParams.paymentMethod;
+  }
+  if (queryParams.search) {
+    filter.$or = [{ invoiceNo: { $regex: queryParams.search, $options: "i" } }];
+  }
+
+  const sales = await Sale.find(filter).populate("customerId");
+  const settings = await Settings.getSettings();
+  const charityPercentage = Number(settings?.charityPercentage ?? 20);
+
+  return sales.map((sale) => {
+    const totalRevenue = sale.total || 0;
+    const grossProfit = sale.grossProfit || 0;
+    const cogs = Math.max(0, totalRevenue - grossProfit);
+    const charityAmount = sale.charityAmount || grossProfit * (charityPercentage / 100);
+    const netProfit = sale.netProfit || grossProfit - charityAmount;
+    const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+    const netMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+
+    return {
+      _id: sale._id,
+      invoiceNo: sale.invoiceNo,
+      customerId: sale.customerId,
+      customerName: sale.customerId?.fullName || "—",
+      createdAt: sale.createdAt,
+      paymentStatus: sale.paymentStatus,
+      paymentMethod: sale.paymentMethod,
+      totalRevenue,
+      cogs,
+      grossProfit,
+      charityAmount,
+      netProfit,
+      grossMargin: Number(grossMargin.toFixed(2)),
+      netMargin: Number(netMargin.toFixed(2)),
+    };
+  });
+}
+
+async function getCharityReport(queryParams = {}) {
+  const filter = buildQueryFilter(queryParams, "createdAt");
+  if (queryParams.status && queryParams.status !== "All") {
+    filter.paymentStatus = queryParams.status;
+    delete filter.status;
+  }
+  if (queryParams.search) {
+    filter.$or = [{ invoiceNo: { $regex: queryParams.search, $options: "i" } }];
+  }
+
+  const sales = await Sale.find(filter).populate("customerId");
+  const settings = await Settings.getSettings();
+  const charityPercentage = Number(settings?.charityPercentage ?? 20);
+
+  return sales.map((sale) => {
+    const grossProfit = sale.grossProfit || 0;
+    const charityAmount = sale.charityAmount || grossProfit * (charityPercentage / 100);
+
+    return {
+      _id: sale._id,
+      invoiceNo: sale.invoiceNo,
+      customerId: sale.customerId,
+      customerName: sale.customerId?.fullName || "—",
+      createdAt: sale.createdAt,
+      paymentStatus: sale.paymentStatus,
+      grossProfit,
+      charityPercentage,
+      charityAmount,
+      total: sale.total || 0,
+    };
+  });
+}
+
 async function getProductCostReport(queryParams = {}) {
   const filter = buildQueryFilter(queryParams, "createdAt");
   if (queryParams.search) {
@@ -342,7 +420,10 @@ async function getProductCostReport(queryParams = {}) {
       { name: { $regex: queryParams.search, $options: "i" } },
     ];
   }
-  return Product.find(filter, "productCode name category costPrice sellingPrice grossProfit margin totalCost");
+  return Product.find(
+    filter,
+    "productCode name category costPrice sellingPrice grossProfit margin totalCost materialCost manufacturingCost packagingCost shippingCost otherCosts costBreakdown components"
+  );
 }
 
 async function getStockMovementReport(queryParams = {}) {
@@ -354,24 +435,58 @@ async function getStockMovementReport(queryParams = {}) {
       { action: { $regex: queryParams.search, $options: "i" } },
     ];
   }
-  return InventoryMovement.find(filter).sort({ movementDate: -1 });
+
+  const movements = await InventoryMovement.find(filter)
+    .populate("userId", "fullName username")
+    .populate("inventoryId")
+    .sort({ movementDate: -1 });
+
+  return movements.map((mov) => {
+    const obj = mov.toObject ? mov.toObject() : mov;
+    const inv = obj.inventoryId || {};
+    const itemCode =
+      obj.itemCode ||
+      inv.stoneId ||
+      inv.productCode ||
+      inv.materialCode ||
+      inv.materialName ||
+      "N/A";
+    const user = obj.userId?.fullName || obj.userId?.username || "System";
+
+    return {
+      ...obj,
+      itemCode,
+      user,
+      type: obj.inventoryType || "Item",
+    };
+  });
 }
 
 async function getSupplierPurchaseReport(queryParams = {}) {
   const stoneFilter = buildQueryFilter(queryParams, "createdAt");
   const stones = await Gemstone.find(stoneFilter).populate("supplierId");
+  const materials = await Material.find({ status: "active" }).populate("supplierId");
   const suppliers = await Supplier.find({});
 
   const summary = suppliers.map((sup) => {
-    const purchases = stones.filter((s) => s.supplierId?._id?.toString() === sup._id.toString());
-    const totalSpent = purchases.reduce((sum, curr) => sum + (curr.purchasePrice || 0), 0);
-    const totalCarats = purchases.reduce((sum, curr) => sum + (curr.carat || 0), 0);
+    const gemPurchases = stones.filter((s) => s.supplierId?._id?.toString() === sup._id.toString());
+    const matPurchases = materials.filter((m) => m.supplierId?._id?.toString() === sup._id.toString());
+
+    const gemSpent = gemPurchases.reduce((sum, curr) => sum + (curr.purchasePrice || 0), 0);
+    const matSpent = matPurchases.reduce((sum, curr) => sum + (curr.cost || 0) * (curr.quantity || 1), 0);
+    const totalSpent = gemSpent + matSpent;
+
+    const totalCarats = gemPurchases.reduce((sum, curr) => sum + (curr.carat || 0), 0);
+    const purchasesCount = gemPurchases.length + matPurchases.length;
+
     return {
       supplierName: sup.companyName,
       contact: sup.contactName,
-      purchasesCount: purchases.length,
+      purchasesCount,
       totalCarats,
       totalSpent,
+      gemstonePurchasesCount: gemPurchases.length,
+      materialPurchasesCount: matPurchases.length,
     };
   });
 
@@ -424,9 +539,12 @@ export default {
   getJewelleryStockReport,
   getMemoReport,
   getSalesReport,
+  getProfitReport,
+  getCharityReport,
   getProductCostReport,
   getStockMovementReport,
   getSupplierPurchaseReport,
   getIncomeReport,
   getExpenseReport,
 };
+

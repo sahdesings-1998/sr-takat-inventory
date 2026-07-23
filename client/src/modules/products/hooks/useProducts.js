@@ -112,6 +112,7 @@ export function useProduct(id) {
   return {
     product: productQuery.data?.data?.product,
     components: productQuery.data?.data?.components || [],
+    salesHistory: productQuery.data?.data?.salesHistory || [],
     costing: costingQuery.data?.data,
     isLoading: productQuery.isLoading || costingQuery.isLoading,
     isError: productQuery.isError || costingQuery.isError,

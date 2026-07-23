@@ -3,6 +3,7 @@ import ProductComponent from "../models/ProductComponent.js";
 import Gemstone from "../models/Gemstone.js";
 import GemstoneLot from "../models/GemstoneLot.js";
 import Settings from "../models/Settings.js";
+import SaleItem from "../models/SaleItem.js";
 import generateId from "../utils/generateId.js";
 import auditLogService from "./auditLogService.js";
 import ApiError from "../utils/ApiError.js";
@@ -47,9 +48,29 @@ async function getProductById(id) {
 
   const components = await ProductComponent.find({ productId: id }).populate("sourceId");
 
+  const salesItems = await SaleItem.find({ inventoryType: "Product", inventoryId: id })
+    .populate({
+      path: "saleId",
+      populate: { path: "customerId", select: "name email phone" },
+    })
+    .sort({ createdAt: -1 });
+
+  const salesHistory = salesItems.map((item) => ({
+    _id: item._id,
+    saleId: item.saleId?._id,
+    invoiceNo: item.saleId?.invoiceNo || "N/A",
+    createdAt: item.saleId?.createdAt || item.createdAt,
+    customerName: item.saleId?.customerId?.name || "Direct Customer",
+    quantity: item.quantity || 1,
+    sellingPrice: item.sellingPrice || 0,
+    totalPrice: (item.sellingPrice || 0) * (item.quantity || 1),
+    paymentStatus: item.saleId?.paymentStatus || "Paid",
+  }));
+
   return {
     product,
     components,
+    salesHistory,
   };
 }
 
@@ -64,9 +85,19 @@ async function createProduct(data, userId, ipAddress = "") {
   const charityAmount = grossProfit * (charityPct / 100);
   const netProfit = Math.max(0, grossProfit - charityAmount);
 
+  const qty = Number(data.quantity ?? data.stockQuantity ?? 1);
+  const origQty = Number(data.originalQuantity ?? qty);
+  const soldQty = Number(data.soldQuantity || 0);
+  const remQty = Math.max(0, origQty - soldQty);
+
   const product = await Product.create({
     ...data,
     productCode,
+    originalQuantity: origQty,
+    soldQuantity: soldQty,
+    quantity: remQty,
+    stockQuantity: remQty,
+    availableQuantity: remQty,
     grossProfit,
     charityAmount,
     netProfit,

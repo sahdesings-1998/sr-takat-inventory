@@ -52,6 +52,16 @@ export const getSupplierPurchaseReport = catchAsync(async (req, res) => {
   sendSuccess(res, { message: "Supplier purchases summary report retrieved", data: report });
 });
 
+export const getProfitReport = catchAsync(async (req, res) => {
+  const report = await reportService.getProfitReport(req.query);
+  sendSuccess(res, { message: "Profit report retrieved successfully", data: report });
+});
+
+export const getCharityReport = catchAsync(async (req, res) => {
+  const report = await reportService.getCharityReport(req.query);
+  sendSuccess(res, { message: "Charity report retrieved successfully", data: report });
+});
+
 export const getIncomeReport = catchAsync(async (req, res) => {
   const report = await reportService.getIncomeReport(req.query);
   sendSuccess(res, { message: "Income report retrieved successfully", data: report });
@@ -70,9 +80,12 @@ export default {
   getJewelleryStockReport,
   getMemoReport,
   getSalesReport,
+  getProfitReport,
+  getCharityReport,
   getProductCostReport,
   getStockMovementReport,
   getSupplierPurchaseReport,
   getIncomeReport,
   getExpenseReport,
 };
+

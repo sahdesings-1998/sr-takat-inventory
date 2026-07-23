@@ -33,6 +33,23 @@ export function useSalesReport(params) {
   });
 }
 
+export function useProfitReport(params) {
+  return useQuery({
+    queryKey: ["reports", "profit", params],
+    queryFn: () => reportsApi.getProfit(params),
+    keepPreviousData: true,
+  });
+}
+
+export function useCharityReport(params) {
+  return useQuery({
+    queryKey: ["reports", "charity", params],
+    queryFn: () => reportsApi.getCharity(params),
+    keepPreviousData: true,
+  });
+}
+
+
 export function useMemoReport(params) {
   return useQuery({
     queryKey: ["reports", "memo", params],

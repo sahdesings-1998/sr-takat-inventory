@@ -50,13 +50,51 @@ async function createDirectSale(data, userId, ipAddress = "") {
     if (item.inventoryType === "Product") {
       const p = await Product.findById(item.inventoryId);
       if (!p) throw new ApiError(404, `Product not found: ${item.inventoryId}`);
-      if (p.status === "Sold") throw new ApiError(400, `Product ${p.productCode} is already sold`);
+      const currentQty = p.quantity ?? p.stockQuantity ?? 1;
+      if (currentQty <= 0 || p.status === "Sold") {
+        throw new ApiError(400, `Product ${p.productCode || p.name} is out of stock`);
+      }
+      if (currentQty < qty) {
+        throw new ApiError(400, `Product ${p.productCode || p.name} only has ${currentQty} units available, requested ${qty}`);
+      }
 
       costPrice = p.costPrice || 0;
       if (!sellingPrice) sellingPrice = p.sellingPrice || 0;
 
-      p.status = "Sold";
-      p.stockQuantity = Math.max(0, (p.stockQuantity || 1) - qty);
+      const origQty = p.originalQuantity || (currentQty + (p.soldQuantity || 0)) || currentQty;
+      const newSoldQty = (p.soldQuantity || 0) + qty;
+      const remainingQty = Math.max(0, currentQty - qty);
+
+      p.originalQuantity = origQty;
+      p.soldQuantity = newSoldQty;
+      p.quantity = remainingQty;
+      p.stockQuantity = remainingQty;
+      p.availableQuantity = remainingQty;
+
+      if (remainingQty === 0) {
+        p.status = "Sold";
+        p.sellingStatus = "Sold";
+      } else {
+        p.status = "In Stock";
+        p.sellingStatus = "In Stock";
+      }
+
+      p.lastSellingPrice = sellingPrice;
+      p.lastSoldDate = new Date();
+      if (data.customerId) {
+        const cust = await Customer.findById(data.customerId);
+        if (cust) p.customer = cust.name;
+      }
+
+      p.history = [
+        ...(p.history || []),
+        {
+          date: new Date(),
+          action: `Sold ${qty} unit(s) via Invoice #${invoiceNo} (Remaining: ${remainingQty})`,
+          user: userId?.toString() || "System",
+        },
+      ];
+
       await p.save();
     } else if (item.inventoryType === "Gemstone") {
       const g = await Gemstone.findById(item.inventoryId);

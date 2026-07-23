@@ -1,32 +1,99 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useProducts } from "@/modules/products/hooks/useProducts";
 import { useToast } from "@/contexts/ToastContext";
 import { useDebounce } from "@/hooks/useDebounce";
-import Input from "@/components/ui/Input";
 import DataTable from "@/components/ui/DataTable";
 import SearchInput from "@/components/ui/SearchInput";
 import FilterPanel from "@/components/ui/FilterPanel";
 import TableActionButton from "@/components/ui/TableActionButton";
-import { Eye, ChevronDown, ChevronUp } from "lucide-react";
+import Modal from "@/components/ui/Modal";
+import Button from "@/components/ui/Button";
+import { Eye, ChevronDown, ChevronUp, Calculator, Save, CheckCircle2 } from "lucide-react";
 import { SkeletonPageHeader } from "@/components/ui/Skeleton";
-
-import { useMemo } from "react";
 import Select from "@/components/ui/Select";
+import CostingCalculatorWidget from "@/modules/costing/components/CostingCalculatorWidget";
+import CostProtectionModal from "@/modules/costing/components/CostProtectionModal";
+import { productsApi } from "@/modules/products/api/productsApi";
+import { calculateCostingDetails } from "@/utils/costingCalculator";
+
 
 export default function CostingList() {
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 300);
   const [categoryFilter, setCategoryFilter] = useState("");
 
-  const { products, isLoading, isError } = useProducts({ search });
-  const { showError } = useToast();
+  const { products, isLoading, isError, refetch } = useProducts({ search });
+  const { showSuccess, showError } = useToast();
+
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [costingData, setCostingData] = useState(null);
+  const [isLoadingCosting, setIsLoadingCosting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showProtectionModal, setShowProtectionModal] = useState(false);
 
   useEffect(() => {
     if (isError) {
       showError("Fetch Failed", "Failed to fetch products for costing analysis.");
     }
   }, [isError, showError]);
+
+  const handleOpenCostingModal = async (prod) => {
+    setSelectedProduct(prod);
+    setIsLoadingCosting(true);
+    try {
+      const res = await productsApi.getCosting(prod._id);
+      const data = res?.data || res;
+      setCostingData({
+        costBreakdown: data.costBreakdown || prod.costBreakdown || {},
+        sellingPrice: data.sellingPrice ?? prod.sellingPrice ?? 0,
+        recipeMaterialCost: data.recipeMaterialCost || 0,
+        charityPercentage: data.charityPercentage || 20.0,
+      });
+    } catch (err) {
+      console.error("Failed to load costing details:", err);
+      showError("Load Error", "Failed to fetch detailed costing breakdown.");
+      setCostingData({
+        costBreakdown: prod.costBreakdown || {},
+        sellingPrice: prod.sellingPrice || 0,
+        recipeMaterialCost: 0,
+        charityPercentage: 20.0,
+      });
+    } finally {
+      setIsLoadingCosting(false);
+    }
+  };
+
+  const handleInitiateSave = () => {
+    if (!selectedProduct || !costingData) return;
+    // Check if product already has non-zero cost price or saved costing
+    if ((selectedProduct.costPrice || 0) > 0 || (selectedProduct.sellingPrice || 0) > 0) {
+      setShowProtectionModal(true);
+    } else {
+      executeSaveCosting();
+    }
+  };
+
+  const executeSaveCosting = async () => {
+    if (!selectedProduct || !costingData) return;
+    setIsSaving(true);
+    try {
+      await productsApi.saveCosting(selectedProduct._id, {
+        costBreakdown: costingData.costBreakdown,
+        sellingPrice: costingData.sellingPrice,
+      });
+      showSuccess("Costing Saved", `Updated costing breakdown for ${selectedProduct.productCode}`);
+      setShowProtectionModal(false);
+      setSelectedProduct(null);
+      setCostingData(null);
+      refetch();
+    } catch (err) {
+      console.error("Failed to save costing:", err);
+      showError("Save Failed", err.message || "Failed to update costing details.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Extract dynamic category options
   const categoryOptions = useMemo(() => {
@@ -58,10 +125,12 @@ export default function CostingList() {
     "Product Code",
     "Name",
     "Category",
-    "Cost Price",
-    "Proposed Selling Price",
+    "Material Cost",
+    "Production Cost",
+    "Other Cost",
+    "Total Cost",
+    "Selling Price",
     "Gross Margin",
-    "Net Margin",
     "Actions",
   ];
 
@@ -73,7 +142,7 @@ export default function CostingList() {
         <div className="border-b border-gray-200/80 pb-0">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Costing Engine</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Material Cost + Production Cost + Other Cost = Total Cost &rarr; Selling Price &rarr; Gross Profit &rarr; Charity (2%) &rarr; Net Profit
+            Material Cost + Production Cost + Other Cost = Total Product Cost &rarr; Selling Price &rarr; Gross Profit &rarr; Charity (20%) &rarr; Net Profit
           </p>
         </div>
       )}
@@ -111,7 +180,7 @@ export default function CostingList() {
         }
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
-          {/* Filter 1: Search (Always First) */}
+          {/* Filter 1: Search */}
           <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-2">
             <label className="text-xs sm:text-sm font-semibold text-gray-700 tracking-tight select-none">
               Search Costing Products
@@ -159,23 +228,38 @@ export default function CostingList() {
             <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-primary truncate text-xs sm:text-sm">{prod.productCode}</td>
             <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-gray-900 truncate text-xs sm:text-sm">{prod.name}</td>
             <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{prod.category}</td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 whitespace-nowrap text-xs sm:text-sm">
-              ${prod.costPrice.toLocaleString()}
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-amber-700 font-medium">
+              ${(prod.materialCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 whitespace-nowrap text-xs sm:text-sm">
-              ${prod.sellingPrice.toLocaleString()}
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-blue-700 font-medium">
+              ${(prod.manufacturingCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">${(prod.grossProfit || 0).toLocaleString()}</td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-emerald-600 whitespace-nowrap text-xs sm:text-sm">
-              ${(prod.netProfit || 0).toLocaleString()}
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-mono text-purple-700 font-medium">
+              ${(prod.otherCosts || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 whitespace-nowrap text-xs sm:text-sm font-mono">
+              ${(prod.costPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-emerald-700 whitespace-nowrap text-xs sm:text-sm font-mono">
+              ${(prod.sellingPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-emerald-600 whitespace-nowrap text-xs sm:text-sm font-mono">
+              ${(prod.grossProfit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </td>
             <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap">
-              <Link to={`/products/${prod._id}`} title="View Product Costing Details">
+              <div className="flex items-center gap-2">
                 <TableActionButton
-                  icon={Eye}
-                  title="View Product Costing Details"
+                  icon={Calculator}
+                  title="Open Costing Engine Calculator"
+                  onClick={() => handleOpenCostingModal(prod)}
                 />
-              </Link>
+                <Link to={`/products/${prod._id}`} title="View Product Details">
+                  <TableActionButton
+                    icon={Eye}
+                    title="View Product Details"
+                  />
+                </Link>
+              </div>
             </td>
           </tr>
         )}
@@ -195,9 +279,9 @@ export default function CostingList() {
                   <span className="text-xs text-gray-500 font-medium truncate">• {prod.name}</span>
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-xs">
-                  <span className="font-mono font-bold text-gray-900">Cost: ${prod.costPrice.toLocaleString()}</span>
+                  <span className="font-mono font-bold text-gray-900">Total Cost: ${(prod.costPrice || 0).toLocaleString()}</span>
                   <span className="text-gray-400 font-medium">•</span>
-                  <span className="font-mono font-bold text-emerald-600">Net: ${(prod.netProfit || 0).toLocaleString()}</span>
+                  <span className="font-mono font-bold text-emerald-600">Gross: ${(prod.grossProfit || 0).toLocaleString()}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -214,21 +298,32 @@ export default function CostingList() {
                   <span className="font-medium text-gray-900">{prod.category}</span>
                 </div>
                 <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
-                  <span className="font-semibold text-gray-500">Selling Price</span>
-                  <span className="font-mono font-medium text-gray-900">${prod.sellingPrice.toLocaleString()}</span>
+                  <span className="font-semibold text-gray-500">Material Cost</span>
+                  <span className="font-mono font-medium text-amber-700">${(prod.materialCost || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
-                  <span className="font-semibold text-gray-500">Gross Profit</span>
-                  <span className="font-mono font-medium text-gray-900">${(prod.grossProfit || 0).toLocaleString()}</span>
+                  <span className="font-semibold text-gray-500">Production Cost</span>
+                  <span className="font-mono font-medium text-blue-700">${(prod.manufacturingCost || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                  <span className="font-semibold text-gray-500">Other Cost</span>
+                  <span className="font-mono font-medium text-purple-700">${(prod.otherCosts || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between gap-2 border-b border-gray-100/60 pb-2">
+                  <span className="font-semibold text-gray-500">Selling Price</span>
+                  <span className="font-mono font-medium text-emerald-700">${(prod.sellingPrice || 0).toLocaleString()}</span>
                 </div>
 
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-                  <Link to={`/products/${prod._id}`} title="View Product Costing Details">
+                  <TableActionButton
+                    icon={Calculator}
+                    title="Open Costing Engine Calculator"
+                    onClick={() => handleOpenCostingModal(prod)}
+                  />
+                  <Link to={`/products/${prod._id}`} title="View Product Details">
                     <TableActionButton
                       icon={Eye}
-                      title="View Product Costing Details"
-                      showLabel
-                      label="View Details"
+                      title="View Product Details"
                     />
                   </Link>
                 </div>
@@ -237,6 +332,89 @@ export default function CostingList() {
           </div>
         )}
       />
+
+      {/* Interactive Costing Engine Modal */}
+      {selectedProduct && (
+        <Modal
+          isOpen={Boolean(selectedProduct)}
+          onClose={() => {
+            if (!isSaving) {
+              setSelectedProduct(null);
+              setCostingData(null);
+            }
+          }}
+          title={`Costing Engine — ${selectedProduct.productCode} (${selectedProduct.name})`}
+          maxWidth="max-w-5xl"
+        >
+          {isLoadingCosting || !costingData ? (
+            <div className="p-12 flex flex-col items-center justify-center gap-3">
+              <div className="h-8 w-8 text-primary animate-spin rounded-full border-4 border-solid border-current border-r-transparent" />
+              <p className="text-sm font-semibold text-gray-500">Loading cost breakdown structure...</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <CostingCalculatorWidget
+                costBreakdown={costingData.costBreakdown}
+                sellingPrice={costingData.sellingPrice}
+                recipeMaterialCost={costingData.recipeMaterialCost}
+                charityPercentage={costingData.charityPercentage}
+                category={selectedProduct.category}
+                onChange={({ costBreakdown, sellingPrice }) => {
+                  setCostingData((prev) => ({
+                    ...prev,
+                    costBreakdown,
+                    sellingPrice,
+                  }));
+                }}
+              />
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedProduct(null);
+                    setCostingData(null);
+                  }}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleInitiateSave}
+                  disabled={isSaving}
+                  className="gap-2"
+                >
+                  {isSaving ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Save Costing Calculations
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
+      )}
+
+      {/* Cost Protection Confirmation Modal */}
+      {selectedProduct && costingData && (
+        <CostProtectionModal
+          isOpen={showProtectionModal}
+          onClose={() => setShowProtectionModal(false)}
+          onConfirm={executeSaveCosting}
+          productCode={selectedProduct.productCode}
+          productName={selectedProduct.name}
+          isSaving={isSaving}
+          oldCost={selectedProduct.costPrice || 0}
+          newCost={costingData.costBreakdown ? calculateCostingDetails({ costBreakdown: costingData.costBreakdown, sellingPrice: costingData.sellingPrice }).totalCost : 0}
+          oldSellingPrice={selectedProduct.sellingPrice || 0}
+          newSellingPrice={costingData.sellingPrice || 0}
+        />
+      )}
     </div>
   );
 }
+
+

@@ -5,7 +5,10 @@ import upload from "../middleware/upload.js";
 
 const router = Router();
 
-// Protect upload routes with auth middleware
+// Public / Authenticated File Proxy Endpoint (for cross-origin PDF viewing & downloading)
+router.get("/proxy", uploadController.proxyFile);
+
+// Protect upload modification routes with auth middleware
 router.use(auth);
 
 // Handle single file upload in request field named "file"

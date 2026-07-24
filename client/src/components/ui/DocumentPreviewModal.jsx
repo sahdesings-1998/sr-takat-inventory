@@ -1,14 +1,23 @@
 import { useState, useEffect } from "react";
-import { Download, ZoomIn, ZoomOut, X, FileText, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, ZoomIn, ZoomOut, X, FileText, Loader2, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import Modal from "./Modal";
 import Button from "./Button";
 import apiClient from "@/services/apiClient";
+import PdfViewer from "./PdfViewer";
 
-// Import react-pdf and configure local worker
-import { Document, Page, pdfjs } from "react-pdf";
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+/**
+ * Inspects magic bytes of arrayBuffer to check if file is PDF (%PDF)
+ */
+async function checkPdfMagicBytes(blob) {
+  try {
+    const buffer = await blob.slice(0, 4).arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    // %PDF is 0x25 0x50 0x44 0x46
+    return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
+  } catch {
+    return false;
+  }
+}
 
 export default function DocumentPreviewModal({
   isOpen,
@@ -20,94 +29,157 @@ export default function DocumentPreviewModal({
   fileSize = "N/A",
 }) {
   const [scale, setScale] = useState(1);
-  const [pdfScale, setPdfScale] = useState(1.0);
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
 
   const [blobUrl, setBlobUrl] = useState(null);
+  const [isPdfFile, setIsPdfFile] = useState(false);
+  const [isImageFile, setIsImageFile] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [detectedMime, setDetectedMime] = useState("");
 
   useEffect(() => {
-    let currentBlobUrl = null;
+    let activeBlobUrl = null;
 
     if (!isOpen || !fileUrl) {
       setBlobUrl(null);
-      setDetectedMime("");
+      setIsPdfFile(false);
+      setIsImageFile(false);
       setError(null);
       setNumPages(null);
       setPageNumber(1);
-      setPdfScale(1.0);
       setScale(1);
       return;
     }
 
-    const requiresAuth = fileUrl.startsWith("/") || fileUrl.includes("/api/v1/");
-
-    if (requiresAuth) {
+    const processFile = async () => {
       setLoading(true);
       setError(null);
-      setDetectedMime("");
-      apiClient
-        .get(fileUrl, { responseType: "blob" })
-        .then((res) => {
-          const mime = res.data?.type || "";
-          setDetectedMime(mime);
 
-          currentBlobUrl = URL.createObjectURL(res.data);
-          setBlobUrl(currentBlobUrl);
+      try {
+        let blob = null;
+        let finalUrl = fileUrl;
+
+        // Data URLs or existing Blob URLs
+        if (fileUrl.startsWith("data:") || fileUrl.startsWith("blob:")) {
+          setBlobUrl(fileUrl);
+          const isPdfData = fileUrl.includes("application/pdf");
+          const isImageData = fileUrl.includes("image/");
+          setIsPdfFile(isPdfData);
+          setIsImageFile(isImageData || (!isPdfData && Boolean(fileName?.match(/\.(png|jpe?g|webp|gif)$/i))));
           setLoading(false);
-        })
-        .catch((err) => {
-          console.error("Failed to load authenticated preview:", err);
-          setError("Failed to load PDF document.");
-          setLoading(false);
-        });
-    } else {
-      setBlobUrl(fileUrl);
-      const ext = fileUrl.split("?")[0].split(".").pop()?.toLowerCase();
-      if (ext === "pdf") setDetectedMime("application/pdf");
-      else if (["png", "jpg", "jpeg", "webp", "gif"].includes(ext)) setDetectedMime(`image/${ext}`);
-    }
+          return;
+        }
+
+        // Relative paths or local API uploads
+        const isRelative = fileUrl.startsWith("/") || fileUrl.includes("/api/v1/") || fileUrl.includes("/uploads/");
+
+        if (isRelative) {
+          const res = await apiClient.get(fileUrl, { responseType: "blob" });
+          blob = res.data;
+        } else {
+          // Cloudinary or external URL: attempt direct fetch first, fallback to backend proxy
+          try {
+            const resp = await fetch(fileUrl);
+            if (resp.ok) {
+              blob = await resp.blob();
+            }
+          } catch (e) {
+            console.warn("[DocumentPreviewModal] Direct fetch failed, trying backend proxy...", e);
+          }
+
+          if (!blob) {
+            try {
+              const proxyPath = `/upload/proxy?url=${encodeURIComponent(fileUrl)}&name=${encodeURIComponent(fileName || "document")}`;
+              const res = await apiClient.get(proxyPath, { responseType: "blob" });
+              if (res.data && res.data.size > 0) {
+                blob = res.data;
+              }
+            } catch (err) {
+              console.warn("[DocumentPreviewModal] Proxy fetch failed:", err);
+            }
+          }
+        }
+
+        if (blob) {
+          activeBlobUrl = URL.createObjectURL(blob);
+          setBlobUrl(activeBlobUrl);
+
+          const isMagicPdf = await checkPdfMagicBytes(blob);
+          const mime = blob.type || "";
+          const isPdfMime = mime.includes("pdf") || isMagicPdf || fileUrl.toLowerCase().includes(".pdf") || fileUrl.includes("/raw/upload/");
+          const isImgMime = mime.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp)$/i.test(fileUrl) || fileUrl.includes("/image/upload/");
+
+          setIsPdfFile(isPdfMime);
+          setIsImageFile(!isPdfMime && isImgMime);
+        } else {
+          setBlobUrl(finalUrl);
+          const isPdfPath = fileUrl.toLowerCase().includes(".pdf") || fileUrl.includes("/raw/upload/");
+          const isImgPath = /\.(png|jpe?g|gif|webp|bmp)$/i.test(fileUrl) || fileUrl.includes("/image/upload/");
+          setIsPdfFile(isPdfPath);
+          setIsImageFile(!isPdfPath && isImgPath);
+        }
+      } catch (err) {
+        console.error("[DocumentPreviewModal] Error loading file blob:", err);
+        // Fallback to direct fileUrl
+        setBlobUrl(fileUrl);
+        const isPdfPath = fileUrl.toLowerCase().includes(".pdf") || fileUrl.includes("/raw/upload/");
+        const isImgPath = /\.(png|jpe?g|gif|webp|bmp)$/i.test(fileUrl) || fileUrl.includes("/image/upload/");
+        setIsPdfFile(isPdfPath);
+        setIsImageFile(!isPdfPath && isImgPath);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    processFile();
 
     return () => {
-      if (currentBlobUrl) {
-        URL.revokeObjectURL(currentBlobUrl);
+      if (activeBlobUrl) {
+        URL.revokeObjectURL(activeBlobUrl);
       }
     };
   }, [fileUrl, isOpen]);
 
   if (!fileUrl) return null;
 
-  const isPdf = detectedMime === "application/pdf" || (!detectedMime && (fileUrl.toLowerCase().endsWith(".pdf") || fileUrl.toLowerCase().includes("/raw/upload/")));
-  const isImage = detectedMime.startsWith("image/") || (!detectedMime && (/\.(png|jpe?g|gif|webp|bmp)$/i.test(fileUrl) || fileUrl.includes("/image/upload/")));
-
   const handleZoomIn = () => setScale((s) => Math.min(s + 0.25, 3));
   const handleZoomOut = () => setScale((s) => Math.max(s - 0.25, 0.5));
-
-  const zoomInPdf = () => setPdfScale((s) => Math.min(s + 0.25, 3));
-  const zoomOutPdf = () => setPdfScale((s) => Math.max(s - 0.25, 0.5));
 
   const prevPage = () => setPageNumber((p) => Math.max(p - 1, 1));
   const nextPage = () => setPageNumber((p) => Math.min(p + 1, numPages || 1));
 
-  function onDocumentLoadSuccess({ numPages }) {
-    setNumPages(numPages);
-    setPageNumber(1);
-  }
+  const downloadFile = async () => {
+    try {
+      let downloadUrl = blobUrl;
 
-  const downloadFile = () => {
-    const urlToUse = blobUrl || fileUrl;
-    if (!urlToUse) return;
+      // If we don't have a valid blob object URL, fetch via backend proxy to guarantee binary integrity
+      if (!downloadUrl || !downloadUrl.startsWith("blob:")) {
+        const proxyUrl = `/upload/proxy?url=${encodeURIComponent(fileUrl)}&name=${encodeURIComponent(fileName || "document")}&download=true`;
+        const res = await apiClient.get(proxyUrl, { responseType: "blob" });
+        downloadUrl = URL.createObjectURL(res.data);
+      }
 
-    const link = document.createElement("a");
-    link.href = urlToUse;
-    link.target = "_blank";
-    link.download = fileName || "document";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const cleanName = fileName || (isPdfFile ? "document.pdf" : "download");
+      const nameWithExt = isPdfFile && !cleanName.toLowerCase().endsWith(".pdf") ? `${cleanName}.pdf` : cleanName;
+
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.target = "_blank";
+      link.download = nameWithExt;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("[DocumentPreviewModal] Download error, falling back to direct link:", err);
+      const link = document.createElement("a");
+      link.href = fileUrl;
+      link.target = "_blank";
+      link.download = fileName || "document.pdf";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
@@ -120,7 +192,7 @@ export default function DocumentPreviewModal({
             {fileName || "Document Preview"}
           </h3>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400 font-semibold">
-            <span>Type: {fileType || (isPdf ? "PDF Document" : isImage ? "Image" : "Document")}</span>
+            <span>Type: {fileType || (isPdfFile ? "PDF Document" : isImageFile ? "Image" : "Document")}</span>
             {uploadDate && (
               <>
                 <span className="hidden sm:inline">•</span>
@@ -139,26 +211,26 @@ export default function DocumentPreviewModal({
     >
       <div className="flex flex-col gap-4 mt-2">
         {/* Controls Toolbar */}
-        <div className="flex items-center justify-between gap-3 bg-gray-50/50 p-2.5 rounded-xl border border-gray-100 flex-wrap">
+        <div className="flex items-center justify-between gap-3 bg-gray-50 p-2.5 rounded-xl border border-gray-200 flex-wrap">
           <div className="flex items-center gap-3">
-            {(isImage || isPdf) && !loading && !error && (
-              <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-gray-150 shadow-sm">
+            {isImageFile && !loading && !error && (
+              <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-gray-200 shadow-xs">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={isPdf ? zoomOutPdf : handleZoomOut}
+                  onClick={handleZoomOut}
                   className="h-8 w-8 p-0"
                   title="Zoom Out"
                 >
                   <ZoomOut className="h-4 w-4 text-gray-600" />
                 </Button>
                 <span className="text-xs text-gray-600 font-bold min-w-[36px] text-center select-none">
-                  {Math.round((isPdf ? pdfScale : scale) * 100)}%
+                  {Math.round(scale * 100)}%
                 </span>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={isPdf ? zoomInPdf : handleZoomIn}
+                  onClick={handleZoomIn}
                   className="h-8 w-8 p-0"
                   title="Zoom In"
                 >
@@ -167,8 +239,8 @@ export default function DocumentPreviewModal({
               </div>
             )}
 
-            {isPdf && numPages && numPages > 1 && (
-              <div className="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-gray-150 shadow-sm">
+            {isPdfFile && numPages && numPages > 1 && (
+              <div className="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-gray-200 shadow-xs">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -195,6 +267,7 @@ export default function DocumentPreviewModal({
               </div>
             )}
           </div>
+
           <div className="flex items-center gap-2">
             <Button onClick={downloadFile} size="sm" className="h-9" disabled={loading}>
               <Download className="h-4 w-4 mr-1.5" /> Download
@@ -205,59 +278,40 @@ export default function DocumentPreviewModal({
           </div>
         </div>
 
-        {/* Document Display Area */}
-        <div className="relative border border-gray-150 rounded-xl bg-gray-100/30 overflow-hidden min-h-[300px] flex items-center justify-center">
+        {/* Document Preview Display Area */}
+        <div className="relative border border-gray-200 rounded-xl bg-gray-100/40 overflow-hidden min-h-[400px] flex items-center justify-center">
           {loading ? (
             <div className="flex flex-col items-center justify-center p-12 text-center gap-3">
-              <Loader2 className="h-8 w-8 text-primary animate-spin" />
+              <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
               <p className="text-sm font-semibold text-gray-600">Loading document preview...</p>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center p-8 text-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-red-50 border border-red-100 flex items-center justify-center">
-                <X className="h-6 w-6 text-red-500" />
+              <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center">
+                <AlertCircle className="h-6 w-6 text-rose-500" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-700">{error}</p>
-                <p className="text-xs text-gray-400 mt-0.5">Please check if the file is corrupted or contact support.</p>
+                <p className="text-sm font-semibold text-gray-800">{error}</p>
+                <p className="text-xs text-gray-500 mt-1">Please verify the file exists or try direct download.</p>
               </div>
               <Button size="sm" onClick={downloadFile} className="mt-2">
                 <Download className="h-4 w-4 mr-1.5" /> Try Downloading Direct
               </Button>
             </div>
-          ) : isPdf && blobUrl ? (
-            <div className="w-full h-[60vh] overflow-auto flex flex-col items-center p-4">
-              <Document
-                file={blobUrl}
-                onLoadSuccess={onDocumentLoadSuccess}
-                loading={
-                  <div className="flex flex-col items-center justify-center p-12 text-center gap-3">
-                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                    <p className="text-sm font-semibold text-gray-600">Loading pages...</p>
-                  </div>
-                }
-                error={
-                  <div className="flex flex-col items-center justify-center p-8 text-center gap-2">
-                    <div className="w-10 h-10 rounded-full bg-red-50 border border-red-100 flex items-center justify-center">
-                      <X className="h-5 w-5 text-red-500" />
-                    </div>
-                    <p className="text-xs sm:text-sm font-semibold text-gray-700">Failed to render PDF document.</p>
-                  </div>
-                }
-              >
-                <Page
-                  pageNumber={pageNumber}
-                  scale={pdfScale}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                  className="shadow-md rounded-lg max-w-full bg-white"
-                />
-              </Document>
+          ) : isPdfFile && (blobUrl || fileUrl) ? (
+            <div className="w-full h-full p-2">
+              <PdfViewer
+                fileUrl={blobUrl || fileUrl}
+                pageNumber={pageNumber}
+                scale={scale}
+                onDocumentLoad={({ numPages }) => setNumPages(numPages)}
+                onError={() => setError("Failed to render PDF document.")}
+              />
             </div>
-          ) : isImage && blobUrl ? (
+          ) : isImageFile && (blobUrl || fileUrl) ? (
             <div className="w-full h-[60vh] overflow-auto flex items-center justify-center p-4">
               <img
-                src={blobUrl}
+                src={blobUrl || fileUrl}
                 alt="Document preview"
                 className="max-h-full max-w-full object-contain rounded-lg transition-transform duration-200 shadow-sm"
                 style={{ transform: `scale(${scale})` }}
@@ -269,11 +323,11 @@ export default function DocumentPreviewModal({
                 <FileText className="h-6 w-6 text-amber-500" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-700">Preview not available</p>
-                <p className="text-xs text-gray-400 mt-0.5">This file type cannot be previewed in the browser.</p>
+                <p className="text-sm font-bold text-gray-800">Preview not supported</p>
+                <p className="text-xs text-gray-500 mt-1">This file type cannot be previewed in the browser window.</p>
               </div>
               <Button size="sm" onClick={downloadFile} className="mt-2">
-                <Download className="h-4 w-4 mr-1.5" /> Download File
+                <Download className="h-4 w-4 mr-1.5" /> Download Original File
               </Button>
             </div>
           )}

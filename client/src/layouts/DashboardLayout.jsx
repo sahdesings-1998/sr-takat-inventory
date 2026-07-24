@@ -23,11 +23,14 @@ import {
   Package,
   Gem,
   Award,
+  QrCode,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/modules/notifications/hooks/useNotifications";
 import Avatar from "@/components/ui/Avatar";
 import { cn } from "@/utils/cn";
+import CodeScannerModal from "@/modules/products/components/CodeScannerModal";
+import ChatbotWidget from "@/modules/chatbot/components/ChatbotWidget";
 
 // ─── Navigation Config ────────────────────────────────────────────────────────
 
@@ -184,6 +187,7 @@ export default function DashboardLayout() {
   const mainRef = useRef(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const profileRef = useRef(null);
   const { title, sub } = usePageMeta();
 
@@ -289,25 +293,15 @@ export default function DashboardLayout() {
 
           {/* Right controls */}
           <div className="flex items-center gap-2">
-
-            {/* Search button */}
-            {/* <button className="flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200/80 text-sm text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-all duration-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hidden sm:flex">
-              <Search className="h-4 w-4" />
-              <span className="text-[13px] hidden lg:inline">Search...</span>
-            </button> */}
-
-            {/* Notifications */}
-            {/* <Link
-              to="/notifications"
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-gray-200/80 text-gray-500 hover:text-gray-800 hover:border-gray-300 transition-all duration-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+            {/* Scan Code Header Button */}
+            <button
+              onClick={() => setIsScannerOpen(true)}
+              className="flex items-center gap-2 h-10 px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all duration-200 shadow-md shadow-indigo-500/20 shrink-0 cursor-pointer"
+              title="Scan Product QR Code / Barcode"
             >
-              <Bell className="h-4.5 w-4.5" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-danger text-[9px] font-bold text-white border-2 border-[#f3f4f8]">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </Link> */}
+              <QrCode className="h-4 w-4" />
+              <span className="hidden sm:inline">Scan Code</span>
+            </button>
 
             {/* Profile dropdown */}
             <div className="relative" ref={profileRef}>
@@ -358,6 +352,15 @@ export default function DashboardLayout() {
           </div>
         </main>
       </div>
+
+      {/* Global Code Scanner Modal */}
+      <CodeScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+      />
+
+      {/* Global AI Chatbot Widget */}
+      <ChatbotWidget />
     </div>
   );
 }

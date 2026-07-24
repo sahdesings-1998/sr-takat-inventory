@@ -10,10 +10,11 @@ import {
   RefreshCw,
   Sparkles,
   Tag,
-  Layers,
   Save,
   X,
-  ExternalLink,
+  Eye,
+  Maximize2,
+  Package,
 } from "lucide-react";
 import Card, { CardBody, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -35,6 +36,10 @@ export default function TabQrBarcode({ product, updateProduct, isUpdating }) {
   const [isSaving, setIsSaving] = useState(false);
   const [qrSize, setQrSize] = useState(220); // 160, 220, 280
 
+  // Preview Modals
+  const [viewBarcodeModalOpen, setViewBarcodeModalOpen] = useState(false);
+  const [viewQrModalOpen, setViewQrModalOpen] = useState(false);
+
   // Derived effective values
   const defaultBarcode = useMemo(() => {
     if (product?.barcode) return product.barcode;
@@ -44,7 +49,10 @@ export default function TabQrBarcode({ product, updateProduct, isUpdating }) {
 
   const defaultQrCode = useMemo(() => {
     if (product?.qrCode) return product.qrCode;
-    return `QR-STK-${product?.stockNo || product?.productCode || "10001"}`;
+    // Format full scan URL or unique QR payload
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const cleanCode = product?.stockNo || product?.productCode || product?._id || "10001";
+    return `${origin}/products/scan/${cleanCode}`;
   }, [product]);
 
   const [editBarcode, setEditBarcode] = useState(defaultBarcode);
@@ -58,9 +66,17 @@ export default function TabQrBarcode({ product, updateProduct, isUpdating }) {
     return generateBarcodeSVGData(barcodeValue, { width: 340, height: 95, showText: true });
   }, [barcodeValue]);
 
+  const barcodeSVGStringLarge = useMemo(() => {
+    return generateBarcodeSVGData(barcodeValue, { width: 500, height: 160, showText: true });
+  }, [barcodeValue]);
+
   const qrCodeSVGString = useMemo(() => {
     return generateQRCodeSVGData(qrCodeValue, { size: qrSize, fgColor: "#1e1b4b" });
   }, [qrCodeValue, qrSize]);
+
+  const qrCodeSVGStringLarge = useMemo(() => {
+    return generateQRCodeSVGData(qrCodeValue, { size: 360, fgColor: "#1e1b4b" });
+  }, [qrCodeValue]);
 
   // Copy helper
   const handleCopy = (text, fieldName) => {
@@ -126,8 +142,11 @@ export default function TabQrBarcode({ product, updateProduct, isUpdating }) {
 
   const handleRegenerateDefaults = () => {
     const cleanStock = (product?.stockNo || "10001").replace(/\D/g, "").padStart(9, "0");
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const cleanCode = product?.stockNo || product?.productCode || product?._id || "10001";
+
     setEditBarcode(`890${cleanStock}`);
-    setEditQrCode(`QR-STK-${product?.stockNo || product?.productCode || "10001"}`);
+    setEditQrCode(`${origin}/products/scan/${cleanCode}`);
   };
 
   return (
@@ -202,8 +221,8 @@ export default function TabQrBarcode({ product, updateProduct, isUpdating }) {
                 />
 
                 <Input
-                  label="QR Code Payload / Text"
-                  placeholder="e.g. QR-STK-10001"
+                  label="QR Code Payload / Target URL"
+                  placeholder="e.g. https://domain.com/products/scan/10001"
                   value={editQrCode}
                   onChange={(e) => setEditQrCode(e.target.value)}
                   leftIcon={<QrCode className="h-4 w-4 text-gray-400" />}
@@ -251,11 +270,17 @@ export default function TabQrBarcode({ product, updateProduct, isUpdating }) {
 
           <CardBody className="space-y-5 flex-1 flex flex-col justify-between">
             {/* Visual Barcode Display */}
-            <div className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-inner flex flex-col items-center justify-center min-h-[160px]">
+            <div className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-inner flex flex-col items-center justify-center min-h-[160px] relative group cursor-pointer"
+                 onClick={() => setViewBarcodeModalOpen(true)}>
               <div
                 className="w-full max-w-[340px] h-[95px] flex items-center justify-center"
                 dangerouslySetInnerHTML={{ __html: barcodeSVGString }}
               />
+              <div className="absolute inset-0 bg-gray-900/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center backdrop-blur-[1px]">
+                <span className="bg-white text-gray-900 px-3 py-1.5 rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5">
+                  <Maximize2 className="h-3.5 w-3.5 text-indigo-600" /> Zoom View
+                </span>
+              </div>
             </div>
 
             {/* Code Details & Actions */}
@@ -275,25 +300,31 @@ export default function TabQrBarcode({ product, updateProduct, isUpdating }) {
                 </Button>
               </div>
 
-              {/* Downloads */}
-              <div className="flex flex-wrap items-center gap-2">
+              {/* Action Buttons */}
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setViewBarcodeModalOpen(true)}
+                  icon={<Eye className="h-3.5 w-3.5" />}
+                >
+                  View
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleDownloadBarcodeSVG}
                   icon={<Download className="h-3.5 w-3.5" />}
-                  className="flex-1"
                 >
-                  Download SVG
+                  SVG
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleDownloadBarcodePNG}
                   icon={<Download className="h-3.5 w-3.5" />}
-                  className="flex-1"
                 >
-                  Download PNG
+                  PNG
                 </Button>
               </div>
             </div>
@@ -333,19 +364,25 @@ export default function TabQrBarcode({ product, updateProduct, isUpdating }) {
 
           <CardBody className="space-y-5 flex-1 flex flex-col justify-between">
             {/* Visual QR Code Display */}
-            <div className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-inner flex flex-col items-center justify-center min-h-[160px]">
+            <div className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-inner flex flex-col items-center justify-center min-h-[160px] relative group cursor-pointer"
+                 onClick={() => setViewQrModalOpen(true)}>
               <div
                 style={{ width: `${Math.min(qrSize, 240)}px`, height: `${Math.min(qrSize, 240)}px` }}
                 className="flex items-center justify-center transition-all duration-300"
                 dangerouslySetInnerHTML={{ __html: qrCodeSVGString }}
               />
+              <div className="absolute inset-0 bg-gray-900/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center backdrop-blur-[1px]">
+                <span className="bg-white text-gray-900 px-3 py-1.5 rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5">
+                  <Maximize2 className="h-3.5 w-3.5 text-indigo-600" /> Zoom View
+                </span>
+              </div>
             </div>
 
             {/* Code Details & Actions */}
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
                 <div className="min-w-0 pr-2">
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">QR Payload</span>
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">QR Payload / URL</span>
                   <span className="block text-sm font-mono font-bold text-gray-900 truncate mt-0.5">{qrCodeValue}</span>
                 </div>
                 <Button
@@ -358,25 +395,31 @@ export default function TabQrBarcode({ product, updateProduct, isUpdating }) {
                 </Button>
               </div>
 
-              {/* Downloads */}
-              <div className="flex flex-wrap items-center gap-2">
+              {/* Action Buttons */}
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setViewQrModalOpen(true)}
+                  icon={<Eye className="h-3.5 w-3.5" />}
+                >
+                  View
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleDownloadQrSVG}
                   icon={<Download className="h-3.5 w-3.5" />}
-                  className="flex-1"
                 >
-                  Download SVG
+                  SVG
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleDownloadQrPNG}
                   icon={<Download className="h-3.5 w-3.5" />}
-                  className="flex-1"
                 >
-                  Download PNG
+                  PNG
                 </Button>
               </div>
             </div>
@@ -400,41 +443,61 @@ export default function TabQrBarcode({ product, updateProduct, isUpdating }) {
           {/* Printable Tag Box */}
           <div
             id="product-printable-tag"
-            className="w-full max-w-md bg-white border-2 border-dashed border-gray-300 rounded-2xl p-5 shadow-sm space-y-4 print:border-none print:shadow-none print:p-0 print:m-0 print:max-w-none"
+            className="w-full max-w-lg bg-white border-2 border-dashed border-gray-300 rounded-2xl p-6 shadow-sm space-y-4 print:border-none print:shadow-none print:p-0 print:m-0 print:max-w-none"
           >
             {/* Header / Brand */}
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
               <div>
-                <span className="text-xs font-black uppercase tracking-widest text-indigo-900 block">SR-TAKAT</span>
-                <span className="text-[10px] font-semibold text-gray-400 block uppercase">Jewelry & Gemstones</span>
+                <span className="text-sm font-black uppercase tracking-widest text-indigo-900 block">SR-TAKAT</span>
+                <span className="text-[10px] font-semibold text-gray-500 block uppercase">Jewellery & Gemstone Inventory</span>
               </div>
               <div className="text-right">
-                <span className="text-xs font-bold text-gray-700 block">{product?.category || "Item"}</span>
+                <span className="text-xs font-bold text-gray-700 block">{product?.category || "Product"}</span>
                 {product?.sellingPrice > 0 && (
-                  <span className="text-sm font-extrabold text-indigo-600 block">
+                  <span className="text-base font-extrabold text-indigo-600 block">
                     ${product.sellingPrice.toLocaleString()}
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Product Details */}
-            <div className="space-y-1">
-              <h4 className="text-sm font-bold text-gray-900 leading-tight">{product?.name || "Unnamed Product"}</h4>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-gray-500">
-                {product?.stockNo && <span>Stock: <strong className="text-gray-800">{product.stockNo}</strong></span>}
-                {product?.sku && <span>| SKU: <strong className="text-gray-800">{product.sku}</strong></span>}
+            {/* Product Image & Main Specs */}
+            <div className="flex items-start gap-4">
+              {product?.imageUrls && product.imageUrls[0] ? (
+                <img
+                  src={product.imageUrls[0]}
+                  alt={product.name}
+                  className="h-20 w-20 object-cover rounded-xl border border-gray-200 shrink-0"
+                />
+              ) : (
+                <div className="h-20 w-20 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-400 shrink-0">
+                  <Package className="h-10 w-10" />
+                </div>
+              )}
+
+              <div className="min-w-0 flex-1 space-y-1">
+                <h4 className="text-sm font-bold text-gray-900 leading-tight">{product?.name || "Unnamed Product"}</h4>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11px] font-medium text-gray-600">
+                  <div>Stock #: <strong className="text-gray-900">{product?.stockNo || "N/A"}</strong></div>
+                  <div>SKU: <strong className="text-gray-900">{product?.sku || "N/A"}</strong></div>
+                  {product?.material && <div>Material: <strong className="text-gray-900">{product.material}</strong></div>}
+                  {product?.metalType && <div>Metal: <strong className="text-gray-900">{product.metalType}</strong></div>}
+                  {product?.gemstoneType && <div>Gem: <strong className="text-gray-900">{product.gemstoneType}</strong></div>}
+                  {product?.totalCarat > 0 && <div>Carat: <strong className="text-gray-900">{product.totalCarat} ct</strong></div>}
+                  <div>Stock Qty: <strong className="text-gray-900">{product?.quantity ?? product?.stockQuantity ?? 1}</strong></div>
+                  <div>Status: <strong className="text-emerald-700">{product?.status || "Available"}</strong></div>
+                </div>
               </div>
             </div>
 
             {/* Codes Layout */}
-            <div className="grid grid-cols-3 gap-3 items-center pt-2 border-t border-gray-100">
+            <div className="grid grid-cols-3 gap-3 items-center pt-3 border-t border-gray-200">
               {/* Barcode column */}
               <div className="col-span-2 flex flex-col items-center">
                 <div
-                  className="w-full h-[65px] flex items-center justify-center"
+                  className="w-full h-[70px] flex items-center justify-center"
                   dangerouslySetInnerHTML={{
-                    __html: generateBarcodeSVGData(barcodeValue, { width: 220, height: 65, showText: true }),
+                    __html: generateBarcodeSVGData(barcodeValue, { width: 240, height: 70, showText: true }),
                   }}
                 />
               </div>
@@ -442,9 +505,9 @@ export default function TabQrBarcode({ product, updateProduct, isUpdating }) {
               {/* QR Code column */}
               <div className="flex flex-col items-center justify-center">
                 <div
-                  className="w-[75px] h-[75px] flex items-center justify-center"
+                  className="w-[80px] h-[80px] flex items-center justify-center"
                   dangerouslySetInnerHTML={{
-                    __html: generateQRCodeSVGData(qrCodeValue, { size: 75, fgColor: "#1e1b4b" }),
+                    __html: generateQRCodeSVGData(qrCodeValue, { size: 80, fgColor: "#1e1b4b" }),
                   }}
                 />
               </div>
@@ -452,10 +515,120 @@ export default function TabQrBarcode({ product, updateProduct, isUpdating }) {
           </div>
 
           <div className="mt-4 flex items-center gap-2 text-xs text-gray-400 print:hidden">
-            <Printer className="h-3.5 w-3.5" /> Click "Print Label / Tag" above to send this label directly to your label printer.
+            <Printer className="h-3.5 w-3.5" /> Click "Print Label / Tag" above to print standard 4x2 inch tags or custom stickers.
           </div>
         </CardBody>
       </Card>
+
+      {/* VIEW BARCODE MODAL */}
+      {viewBarcodeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs animate-fade-in"
+             onClick={() => setViewBarcodeModalOpen(false)}>
+          <div className="relative bg-white rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-2xl border border-gray-100"
+               onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2 font-bold text-gray-900 text-base">
+                <Barcode className="h-5 w-5 text-indigo-600" /> Product Barcode View
+              </div>
+              <button
+                onClick={() => setViewBarcodeModalOpen(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-800 rounded-xl transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 bg-white border border-gray-200 rounded-2xl flex flex-col items-center justify-center">
+              <div
+                className="w-full max-w-[440px] h-[140px] flex items-center justify-center"
+                dangerouslySetInnerHTML={{ __html: barcodeSVGStringLarge }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-gray-50 border border-gray-100 text-xs font-mono font-bold text-gray-900">
+              <span>Code 128: {barcodeValue}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleCopy(barcodeValue, "Barcode")}
+                icon={copiedField === "Barcode" ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4 text-gray-500" />}
+              >
+                {copiedField === "Barcode" ? "Copied" : "Copy"}
+              </Button>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleDownloadBarcodeSVG}
+                icon={<Download className="h-4 w-4" />}
+                className="flex-1"
+              >
+                Download SVG
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleDownloadBarcodePNG}
+                icon={<Download className="h-4 w-4" />}
+                className="flex-1"
+              >
+                Download PNG
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW QR CODE MODAL */}
+      {viewQrModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs animate-fade-in"
+             onClick={() => setViewQrModalOpen(false)}>
+          <div className="relative bg-white rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl border border-gray-100"
+               onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2 font-bold text-gray-900 text-base">
+                <QrCode className="h-5 w-5 text-indigo-600" /> Product QR Code View
+              </div>
+              <button
+                onClick={() => setViewQrModalOpen(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-800 rounded-xl transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 bg-white border border-gray-200 rounded-2xl flex flex-col items-center justify-center">
+              <div
+                className="w-[280px] h-[280px] flex items-center justify-center"
+                dangerouslySetInnerHTML={{ __html: qrCodeSVGStringLarge }}
+              />
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100 text-xs font-mono font-bold text-gray-900 truncate">
+              Payload: {qrCodeValue}
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleDownloadQrSVG}
+                icon={<Download className="h-4 w-4" />}
+                className="flex-1"
+              >
+                Download SVG
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleDownloadQrPNG}
+                icon={<Download className="h-4 w-4" />}
+                className="flex-1"
+              >
+                Download PNG
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Embedded CSS for Print Mode */}
       <style>{`

@@ -237,6 +237,8 @@ const productSchema = new Schema(
 
 // Indexes
 productSchema.index({ stockNo: 1 });
+productSchema.index({ barcode: 1 }, { sparse: true });
+productSchema.index({ qrCode: 1 }, { sparse: true });
 productSchema.index({ status: 1 });
 productSchema.index({ category: 1 });
 productSchema.index({ status: 1, category: 1 }); // compound

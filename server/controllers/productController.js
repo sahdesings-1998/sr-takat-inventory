@@ -42,9 +42,16 @@ export const deleteComponent = catchAsync(async (req, res) => {
   sendSuccess(res, { message: "Component removed successfully" });
 });
 
+export const scanProduct = catchAsync(async (req, res) => {
+  const { code } = req.params;
+  const result = await productService.lookupProductByCode(code);
+  sendSuccess(res, { message: "Product details retrieved by scanned code", data: result });
+});
+
 export default {
   getProducts,
   getProduct,
+  scanProduct,
   createProduct,
   updateProduct,
   deleteProduct,

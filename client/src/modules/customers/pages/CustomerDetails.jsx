@@ -27,6 +27,7 @@ import Button from "@/components/ui/Button";
 import TableActionButton from "@/components/ui/TableActionButton";
 import { SkeletonDetailCard, Skeleton } from "@/components/ui/Skeleton";
 import RecordPaymentModal from "@/modules/sales/components/RecordPaymentModal";
+import DocumentPreviewModal from "@/components/ui/DocumentPreviewModal";
 
 export default function CustomerDetails() {
   const { id } = useParams();
@@ -36,6 +37,7 @@ export default function CustomerDetails() {
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedSaleForPayment, setSelectedSaleForPayment] = useState(null);
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState(null);
 
   useEffect(() => {
     if (isError) {
@@ -522,17 +524,16 @@ export default function CustomerDetails() {
                       {pay.attachments && pay.attachments.length > 0 ? (
                         <div className="flex items-center gap-1.5">
                           {pay.attachments.map((att, idx) => (
-                            <a
+                            <button
                               key={idx}
-                              href={att.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline bg-primary/10 px-2 py-0.5 rounded border border-primary/20"
+                              type="button"
+                              onClick={() => setPreviewDoc({ url: att.url, name: att.name })}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 hover:bg-indigo-100 transition-colors cursor-pointer"
                               title={att.name}
                             >
                               <Paperclip className="h-3 w-3 shrink-0" />
-                              <span className="truncate max-w-[80px]">{att.name}</span>
-                            </a>
+                              <span className="truncate max-w-[80px]">{att.name || "Attachment"}</span>
+                            </button>
                           ))}
                         </div>
                       ) : (
@@ -647,6 +648,14 @@ export default function CustomerDetails() {
           setSelectedSaleForPayment(null);
         }}
         sale={selectedSaleForPayment}
+      />
+
+      {/* In-App Document & PDF Preview Modal */}
+      <DocumentPreviewModal
+        isOpen={Boolean(previewDoc)}
+        onClose={() => setPreviewDoc(null)}
+        fileUrl={previewDoc?.url}
+        fileName={previewDoc?.name}
       />
     </div>
   );

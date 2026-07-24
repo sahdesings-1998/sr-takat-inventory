@@ -8,6 +8,7 @@ import Badge from "@/components/ui/Badge";
 import DataTable from "@/components/ui/DataTable";
 import logo from "@/assets/logo.png";
 import RecordPaymentModal from "../components/RecordPaymentModal";
+import DocumentPreviewModal from "@/components/ui/DocumentPreviewModal";
 
 import { Skeleton } from "@/components/ui/Skeleton";
 
@@ -17,6 +18,7 @@ export default function SaleDetails() {
   const { showSuccess, showError } = useToast();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState(null);
 
   useEffect(() => {
     if (isError) {
@@ -459,17 +461,16 @@ export default function SaleDetails() {
                 {pay.attachments && pay.attachments.length > 0 ? (
                   <div className="flex items-center gap-1.5">
                     {pay.attachments.map((att, idx) => (
-                      <a
+                      <button
                         key={idx}
-                        href={att.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline bg-primary/10 px-2 py-0.5 rounded border border-primary/20"
+                        type="button"
+                        onClick={() => setPreviewDoc({ url: att.url, name: att.name })}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 hover:bg-indigo-100 transition-colors cursor-pointer"
                         title={att.name}
                       >
                         <Paperclip className="h-3 w-3 shrink-0" />
-                        <span className="truncate max-w-[80px]">{att.name}</span>
-                      </a>
+                        <span className="truncate max-w-[80px]">{att.name || "Attachment"}</span>
+                      </button>
                     ))}
                   </div>
                 ) : (
@@ -487,6 +488,14 @@ export default function SaleDetails() {
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
         sale={sale}
+      />
+
+      {/* In-App Document & PDF Preview Modal */}
+      <DocumentPreviewModal
+        isOpen={Boolean(previewDoc)}
+        onClose={() => setPreviewDoc(null)}
+        fileUrl={previewDoc?.url}
+        fileName={previewDoc?.name}
       />
     </div>
   );

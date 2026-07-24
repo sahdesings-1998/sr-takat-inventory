@@ -3,6 +3,7 @@ packages:
   - "server"
 allowBuilds:
   bcrypt: false
+  canvas: set this to true or false
   esbuild: false
   puppeteer: true
 onlyBuiltDependencies:

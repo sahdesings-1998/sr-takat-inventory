@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Product from "../models/Product.js";
 import ProductComponent from "../models/ProductComponent.js";
 import Gemstone from "../models/Gemstone.js";
@@ -74,6 +75,71 @@ async function getProductById(id) {
   };
 }
 
+async function generateUniqueBarcode(stockNoSeed = "") {
+  const cleanStock = (stockNoSeed || "").replace(/\D/g, "");
+  let candidate = cleanStock ? `890${cleanStock.padStart(9, "0")}` : `890${Math.floor(100000000 + Math.random() * 900000000)}`;
+
+  let exists = await Product.findOne({ barcode: candidate, isDeleted: { $ne: true } });
+  let attempts = 0;
+  while (exists && attempts < 10) {
+    candidate = `890${Math.floor(100000000 + Math.random() * 900000000)}`;
+    exists = await Product.findOne({ barcode: candidate, isDeleted: { $ne: true } });
+    attempts++;
+  }
+  return candidate;
+}
+
+async function generateUniqueQrCode(productCodeSeed = "", stockNoSeed = "") {
+  let candidate = `QR-STK-${stockNoSeed || productCodeSeed || Math.floor(10000 + Math.random() * 90000)}`;
+  let exists = await Product.findOne({ qrCode: candidate, isDeleted: { $ne: true } });
+  let attempts = 0;
+  while (exists && attempts < 10) {
+    candidate = `QR-STK-${Math.floor(100000 + Math.random() * 900000)}`;
+    exists = await Product.findOne({ qrCode: candidate, isDeleted: { $ne: true } });
+    attempts++;
+  }
+  return candidate;
+}
+
+async function lookupProductByCode(codeRaw) {
+  if (!codeRaw || typeof codeRaw !== "string" || !codeRaw.trim()) {
+    throw new ApiError(400, "Scanned code cannot be empty");
+  }
+
+  const code = codeRaw.trim();
+
+  // Construct query to match barcode, qrCode, productCode, stockNo, sku, or _id
+  const query = {
+    $or: [
+      { qrCode: code },
+      { barcode: code },
+      { productCode: code },
+      { stockNo: code },
+      { sku: code },
+    ],
+  };
+
+  if (mongoose.Types.ObjectId.isValid(code)) {
+    query.$or.push({ _id: code });
+  }
+
+  // Find matching product record (including soft-deleted)
+  const productDoc = await Product.findOne(query);
+
+  if (!productDoc) {
+    throw new ApiError(404, `No product found matching code: "${code}"`);
+  }
+
+  if (productDoc.isDeleted) {
+    throw new ApiError(
+      410,
+      `Product "${productDoc.name || productDoc.stockNo || "Item"}" has been deleted/archived and is no longer available.`
+    );
+  }
+
+  return await getProductById(productDoc._id);
+}
+
 async function createProduct(data, userId, ipAddress = "") {
   const productCode = await generateId(Product, "productCode", "product", 5);
 
@@ -90,9 +156,32 @@ async function createProduct(data, userId, ipAddress = "") {
   const soldQty = Number(data.soldQuantity || 0);
   const remQty = Math.max(0, origQty - soldQty);
 
+  // Auto-generate or validate unique barcode & qrCode
+  let barcode = (data.barcode || "").trim();
+  if (!barcode) {
+    barcode = await generateUniqueBarcode(data.stockNo);
+  } else {
+    const existing = await Product.findOne({ barcode, isDeleted: { $ne: true } });
+    if (existing) {
+      throw new ApiError(400, `Barcode "${barcode}" is already assigned to product "${existing.name || existing.stockNo}".`);
+    }
+  }
+
+  let qrCode = (data.qrCode || "").trim();
+  if (!qrCode) {
+    qrCode = await generateUniqueQrCode(productCode, data.stockNo);
+  } else {
+    const existing = await Product.findOne({ qrCode, isDeleted: { $ne: true } });
+    if (existing) {
+      throw new ApiError(400, `QR Code "${qrCode}" is already assigned to product "${existing.name || existing.stockNo}".`);
+    }
+  }
+
   const product = await Product.create({
     ...data,
     productCode,
+    barcode,
+    qrCode,
     originalQuantity: origQty,
     soldQuantity: soldQty,
     quantity: remQty,
@@ -127,6 +216,28 @@ async function createProduct(data, userId, ipAddress = "") {
 async function updateProduct(id, data, userId, ipAddress = "") {
   const { product: productDoc } = await getProductById(id);
   const oldVal = productDoc.toObject();
+
+  if (data.barcode !== undefined) {
+    const barcodeTrimmed = (data.barcode || "").trim();
+    if (barcodeTrimmed && barcodeTrimmed !== productDoc.barcode) {
+      const existing = await Product.findOne({ barcode: barcodeTrimmed, _id: { $ne: id }, isDeleted: { $ne: true } });
+      if (existing) {
+        throw new ApiError(400, `Barcode "${barcodeTrimmed}" is already assigned to product "${existing.name || existing.stockNo}".`);
+      }
+    }
+    data.barcode = barcodeTrimmed;
+  }
+
+  if (data.qrCode !== undefined) {
+    const qrCodeTrimmed = (data.qrCode || "").trim();
+    if (qrCodeTrimmed && qrCodeTrimmed !== productDoc.qrCode) {
+      const existing = await Product.findOne({ qrCode: qrCodeTrimmed, _id: { $ne: id }, isDeleted: { $ne: true } });
+      if (existing) {
+        throw new ApiError(400, `QR Code "${qrCodeTrimmed}" is already assigned to product "${existing.name || existing.stockNo}".`);
+      }
+    }
+    data.qrCode = qrCodeTrimmed;
+  }
 
   if (data.sellingPrice !== undefined || data.costPrice !== undefined) {
     const settings = await Settings.getSettings();
@@ -267,6 +378,7 @@ async function softDeleteProduct(id, userId, ipAddress = "") {
 export default {
   getAllProducts,
   getProductById,
+  lookupProductByCode,
   createProduct,
   updateProduct,
   softDeleteProduct,

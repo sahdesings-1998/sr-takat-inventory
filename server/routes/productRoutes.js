@@ -8,6 +8,7 @@ const router = Router();
 router.use(auth);
 
 router.get("/", requirePermission("inventory.view"), productController.getProducts);
+router.get("/scan/:code", requirePermission("inventory.view"), productController.scanProduct);
 router.get("/:id", requirePermission("inventory.view"), productController.getProduct);
 router.post("/", requirePermission("inventory.create"), productController.createProduct);
 router.put("/:id", requirePermission("inventory.update"), productController.updateProduct);

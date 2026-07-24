@@ -15,6 +15,7 @@ import {
   Building2,
   Calendar,
   Package,
+  Eye,
 } from "lucide-react";
 import { usePurchaseInvoice } from "../hooks/usePurchaseInvoices";
 import { useToast } from "@/contexts/ToastContext";
@@ -23,6 +24,7 @@ import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Modal from "@/components/ui/Modal";
 import DataTable from "@/components/ui/DataTable";
+import DocumentPreviewModal from "@/components/ui/DocumentPreviewModal";
 import Badge from "@/components/ui/Badge";
 import Card, { CardHeader, CardBody } from "@/components/ui/Card";
 import TableActionButton from "@/components/ui/TableActionButton";
@@ -45,6 +47,9 @@ export default function PurchaseInvoiceDetails() {
   // Cancel Modal State
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+
+  // Document Preview Modal State
+  const [previewDoc, setPreviewDoc] = useState(null);
 
   useEffect(() => {
     if (isError) {
@@ -376,16 +381,15 @@ export default function PurchaseInvoiceDetails() {
                   <span className="text-gray-400 block text-[11px] uppercase font-semibold mb-1">Supplier Original Invoice Attachment</span>
                   <div className="flex flex-col gap-1.5">
                     {invoice.attachments.map((att, attIdx) => (
-                      <a
+                      <button
                         key={attIdx}
-                        href={att.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-primary bg-primary/10 px-2.5 py-1.5 rounded-lg border border-primary/20 hover:underline"
+                        type="button"
+                        onClick={() => setPreviewDoc({ url: att.url, name: att.name })}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1.5 rounded-lg border border-indigo-200 hover:bg-indigo-100 transition-colors text-left cursor-pointer"
                       >
-                        <Paperclip className="h-3.5 w-3.5" />
-                        {att.name}
-                      </a>
+                        <Eye className="h-3.5 w-3.5" />
+                        {att.name || "View Invoice PDF"}
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -581,6 +585,14 @@ export default function PurchaseInvoiceDetails() {
           </div>
         </div>
       </Modal>
+
+      {/* In-App Document & PDF Preview Modal */}
+      <DocumentPreviewModal
+        isOpen={Boolean(previewDoc)}
+        onClose={() => setPreviewDoc(null)}
+        fileUrl={previewDoc?.url}
+        fileName={previewDoc?.name}
+      />
     </div>
   );
 }

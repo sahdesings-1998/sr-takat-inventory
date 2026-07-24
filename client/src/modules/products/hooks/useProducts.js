@@ -127,3 +127,12 @@ export function useProduct(id) {
     isUpdating: updateMutation.isPending,
   };
 }
+
+export function useScanProduct(code) {
+  return useQuery({
+    queryKey: ["product-scan", code],
+    queryFn: () => productsApi.scanCode(code),
+    enabled: !!code,
+    retry: false,
+  });
+}

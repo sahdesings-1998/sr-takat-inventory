@@ -23,6 +23,7 @@ import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import Modal from "@/components/ui/Modal";
 import DataTable from "@/components/ui/DataTable";
+import DocumentPreviewModal from "@/components/ui/DocumentPreviewModal";
 import Badge from "@/components/ui/Badge";
 import Card, { CardHeader, CardBody } from "@/components/ui/Card";
 import TableActionButton from "@/components/ui/TableActionButton";
@@ -45,6 +46,9 @@ export default function SupplierDetails() {
   const [notes, setNotes] = useState("");
   const [attachments, setAttachments] = useState([]);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState("");
+
+  // Document Preview Modal State
+  const [previewDoc, setPreviewDoc] = useState(null);
 
   useEffect(() => {
     if (isError) {
@@ -599,16 +603,15 @@ export default function SupplierDetails() {
                       {pmt.attachments && pmt.attachments.length > 0 ? (
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {pmt.attachments.map((att, attIdx) => (
-                            <a
+                            <button
                               key={attIdx}
-                              href={att.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20 hover:underline"
+                              type="button"
+                              onClick={() => setPreviewDoc({ url: att.url, name: att.name })}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 hover:bg-indigo-100 transition-colors cursor-pointer"
                             >
                               <Paperclip className="h-3 w-3" />
-                              {att.name}
-                            </a>
+                              {att.name || "Attachment"}
+                            </button>
                           ))}
                         </div>
                       ) : (
@@ -706,6 +709,14 @@ export default function SupplierDetails() {
           </div>
         </form>
       </Modal>
+
+      {/* In-App Document & PDF Preview Modal */}
+      <DocumentPreviewModal
+        isOpen={Boolean(previewDoc)}
+        onClose={() => setPreviewDoc(null)}
+        fileUrl={previewDoc?.url}
+        fileName={previewDoc?.name}
+      />
     </div>
   );
 }

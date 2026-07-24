@@ -25,8 +25,12 @@ export const createCertificate = catchAsync(async (req, res) => {
     console.log(`[upload] Starting certificate upload. Filename: "${req.file.originalname}", MIME: "${req.file.mimetype}", Size: ${req.file.size} bytes. Cloudinary type: "${resourceType}"`);
     
     try {
-      const uploadResult = await uploadToCloudinary(req.file.buffer, "certificates", resourceType);
-      
+      const uploadResult = await uploadToCloudinary(req.file.buffer, "certificates", {
+        mimetype: req.file.mimetype,
+        originalname: req.file.originalname,
+        resourceType,
+      });
+
       console.log(`[upload] Cloudinary upload successful. Url: "${uploadResult.secure_url}", PublicID: "${uploadResult.public_id}", Bytes: ${uploadResult.bytes}`);
       
       certData.fileUrl = uploadResult.secure_url;
@@ -82,12 +86,24 @@ export const getCertificateFile = catchAsync(async (req, res) => {
       throw new ApiError(500, `Failed to retrieve certificate from storage: ${response.statusText}`);
     }
 
-    const contentType = response.headers.get("content-type") || "application/pdf";
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    // Inspect magic bytes for PDF (%PDF -> 0x25 0x50 0x44 0x46)
+    const isMagicPdf =
+      buffer.length >= 4 &&
+      buffer[0] === 0x25 &&
+      buffer[1] === 0x50 &&
+      buffer[2] === 0x44 &&
+      buffer[3] === 0x46;
+
+    const isPdf = isMagicPdf || cert.format === "pdf" || cert.fileUrl.toLowerCase().includes(".pdf");
+    const contentType = isPdf ? "application/pdf" : (response.headers.get("content-type") || "application/octet-stream");
+    const filename = `certificate_${cert.certificateNo}${isPdf ? ".pdf" : ""}`;
+
     res.setHeader("Content-Type", contentType);
-    res.setHeader("Content-Disposition", `inline; filename="certificate_${cert.certificateNo}"`);
+    res.setHeader("Content-Length", buffer.length);
+    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
     return res.send(buffer);
   } catch (err) {
     console.error("Error retrieving certificate file proxy:", err);

@@ -93,8 +93,9 @@ export const handleChatMessage = catchAsync(async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Chat response generated successfully",
-      data: result,
+      message: result.reply,
+      data: result.data || {},
+      isRefusal: result.isRefusal || false,
     });
   } catch (err) {
     console.error("[ChatbotController] Error handling chat message:", {

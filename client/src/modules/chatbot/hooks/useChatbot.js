@@ -37,30 +37,35 @@ export function useChatbot() {
 
       try {
         const response = await chatbotApi.sendMessage(cleanText, historyForBackend);
-        const data = response.data || {};
+        const actualReply = response?.message || response?.data?.reply || response?.data?.message || "No response received.";
 
         const botMsg = {
           id: `bot-${Date.now()}`,
           sender: "bot",
-          text: data.reply || "No response received.",
-          isRefusal: !!data.isRefusal,
+          text: actualReply,
+          isRefusal: Boolean(response?.isRefusal || response?.data?.isRefusal),
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
 
         setMessages((prev) => [...prev, botMsg]);
       } catch (err) {
         console.error("[useChatbot] Failed to send message:", err);
-        const errMsg =
+        const rawErr =
           err?.response?.data?.error ||
           err?.response?.data?.message ||
-          "An error occurred while connecting to the AI Assistant. Please try again.";
+          "";
 
-        setError(errMsg);
+        let userFriendlyErr = "I am currently experiencing a temporary service delay. Please ask your question again.";
+        if (rawErr && typeof rawErr === "string" && !rawErr.toLowerCase().includes("model") && !rawErr.toLowerCase().includes("groq")) {
+          userFriendlyErr = rawErr;
+        }
+
+        setError(userFriendlyErr);
 
         const errorMsgObj = {
           id: `err-${Date.now()}`,
           sender: "bot",
-          text: `⚠️ **Error**: ${errMsg}`,
+          text: `⚠️ ${userFriendlyErr}`,
           isError: true,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };

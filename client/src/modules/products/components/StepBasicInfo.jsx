@@ -62,9 +62,9 @@ export default function StepBasicInfo({ register, errors, setValue, watch }) {
 
           <Select
             label="Product Category *"
-            options={categoryOptions}
+            type="category"
             value={watch("category") || "Jewellery"}
-            onChange={(e) => setValue("category", e.target.value, { shouldValidate: true })}
+            onChange={(val) => setValue("category", typeof val === "string" ? val : val?.target?.value || "", { shouldValidate: true })}
             error={errors?.category?.message}
           />
 
@@ -81,10 +81,12 @@ export default function StepBasicInfo({ register, errors, setValue, watch }) {
             {...register("subCategory")}
           />
 
-          <Input
+          <Select
             label="Brand / Manufacturer"
-            placeholder="e.g. SR Takat Atelier"
-            {...register("brand")}
+            type="brand"
+            value={watch("brand") || ""}
+            onChange={(val) => setValue("brand", typeof val === "string" ? val : val?.target?.value || "", { shouldValidate: true })}
+            error={errors?.brand?.message}
           />
 
           <Input

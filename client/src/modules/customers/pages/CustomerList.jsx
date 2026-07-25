@@ -43,6 +43,8 @@ export default function CustomerList() {
     handleSubmit,
     reset,
     control,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(customerSchema),
@@ -417,15 +419,10 @@ export default function CustomerList() {
           </div>
           <Select
             label="Customer Type"
+            type="customerType"
             error={errors.customerType?.message}
-            options={[
-              { value: "Private Client", label: "Private Client" },
-              { value: "Dealer", label: "Dealer" },
-              { value: "Wholesaler", label: "Wholesaler" },
-              { value: "VIP", label: "VIP" },
-              { value: "Other", label: "Other" },
-            ]}
-            {...register("customerType")}
+            value={watch("customerType") || "Private Client"}
+            onChange={(val) => setValue("customerType", typeof val === "string" ? val : val?.target?.value || "")}
           />
           <Input
             label="Address"

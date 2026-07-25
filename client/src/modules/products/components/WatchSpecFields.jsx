@@ -25,14 +25,29 @@ export default function WatchSpecFields({ register, errors, setValue, watch, con
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Select
             label="Movement Type"
-            options={movementOptions}
+            type="watchMovement"
             value={watch("movement") || ""}
-            onChange={(e) => setValue("movement", e.target.value)}
+            onChange={(val) => setValue("movement", typeof val === "string" ? val : val?.target?.value || "")}
           />
-          <Input label="Brand / Manufacturer" placeholder="e.g. Rolex, Patek Philippe" {...register("brand")} />
+          <Select
+            label="Brand / Manufacturer"
+            type="brand"
+            value={watch("brand") || ""}
+            onChange={(val) => setValue("brand", typeof val === "string" ? val : val?.target?.value || "")}
+          />
           <Input label="Model / Reference" placeholder="e.g. Submariner 126610LN" {...register("model")} />
-          <Input label="Case Material" placeholder="e.g. Oystersteel, 18K Gold" {...register("material")} />
-          <Input label="Strap / Bracelet" placeholder="e.g. Alligator Leather, Oyster Bracelet" {...register("metalType")} />
+          <Select
+            label="Case Material"
+            type="material"
+            value={watch("material") || ""}
+            onChange={(val) => setValue("material", typeof val === "string" ? val : val?.target?.value || "")}
+          />
+          <Select
+            label="Strap / Bracelet"
+            type="metalType"
+            value={watch("metalType") || ""}
+            onChange={(val) => setValue("metalType", typeof val === "string" ? val : val?.target?.value || "")}
+          />
           <Input label="Case Diameter / Dimensions" placeholder="e.g. 40mm x 12mm" {...register("dimensions")} />
         </div>
       </div>

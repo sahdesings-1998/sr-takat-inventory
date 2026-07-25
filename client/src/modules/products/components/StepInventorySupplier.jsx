@@ -71,8 +71,19 @@ export default function StepInventorySupplier({ register, errors, setValue, watc
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Input label="Primary Warehouse / Vault *" placeholder="e.g. Main Vault - HK, Dubai Showroom" {...register("warehouse")} error={errors?.warehouse?.message} />
-          <Input label="Specific Location / Cabinet" placeholder="e.g. Vault A, Safe #3" {...register("location")} />
+          <Select
+            label="Primary Warehouse / Vault *"
+            type="location"
+            value={watch("warehouse") || ""}
+            onChange={(val) => setValue("warehouse", typeof val === "string" ? val : val?.target?.value || "", { shouldValidate: true })}
+            error={errors?.warehouse?.message}
+          />
+          <Select
+            label="Specific Location / Cabinet"
+            type="location"
+            value={watch("location") || ""}
+            onChange={(val) => setValue("location", typeof val === "string" ? val : val?.target?.value || "")}
+          />
           <Input label="Shelf / Bin ID" placeholder="e.g. Shelf B4" {...register("shelf")} />
 
           <Input
@@ -112,9 +123,10 @@ export default function StepInventorySupplier({ register, errors, setValue, watc
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Select
             label="Supplier Vendor"
-            options={supplierOptions.length > 0 ? supplierOptions : [{ value: watch("supplier") || "General", label: watch("supplier") || "General Vendor" }]}
+            type="supplier"
+            options={supplierOptions}
             value={watch("supplier") || ""}
-            onChange={(e) => setValue("supplier", e.target.value)}
+            onChange={(val) => setValue("supplier", typeof val === "string" ? val : val?.target?.value || "")}
           />
           <Input label="Supplier Reference / Lot No" placeholder="e.g. SUP-INV-8910" {...register("supplierReference")} />
           <DatePicker

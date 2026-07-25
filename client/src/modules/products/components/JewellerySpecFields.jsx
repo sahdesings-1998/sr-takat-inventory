@@ -27,15 +27,15 @@ export default function JewellerySpecFields({ register, errors, setValue, watch,
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Select
             label="Metal Type"
-            options={metalOptions}
+            type="metalType"
             value={watch("metalType") || ""}
-            onChange={(e) => setValue("metalType", e.target.value)}
+            onChange={(val) => setValue("metalType", typeof val === "string" ? val : val?.target?.value || "")}
           />
           <Select
             label="Gold Purity"
-            options={purityOptions}
+            type="goldPurity"
             value={watch("goldPurity") || ""}
-            onChange={(e) => setValue("goldPurity", e.target.value)}
+            onChange={(val) => setValue("goldPurity", typeof val === "string" ? val : val?.target?.value || "")}
           />
           <Input label="Gross Weight (g)" placeholder="e.g. 12.45 g" {...register("weight")} />
           <Input label="Dimensions (mm)" placeholder="e.g. 18mm x 12mm x 4mm" {...register("dimensions")} />

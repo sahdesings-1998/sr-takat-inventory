@@ -15,19 +15,7 @@ const productSchema = new Schema(
     },
     category: {
       type: String,
-      enum: [
-        "Gemstone",
-        "Jewellery",
-        "Watch",
-        "Custom Product",
-        "Accessory",
-        "Ring",
-        "Necklace",
-        "Earrings",
-        "Bracelet",
-        "Pendant",
-        "Other",
-      ],
+      trim: true,
       default: "Other",
     },
     name: {

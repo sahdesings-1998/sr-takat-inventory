@@ -42,6 +42,8 @@ export default function MaterialList() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(materialSchema),
@@ -356,17 +358,10 @@ export default function MaterialList() {
           />
           <Select
             label="Category *"
+            type="material"
             error={errors.category?.message}
-            options={[
-              { value: "Gold", label: "Gold" },
-              { value: "Silver", label: "Silver" },
-              { value: "Platinum", label: "Platinum" },
-              { value: "Setting", label: "Setting" },
-              { value: "Findings", label: "Findings" },
-              { value: "Packaging", label: "Packaging" },
-              { value: "Other", label: "Other" },
-            ]}
-            {...register("category")}
+            value={watch("category") || "Other"}
+            onChange={(val) => setValue("category", typeof val === "string" ? val : val?.target?.value || "")}
           />
           <Input
             label="Material Name *"

@@ -90,6 +90,7 @@ export function ExpenseForm({ initialData, onSubmit, isLoading }) {
             <Select
               {...field}
               label="Category *"
+              type="expenseCategory"
               options={EXPENSE_CATEGORIES}
               error={errors.category?.message}
             />

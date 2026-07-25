@@ -13,7 +13,7 @@ const materialSchema = new Schema(
     category: {
       type: String,
       required: [true, "Material category is required"],
-      enum: ["Gold", "Silver", "Platinum", "Setting", "Findings", "Packaging", "Other"],
+      trim: true,
       default: "Other",
     },
     materialName: {

@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import { cn } from "@/utils/cn";
+import { CreatableSelect } from "./CreatableSelect";
 
 export const Select = forwardRef(function Select(
   {
@@ -10,10 +11,32 @@ export const Select = forwardRef(function Select(
     id,
     containerClassName,
     placeholder = "Select an option",
+    isCreatable = false,
+    isSearchable = false,
+    type,
+    onCreateOption,
     ...props
   },
   ref
 ) {
+  if (isCreatable || isSearchable || type || onCreateOption) {
+    return (
+      <CreatableSelect
+        ref={ref}
+        id={id}
+        label={label}
+        error={error}
+        options={options}
+        className={className}
+        containerClassName={containerClassName}
+        placeholder={placeholder}
+        type={type}
+        onCreateOption={onCreateOption}
+        {...props}
+      />
+    );
+  }
+
   const selectId = id || props.name;
 
   return (
@@ -62,4 +85,5 @@ export const Select = forwardRef(function Select(
   );
 });
 
+export { CreatableSelect };
 export default Select;

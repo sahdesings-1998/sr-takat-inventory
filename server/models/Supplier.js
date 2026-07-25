@@ -37,7 +37,7 @@ const supplierSchema = new Schema(
     },
     supplierType: {
       type: String,
-      enum: ["Gemstone Supplier", "Metal Dealer", "Component Supplier", "Artisan / Workshop", "Other"],
+      trim: true,
       default: "Gemstone Supplier",
     },
     address: {

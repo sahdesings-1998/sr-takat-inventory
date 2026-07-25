@@ -46,7 +46,7 @@ const coerceDateString = (val) => {
 
 export const productSchema = z.object({
   stockNo: z.string().trim().optional().or(z.literal("")),
-  category: z.enum(categoryEnum).optional().default("Other"),
+  category: z.string().optional().default("Other"),
   name: z.string().trim().optional().or(z.literal("")),
   sku: z.string().optional().or(z.literal("")),
   barcode: z.string().optional().or(z.literal("")),

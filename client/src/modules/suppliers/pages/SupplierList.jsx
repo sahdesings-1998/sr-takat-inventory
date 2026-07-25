@@ -70,6 +70,8 @@ export default function SupplierList() {
     handleSubmit,
     reset,
     control,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(supplierSchema),
@@ -500,15 +502,10 @@ export default function SupplierList() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select
                 label="Supplier Category / Type *"
+                type="supplierType"
                 error={errors.supplierType?.message}
-                options={[
-                  { value: "Gemstone Supplier", label: "Gemstone Supplier" },
-                  { value: "Metal Dealer", label: "Metal Dealer (Gold/Silver/Platinum)" },
-                  { value: "Component Supplier", label: "Component Supplier (Findings/Settings)" },
-                  { value: "Artisan / Workshop", label: "Artisan / Workshop" },
-                  { value: "Other", label: "Other" },
-                ]}
-                {...register("supplierType")}
+                value={watch("supplierType") || "Gemstone Supplier"}
+                onChange={(val) => setValue("supplierType", typeof val === "string" ? val : val?.target?.value || "")}
               />
 
               <Select

@@ -88,6 +88,7 @@ export function IncomeForm({ initialData, onSubmit, isLoading }) {
             <Select
               {...field}
               label="Category *"
+              type="incomeCategory"
               options={INCOME_CATEGORIES}
               error={errors.category?.message}
             />

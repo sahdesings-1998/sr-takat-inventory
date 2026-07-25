@@ -42,9 +42,9 @@ export function CertificateFields({ register, errors, setValue, watch }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Select
             label="Laboratory / Grading Lab"
-            options={labOptions}
+            type="laboratory"
             value={watch("laboratory") || ""}
-            onChange={(e) => setValue("laboratory", e.target.value)}
+            onChange={(val) => setValue("laboratory", typeof val === "string" ? val : val?.target?.value || "")}
             error={errors?.laboratory?.message}
           />
           <Input
@@ -123,27 +123,42 @@ export default function GemstoneSpecFields({ register, errors, setValue, watch }
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Select
             label="Gemstone Type"
-            options={gemstoneTypeOptions}
+            type="gemstoneType"
             value={watch("gemstoneType") || ""}
-            onChange={(e) => setValue("gemstoneType", e.target.value)}
+            onChange={(val) => setValue("gemstoneType", typeof val === "string" ? val : val?.target?.value || "")}
           />
           <Input label="Variety" placeholder="e.g. Colombian, Royal Blue" {...register("variety")} />
-          <Input label="Country of Origin" placeholder="e.g. Zambia, Myanmar, Sri Lanka" {...register("origin")} />
+          <Select
+            label="Country of Origin"
+            type="origin"
+            value={watch("origin") || ""}
+            onChange={(val) => setValue("origin", typeof val === "string" ? val : val?.target?.value || "")}
+          />
           <Select
             label="Shape"
-            options={shapeOptions}
+            type="shape"
             value={watch("shape") || ""}
-            onChange={(e) => setValue("shape", e.target.value)}
+            onChange={(val) => setValue("shape", typeof val === "string" ? val : val?.target?.value || "")}
           />
           <Select
             label="Cut Grade"
-            options={cutOptions}
+            type="cut"
             value={watch("cut") || ""}
-            onChange={(e) => setValue("cut", e.target.value)}
+            onChange={(val) => setValue("cut", typeof val === "string" ? val : val?.target?.value || "")}
           />
-          <Input label="Color / Shade" placeholder="e.g. Vivid Green, Pigeon Blood" {...register("colour")} />
+          <Select
+            label="Color / Shade"
+            type="color"
+            value={watch("colour") || ""}
+            onChange={(val) => setValue("colour", typeof val === "string" ? val : val?.target?.value || "")}
+          />
           <Input label="Clarity Grade" placeholder="e.g. VVS1, Eye Clean, Included" {...register("clarity")} />
-          <Input label="Treatment / Enhancement" placeholder="e.g. None, Minor Oil, Heated" {...register("treatment")} />
+          <Select
+            label="Treatment / Enhancement"
+            type="treatment"
+            value={watch("treatment") || ""}
+            onChange={(val) => setValue("treatment", typeof val === "string" ? val : val?.target?.value || "")}
+          />
           <Input label="Heat Status" placeholder="e.g. Unheated, Heated" {...register("heatStatus")} />
           <Input label="Oil Level" placeholder="e.g. None, Minor, Moderate" {...register("oilLevel")} />
           <Input label="Transparency" placeholder="e.g. Transparent, Semi-Transparent" {...register("transparency")} />

@@ -28,6 +28,7 @@ import expenseRoutes from "./routes/expenseRoutes.js";
 import invoiceRoutes from "./routes/invoiceRoutes.js";
 import purchaseInvoiceRoutes from "./routes/purchaseInvoiceRoutes.js";
 import chatbotRoutes from "./routes/chatbotRoutes.js";
+import lookupRoutes from "./routes/lookupRoutes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import ApiError from "./utils/ApiError.js";
 
@@ -98,6 +99,8 @@ app.use("/api/v1/purchase-invoices", purchaseInvoiceRoutes);
 app.use("/api/purchase-invoices", purchaseInvoiceRoutes);
 app.use("/api/v1/chatbot", chatbotRoutes);
 app.use("/api/chatbot", chatbotRoutes);
+app.use("/api/v1/lookups", lookupRoutes);
+app.use("/api/lookups", lookupRoutes);
 
 // 404 handler for unmatched API routes
 app.use("/api", (req, res, next) => {

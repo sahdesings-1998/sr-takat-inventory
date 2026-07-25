@@ -210,12 +210,13 @@ export default function CreatePurchaseInvoice() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Select
                   label="Supplier *"
+                  type="supplier"
                   value={supplierId}
-                  onChange={(e) => setSupplierId(e.target.value)}
+                  onChange={(val) => setSupplierId(typeof val === "string" ? val : val?.target?.value || "")}
                   options={[
-                    { value: "", label: "-- Select Supplier --" },
                     ...suppliers.map((s) => ({ value: s._id, label: `${s.companyName} (${s.contactName || "No contact"})` })),
                   ]}
+                  placeholder="-- Select or search supplier --"
                   required
                 />
 

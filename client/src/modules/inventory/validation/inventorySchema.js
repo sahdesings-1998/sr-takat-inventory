@@ -34,9 +34,7 @@ export const lotSchema = z.object({
 
 export const materialSchema = z.object({
   materialCode: z.string().trim().min(1, "Material code is required"),
-  category: z
-    .enum(["Gold", "Silver", "Platinum", "Setting", "Findings", "Packaging", "Other"])
-    .default("Other"),
+  category: z.string().optional().default("Other"),
   materialName: z.string().trim().min(1, "Material name is required"),
   unit: z.string().trim().min(1, "Unit is required"),
   quantity: z.coerce.number().min(0, "Quantity must be positive"),

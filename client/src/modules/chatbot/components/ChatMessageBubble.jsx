@@ -11,7 +11,7 @@ function FormattedText({ text }) {
   const lines = text.split("\n");
 
   return (
-    <div className="space-y-1.5 text-xs sm:text-sm leading-relaxed">
+    <div className="space-y-1.5 text-xs sm:text-sm leading-relaxed break-words overflow-wrap-anywhere">
       {lines.map((line, idx) => {
         let trimmed = line.trim();
 
@@ -30,9 +30,9 @@ function FormattedText({ text }) {
         if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
           const content = trimmed.substring(2);
           return (
-            <div key={idx} className="flex items-start gap-2 pl-2">
+            <div key={idx} className="flex items-start gap-2 pl-1 sm:pl-2">
               <span className="text-indigo-500 font-bold shrink-0 mt-0.5">•</span>
-              <span dangerouslySetInnerHTML={{ __html: parseInlineMarkdown(content) }} />
+              <span className="break-words min-w-0" dangerouslySetInnerHTML={{ __html: parseInlineMarkdown(content) }} />
             </div>
           );
         }
@@ -41,15 +41,15 @@ function FormattedText({ text }) {
         if (/^\d+\.\s+/.test(trimmed)) {
           const match = trimmed.match(/^(\d+)\.\s+(.*)/);
           return (
-            <div key={idx} className="flex items-start gap-2 pl-2">
+            <div key={idx} className="flex items-start gap-2 pl-1 sm:pl-2">
               <span className="font-bold text-indigo-600 shrink-0">{match[1]}.</span>
-              <span dangerouslySetInnerHTML={{ __html: parseInlineMarkdown(match[2]) }} />
+              <span className="break-words min-w-0" dangerouslySetInnerHTML={{ __html: parseInlineMarkdown(match[2]) }} />
             </div>
           );
         }
 
         return (
-          <p key={idx} dangerouslySetInnerHTML={{ __html: parseInlineMarkdown(trimmed) }} />
+          <p key={idx} className="break-words" dangerouslySetInnerHTML={{ __html: parseInlineMarkdown(trimmed) }} />
         );
       })}
     </div>
@@ -63,7 +63,7 @@ function parseInlineMarkdown(str) {
   html = html.replace(/\*\*(.*?)\*\*/g, "<strong class='font-bold text-gray-900'>$1</strong>");
   html = html.replace(/__(.*?)__/g, "<strong class='font-bold text-gray-900'>$1</strong>");
   // Inline code `code`
-  html = html.replace(/`(.*?)`/g, "<code class='bg-gray-100 px-1 py-0.5 rounded font-mono text-[11px] text-indigo-700'>$1</code>");
+  html = html.replace(/`(.*?)`/g, "<code class='bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded font-mono text-[11px] text-indigo-700 dark:text-indigo-300 break-all'>$1</code>");
   return html;
 }
 
@@ -78,16 +78,16 @@ export default function ChatMessageBubble({ message }) {
   };
 
   return (
-    <div className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"} animate-fade-in`}>
+    <div className={`flex gap-2.5 sm:gap-3 ${isUser ? "justify-end" : "justify-start"} animate-fade-in max-w-full`}>
       {!isUser && (
         <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-800 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
           <Sparkles className="h-4 w-4" />
         </div>
       )}
 
-      <div className={`relative max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 shadow-xs ${
+      <div className={`relative max-w-[85%] sm:max-w-[80%] rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-xs break-words overflow-hidden ${
         isUser
-          ? "bg-indigo-600 text-white rounded-br-none"
+          ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-br-none"
           : message.isRefusal
           ? "bg-amber-50/90 border border-amber-200 text-amber-950 rounded-bl-none"
           : message.isError
@@ -96,15 +96,15 @@ export default function ChatMessageBubble({ message }) {
       }`}>
         <FormattedText text={message.text} />
 
-        <div className="flex items-center justify-between gap-3 mt-1.5 pt-1 border-t border-black/5 text-[10px]">
-          <span className={isUser ? "text-indigo-200" : "text-gray-400 font-medium"}>
+        <div className="flex items-center justify-between gap-3 mt-2 pt-1 border-t border-black/5 text-[10px]">
+          <span className={isUser ? "text-indigo-200 font-medium" : "text-gray-400 font-medium"}>
             {message.timestamp}
           </span>
 
           {!isUser && !message.isError && (
             <button
               onClick={handleCopy}
-              className="text-gray-400 hover:text-gray-600 flex items-center gap-1 font-semibold transition-colors"
+              className="text-gray-400 hover:text-gray-600 active:scale-95 flex items-center gap-1 font-semibold transition-colors py-0.5 px-1 rounded cursor-pointer"
               title="Copy response"
             >
               {copied ? (
@@ -122,10 +122,11 @@ export default function ChatMessageBubble({ message }) {
       </div>
 
       {isUser && (
-        <div className="h-8 w-8 rounded-xl bg-gray-200 text-gray-600 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+        <div className="h-8 w-8 rounded-xl bg-gray-200 text-gray-700 flex items-center justify-center shrink-0 shadow-sm mt-0.5 font-bold">
           <User className="h-4 w-4" />
         </div>
       )}
     </div>
   );
 }
+

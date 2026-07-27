@@ -1,5 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import chatbotApi from "../api/chatbotApi";
+
+const STORAGE_KEY = "sr_takat_chat_history";
 
 const WELCOME_MESSAGE = {
   id: "welcome-1",
@@ -8,20 +10,50 @@ const WELCOME_MESSAGE = {
   timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
 };
 
+const getInitialMessages = () => {
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error("[useChatbot] Failed to load chat history from sessionStorage:", e);
+  }
+  return [WELCOME_MESSAGE];
+};
+
 export function useChatbot() {
-  const [messages, setMessages] = useState([WELCOME_MESSAGE]);
+  const [messages, setMessages] = useState(getInitialMessages);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const sendMessage = useCallback(
-    async (userText) => {
-      if (!userText || !userText.trim() || isLoading) return;
+  // Sync messages to sessionStorage
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    } catch (e) {
+      console.error("[useChatbot] Failed to save chat history to sessionStorage:", e);
+    }
+  }, [messages]);
 
-      const cleanText = userText.trim();
+  const sendMessage = useCallback(
+    async (userText, attachment = null) => {
+      if ((!userText || !userText.trim()) && !attachment) return;
+      if (isLoading) return;
+
+      const cleanText = userText ? userText.trim() : "";
+      const textWithAttachment = attachment
+        ? `${cleanText}\n\n📎 *[Attached file: ${attachment.name}]*`.trim()
+        : cleanText;
+
       const userMsg = {
         id: `user-${Date.now()}`,
         sender: "user",
-        text: cleanText,
+        text: textWithAttachment,
+        attachmentName: attachment?.name || null,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
 
@@ -36,7 +68,7 @@ export function useChatbot() {
         .map((m) => ({ sender: m.sender, text: m.text }));
 
       try {
-        const response = await chatbotApi.sendMessage(cleanText, historyForBackend);
+        const response = await chatbotApi.sendMessage(textWithAttachment, historyForBackend);
         const actualReply = response?.message || response?.data?.reply || response?.data?.message || "No response received.";
 
         const botMsg = {
@@ -81,6 +113,11 @@ export function useChatbot() {
   const clearChat = useCallback(() => {
     setMessages([WELCOME_MESSAGE]);
     setError(null);
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      console.error("[useChatbot] Failed to clear sessionStorage:", e);
+    }
   }, []);
 
   return {
@@ -93,3 +130,4 @@ export function useChatbot() {
 }
 
 export default useChatbot;
+

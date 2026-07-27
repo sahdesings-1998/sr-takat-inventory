@@ -1,33 +1,42 @@
-import ProductList from "./pages/ProductList.jsx";
-import ProductDetails from "./pages/ProductDetails.jsx";
-import AddProductPage from "./pages/AddProductPage.jsx";
-import EditProductPage from "./pages/EditProductPage.jsx";
-import ProductScanPage from "./pages/ProductScanPage.jsx";
+import { lazy, Suspense } from "react";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
+
+const ProductList = lazy(() => import("./pages/ProductList.jsx"));
+const ProductDetails = lazy(() => import("./pages/ProductDetails.jsx"));
+const AddProductPage = lazy(() => import("./pages/AddProductPage.jsx"));
+const EditProductPage = lazy(() => import("./pages/EditProductPage.jsx"));
+const ProductScanPage = lazy(() => import("./pages/ProductScanPage.jsx"));
+
+const withSuspense = (Component) => (
+  <Suspense fallback={<SkeletonPageHeader />}>
+    <Component />
+  </Suspense>
+);
 
 const productRoutes = [
   {
     path: "/products",
-    element: <ProductList />,
+    element: withSuspense(ProductList),
   },
   {
     path: "/products/add",
-    element: <AddProductPage />,
+    element: withSuspense(AddProductPage),
   },
   {
     path: "/products/scan",
-    element: <ProductScanPage />,
+    element: withSuspense(ProductScanPage),
   },
   {
     path: "/products/scan/:code",
-    element: <ProductScanPage />,
+    element: withSuspense(ProductScanPage),
   },
   {
     path: "/products/edit/:id",
-    element: <EditProductPage />,
+    element: withSuspense(EditProductPage),
   },
   {
     path: "/products/:id",
-    element: <ProductDetails />,
+    element: withSuspense(ProductDetails),
   },
 ];
 

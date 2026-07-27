@@ -1,9 +1,16 @@
-import CostingList from "./pages/CostingList.jsx";
+import { lazy, Suspense } from "react";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
+
+const CostingList = lazy(() => import("./pages/CostingList.jsx"));
 
 const costingRoutes = [
   {
     path: "/costing",
-    element: <CostingList />,
+    element: (
+      <Suspense fallback={<SkeletonPageHeader />}>
+        <CostingList />
+      </Suspense>
+    ),
   },
 ];
 

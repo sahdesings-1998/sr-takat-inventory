@@ -1,11 +1,16 @@
-import { lazy } from "react";
+import { lazy, Suspense } from "react";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
 
-const CertificateList = lazy(() => import("./pages/CertificateList"));
+const CertificateList = lazy(() => import("./pages/CertificateList.jsx"));
 
 const routes = [
   {
     path: "/certificates",
-    element: <CertificateList />,
+    element: (
+      <Suspense fallback={<SkeletonPageHeader />}>
+        <CertificateList />
+      </Suspense>
+    ),
   },
 ];
 

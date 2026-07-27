@@ -1,5 +1,17 @@
-import Dashboard from "./pages/Dashboard.jsx";
+import { lazy, Suspense } from "react";
+import { DashboardSkeleton } from "@/components/ui/Skeleton";
 
-const dashboardRoutes = [{ path: "/dashboard", element: <Dashboard /> }];
+const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
+
+const dashboardRoutes = [
+  {
+    path: "/dashboard",
+    element: (
+      <Suspense fallback={<DashboardSkeleton />}>
+        <Dashboard />
+      </Suspense>
+    ),
+  },
+];
 
 export default dashboardRoutes;

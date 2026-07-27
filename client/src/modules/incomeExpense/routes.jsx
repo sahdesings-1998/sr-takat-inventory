@@ -1,14 +1,23 @@
-import IncomeManagement from "./pages/IncomeManagement.jsx";
-import ExpenseManagement from "./pages/ExpenseManagement.jsx";
+import { lazy, Suspense } from "react";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
+
+const IncomeManagement = lazy(() => import("./pages/IncomeManagement.jsx"));
+const ExpenseManagement = lazy(() => import("./pages/ExpenseManagement.jsx"));
+
+const withSuspense = (Component) => (
+  <Suspense fallback={<SkeletonPageHeader />}>
+    <Component />
+  </Suspense>
+);
 
 export const incomeExpenseRoutes = [
   {
     path: "/incomes",
-    element: <IncomeManagement />,
+    element: withSuspense(IncomeManagement),
   },
   {
     path: "/expenses",
-    element: <ExpenseManagement />,
+    element: withSuspense(ExpenseManagement),
   },
 ];
 

@@ -1,9 +1,16 @@
-import NotificationList from "./pages/NotificationList.jsx";
+import { lazy, Suspense } from "react";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
+
+const NotificationList = lazy(() => import("./pages/NotificationList.jsx"));
 
 const notificationRoutes = [
   {
     path: "/notifications",
-    element: <NotificationList />,
+    element: (
+      <Suspense fallback={<SkeletonPageHeader />}>
+        <NotificationList />
+      </Suspense>
+    ),
   },
 ];
 

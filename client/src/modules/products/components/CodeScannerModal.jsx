@@ -15,7 +15,6 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { Html5Qrcode } from "html5-qrcode";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
@@ -101,11 +100,12 @@ export default function CodeScannerModal({ isOpen, onClose }) {
     }
   };
 
-  // Start Camera Stream
+  // Start Camera Stream with dynamic import of html5-qrcode
   const startCamera = async () => {
     setCameraError(null);
     try {
       if (!html5QrcodeRef.current) {
+        const { Html5Qrcode } = await import("html5-qrcode");
         html5QrcodeRef.current = new Html5Qrcode("reader-canvas-container");
       }
       setIsScanning(true);

@@ -1,17 +1,26 @@
+import { lazy, Suspense } from "react";
 import { Navigate } from "react-router-dom";
-import SupplierList from "./pages/SupplierList.jsx";
-import SupplierDetails from "./pages/SupplierDetails.jsx";
-import CreatePurchaseInvoice from "./pages/CreatePurchaseInvoice.jsx";
-import PurchaseInvoiceDetails from "./pages/PurchaseInvoiceDetails.jsx";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
+
+const SupplierList = lazy(() => import("./pages/SupplierList.jsx"));
+const SupplierDetails = lazy(() => import("./pages/SupplierDetails.jsx"));
+const CreatePurchaseInvoice = lazy(() => import("./pages/CreatePurchaseInvoice.jsx"));
+const PurchaseInvoiceDetails = lazy(() => import("./pages/PurchaseInvoiceDetails.jsx"));
+
+const withSuspense = (Component) => (
+  <Suspense fallback={<SkeletonPageHeader />}>
+    <Component />
+  </Suspense>
+);
 
 const supplierRoutes = [
   {
     path: "/suppliers",
-    element: <SupplierList />,
+    element: withSuspense(SupplierList),
   },
   {
     path: "/suppliers/:id",
-    element: <SupplierDetails />,
+    element: withSuspense(SupplierDetails),
   },
   {
     path: "/purchase-invoices",
@@ -19,11 +28,11 @@ const supplierRoutes = [
   },
   {
     path: "/purchase-invoices/new",
-    element: <CreatePurchaseInvoice />,
+    element: withSuspense(CreatePurchaseInvoice),
   },
   {
     path: "/purchase-invoices/:id",
-    element: <PurchaseInvoiceDetails />,
+    element: withSuspense(PurchaseInvoiceDetails),
   },
 ];
 

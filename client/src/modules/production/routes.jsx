@@ -1,14 +1,23 @@
-import JobCardList from "./pages/JobCardList.jsx";
-import JobCardDetails from "./pages/JobCardDetails.jsx";
+import { lazy, Suspense } from "react";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
+
+const JobCardList = lazy(() => import("./pages/JobCardList.jsx"));
+const JobCardDetails = lazy(() => import("./pages/JobCardDetails.jsx"));
+
+const withSuspense = (Component) => (
+  <Suspense fallback={<SkeletonPageHeader />}>
+    <Component />
+  </Suspense>
+);
 
 const productionRoutes = [
   {
     path: "/production",
-    element: <JobCardList />,
+    element: withSuspense(JobCardList),
   },
   {
     path: "/production/:id",
-    element: <JobCardDetails />,
+    element: withSuspense(JobCardDetails),
   },
 ];
 

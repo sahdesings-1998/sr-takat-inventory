@@ -42,7 +42,7 @@ import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Card, { CardBody } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
-import ExcelJS from "exceljs";
+
 
 const REPORT_TABS = [
   { id: "sales", label: "Sales Report", icon: DollarSign },
@@ -923,6 +923,8 @@ export default function Reports() {
     }
 
     try {
+      const ExcelJSModule = await import("exceljs");
+      const ExcelJS = ExcelJSModule.default || ExcelJSModule;
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Filtered Report");
 

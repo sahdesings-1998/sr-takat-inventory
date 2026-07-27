@@ -1,9 +1,16 @@
-import AuditLogList from "./pages/AuditLogList.jsx";
+import { lazy, Suspense } from "react";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
+
+const AuditLogList = lazy(() => import("./pages/AuditLogList.jsx"));
 
 const auditRoutes = [
   {
     path: "/audit",
-    element: <AuditLogList />,
+    element: (
+      <Suspense fallback={<SkeletonPageHeader />}>
+        <AuditLogList />
+      </Suspense>
+    ),
   },
 ];
 

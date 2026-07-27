@@ -10,6 +10,31 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("recharts")) {
+              return "vendor-charts";
+            }
+            if (id.includes("exceljs")) {
+              return "vendor-excel";
+            }
+            if (id.includes("html5-qrcode") || id.includes("qrcode")) {
+              return "vendor-code";
+            }
+            if (id.includes("@react-pdf-viewer") || id.includes("pdfjs-dist")) {
+              return "vendor-pdf";
+            }
+            if (id.includes("lucide-react")) {
+              return "vendor-icons";
+            }
+          }
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

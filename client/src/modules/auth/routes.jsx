@@ -1,18 +1,22 @@
-import Login from "./pages/Login.jsx";
-import Register from "./pages/Register.jsx";
-import ForgotPassword from "./pages/ForgotPassword.jsx";
-import ResetPassword from "./pages/ResetPassword.jsx";
+import { lazy, Suspense } from "react";
+import AuthLoader from "@/components/ui/AuthLoader";
 
-/**
- * Raw page routes owned by the auth module. Composed under AuthLayout by
- * routes/publicRoutes.js — nothing outside this module needs to know these
- * pages exist as files.
- */
+const Login = lazy(() => import("./pages/Login.jsx"));
+const Register = lazy(() => import("./pages/Register.jsx"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword.jsx"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword.jsx"));
+
+const withSuspense = (Component) => (
+  <Suspense fallback={<AuthLoader />}>
+    <Component />
+  </Suspense>
+);
+
 const authRoutes = [
-  { path: "/login", element: <Login /> },
-  { path: "/register", element: <Register /> },
-  { path: "/forgot-password", element: <ForgotPassword /> },
-  { path: "/reset-password/:token", element: <ResetPassword /> },
+  { path: "/login", element: withSuspense(Login) },
+  { path: "/register", element: withSuspense(Register) },
+  { path: "/forgot-password", element: withSuspense(ForgotPassword) },
+  { path: "/reset-password/:token", element: withSuspense(ResetPassword) },
 ];
 
 export default authRoutes;

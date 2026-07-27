@@ -153,7 +153,7 @@ export default function ChatbotWidget() {
             </div>
 
             {/* Quick Prompt Chips */}
-            {messages.length < 5 && !isLoading && (
+            {/* {messages.length < 5 && !isLoading && (
               <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-100">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1">
                   <HelpCircle className="h-3 w-3 text-indigo-500" /> Suggested Prompts
@@ -170,7 +170,7 @@ export default function ChatbotWidget() {
                   ))}
                 </div>
               </div>
-            )}
+            )} */}
 
             {/* Input Form */}
             <div className="p-3 bg-white border-t border-gray-100">

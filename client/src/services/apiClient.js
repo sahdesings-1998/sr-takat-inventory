@@ -39,17 +39,19 @@ function isAuthEndpoint(url) {
   return AUTH_ENDPOINTS.some((endpoint) => url?.includes(endpoint));
 }
 
-let isRedirecting = false;
+let isNotifyingLogout = false;
 
 function notifyLogout() {
   if (typeof window !== "undefined") {
-    if (isRedirecting) {
-      return;
-    }
-    isRedirecting = true;
+    if (isNotifyingLogout) return;
+    isNotifyingLogout = true;
 
     window.dispatchEvent(new CustomEvent("sr-takat:auth-logout"));
-    window.location.assign("/login");
+
+    // Reset flag after 2 seconds to handle future events
+    setTimeout(() => {
+      isNotifyingLogout = false;
+    }, 2000);
   }
 }
 
@@ -60,19 +62,18 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config;
     const url = originalRequest?.url || "unknown";
 
-    // Log all 401 errors with details
     if (response?.status === 401) {
       console.warn("[auth] 401 unauthorized", { url });
     }
 
-    // Don't redirect on 401 for auth endpoints (including session checks)
+    // Don't notify logout on 401 for auth endpoints (e.g. /auth/me or /auth/login)
     if (response?.status === 401 && isAuthEndpoint(url)) {
       return Promise.reject(error);
     }
 
-    // Redirect on 401 only for protected API endpoints
+    // Notify auth context on 401 for protected API endpoints
     if (response?.status === 401 && !isAuthEndpoint(url)) {
-      console.warn("[auth] session expired, redirecting to login", { url });
+      console.warn("[auth] session expired, triggering logout", { url });
       notifyLogout();
       return Promise.reject(error);
     }
@@ -90,4 +91,3 @@ apiClient.interceptors.response.use(
 );
 
 export default apiClient;
-

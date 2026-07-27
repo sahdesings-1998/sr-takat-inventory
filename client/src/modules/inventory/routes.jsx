@@ -1,9 +1,16 @@
-import InventoryDashboard from "./pages/InventoryDashboard.jsx";
+import { lazy, Suspense } from "react";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
+
+const InventoryDashboard = lazy(() => import("./pages/InventoryDashboard.jsx"));
 
 const inventoryRoutes = [
   {
     path: "/inventory",
-    element: <InventoryDashboard />,
+    element: (
+      <Suspense fallback={<SkeletonPageHeader />}>
+        <InventoryDashboard />
+      </Suspense>
+    ),
   },
 ];
 

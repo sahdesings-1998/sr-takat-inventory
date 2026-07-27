@@ -1,22 +1,31 @@
-import MemoList from "./pages/MemoList.jsx";
-import MemoDetails from "./pages/MemoDetails.jsx";
+import { lazy, Suspense } from "react";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
+
+const MemoList = lazy(() => import("./pages/MemoList.jsx"));
+const MemoDetails = lazy(() => import("./pages/MemoDetails.jsx"));
+
+const withSuspense = (Component) => (
+  <Suspense fallback={<SkeletonPageHeader />}>
+    <Component />
+  </Suspense>
+);
 
 const memoRoutes = [
   {
     path: "/memos",
-    element: <MemoList />,
+    element: withSuspense(MemoList),
   },
   {
     path: "/memos/:id",
-    element: <MemoDetails />,
+    element: withSuspense(MemoDetails),
   },
   {
     path: "/memo",
-    element: <MemoList />,
+    element: withSuspense(MemoList),
   },
   {
     path: "/memo/:id",
-    element: <MemoDetails />,
+    element: withSuspense(MemoDetails),
   },
 ];
 

@@ -1,14 +1,23 @@
-import SalesList from "./pages/SalesList.jsx";
-import SaleDetails from "./pages/SaleDetails.jsx";
+import { lazy, Suspense } from "react";
+import { SkeletonPageHeader } from "@/components/ui/Skeleton";
+
+const SalesList = lazy(() => import("./pages/SalesList.jsx"));
+const SaleDetails = lazy(() => import("./pages/SaleDetails.jsx"));
+
+const withSuspense = (Component) => (
+  <Suspense fallback={<SkeletonPageHeader />}>
+    <Component />
+  </Suspense>
+);
 
 const salesRoutes = [
   {
     path: "/sales",
-    element: <SalesList />,
+    element: withSuspense(SalesList),
   },
   {
     path: "/sales/:id",
-    element: <SaleDetails />,
+    element: withSuspense(SaleDetails),
   },
 ];
 

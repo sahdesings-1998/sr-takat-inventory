@@ -3,11 +3,14 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   QrCode,
   Barcode,
+  Upload,
   AlertTriangle,
   ArrowLeft,
   Package,
   RefreshCw,
   Search,
+  Camera,
+  Sparkles,
 } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import Button from "@/components/ui/Button";
@@ -65,7 +68,7 @@ export default function ProductScanPage() {
   }, [code, navigate, showError, showSuccess]);
 
   return (
-    <div className="page-container max-w-3xl mx-auto space-y-6 py-8">
+    <div className="page-container max-w-4xl mx-auto space-y-6 py-8">
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <Link
@@ -81,7 +84,7 @@ export default function ProductScanPage() {
           onClick={() => setIsScannerOpen(true)}
           icon={<QrCode className="h-4 w-4" />}
         >
-          Open Scanner
+          Open Scanner Hub
         </Button>
       </div>
 
@@ -132,29 +135,95 @@ export default function ProductScanPage() {
           </CardBody>
         </Card>
       ) : (
-        <Card>
-          <CardBody className="py-16 flex flex-col items-center justify-center gap-4 text-center">
-            <div className="w-16 h-16 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <Barcode className="h-8 w-8" />
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-900 text-lg">QR Code & Barcode System</h3>
-              <p className="text-xs text-gray-500 max-w-md mx-auto mt-1">
-                Use your device camera or USB barcode reader to scan any product label or sticker in real time.
+        <div className="space-y-6">
+          {/* Hero Header */}
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-8 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="space-y-2 text-center md:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-400/20">
+                <Sparkles className="h-3.5 w-3.5" /> Comprehensive Code Scanner
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight">QR Code & Barcode Scanner</h2>
+              <p className="text-xs text-gray-300 max-w-xl leading-relaxed">
+                Scan product labels using your device camera, upload an image file (JPG, PNG, WebP) containing a QR code or barcode, or connect a hardware USB scanner.
               </p>
             </div>
-
             <Button
               variant="primary"
               size="lg"
               onClick={() => setIsScannerOpen(true)}
               icon={<QrCode className="h-5 w-5" />}
-              className="mt-2"
+              className="bg-indigo-600 hover:bg-indigo-500 text-white shrink-0"
             >
-              Start Camera / USB Scanner
+              Start Scanner Modal
             </Button>
-          </CardBody>
-        </Card>
+          </div>
+
+          {/* Quick Options Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Camera Option */}
+            <Card
+              className="hover:border-indigo-300 transition-all cursor-pointer group"
+              onClick={() => setIsScannerOpen(true)}
+            >
+              <CardBody className="p-6 flex flex-col items-center text-center space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <Camera className="h-7 w-7" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-900 text-sm">Live Camera Stream</h4>
+                  <p className="text-xs text-gray-500 mt-1 font-medium leading-relaxed">
+                    Scan labels live using your web camera or mobile device camera.
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-indigo-600 group-hover:underline pt-1">
+                  Start Camera &rarr;
+                </span>
+              </CardBody>
+            </Card>
+
+            {/* Upload Option */}
+            <Card
+              className="hover:border-indigo-300 transition-all cursor-pointer group"
+              onClick={() => setIsScannerOpen(true)}
+            >
+              <CardBody className="p-6 flex flex-col items-center text-center space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <Upload className="h-7 w-7" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-900 text-sm">Upload Code Image</h4>
+                  <p className="text-xs text-gray-500 mt-1 font-medium leading-relaxed">
+                    Upload image files (JPG, PNG, WebP) with QR or Barcodes (Code 128, EAN, UPC, etc.).
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-indigo-600 group-hover:underline pt-1">
+                  Upload Image &rarr;
+                </span>
+              </CardBody>
+            </Card>
+
+            {/* Manual / USB Option */}
+            <Card
+              className="hover:border-indigo-300 transition-all cursor-pointer group"
+              onClick={() => setIsScannerOpen(true)}
+            >
+              <CardBody className="p-6 flex flex-col items-center text-center space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <Barcode className="h-7 w-7" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-900 text-sm">Manual / Hardware Input</h4>
+                  <p className="text-xs text-gray-500 mt-1 font-medium leading-relaxed">
+                    Use USB barcode handheld guns or type SKU, Stock #, or Product ID.
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-indigo-600 group-hover:underline pt-1">
+                  Type / USB Scan &rarr;
+                </span>
+              </CardBody>
+            </Card>
+          </div>
+        </div>
       )}
 
       {/* Global Scanner Modal */}
@@ -165,3 +234,4 @@ export default function ProductScanPage() {
     </div>
   );
 }
+

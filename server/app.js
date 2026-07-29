@@ -84,6 +84,7 @@ app.use("/api/v1/materials", materialRoutes);
 app.use("/api/v1/certificates", certificateRoutes);
 app.use("/api/v1/movements", movementRoutes);
 app.use("/api/v1/products", productRoutes);
+app.use("/api/products", productRoutes);
 app.use("/api/v1/job-cards", jobCardRoutes);
 app.use("/api/v1/costing", costingRoutes);
 app.use("/api/v1/memos", memoRoutes);

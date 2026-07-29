@@ -102,38 +102,82 @@ async function generateUniqueQrCode(productCodeSeed = "", stockNoSeed = "") {
 }
 
 async function lookupProductByCode(codeRaw) {
-  if (!codeRaw || typeof codeRaw !== "string" || !codeRaw.trim()) {
+  if (codeRaw === undefined || codeRaw === null) {
     throw new ApiError(400, "Scanned code cannot be empty");
   }
 
-  const code = codeRaw.trim();
+  // Preserve exact raw string input, trimmed of surrounding whitespace
+  let code = String(codeRaw).trim();
+  if (!code) {
+    throw new ApiError(400, "Scanned code cannot be empty");
+  }
 
-  // Construct query to match barcode, qrCode, productCode, stockNo, sku, or _id
+  // If code is a full URL (e.g. http(s)://.../products/scan/CODE), extract code payload
+  let extractedCode = code;
+  if (code.includes("/products/scan/")) {
+    const parts = code.split("/products/scan/");
+    extractedCode = parts[parts.length - 1].split("?")[0].split("#")[0].trim();
+  }
+
+  const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const targetCodes = Array.from(new Set([code, extractedCode])).filter(Boolean);
+
+  const orConditions = [];
+
+  for (const c of targetCodes) {
+    const cRegex = new RegExp(`^${escapeRegex(c)}$`, "i");
+
+    // Exact string matches across all candidate fields
+    orConditions.push(
+      { barcode: c },
+      { qrCode: c },
+      { sku: c },
+      { productCode: c },
+      { stockNo: c },
+      { barcode: cRegex },
+      { qrCode: cRegex },
+      { sku: cRegex },
+      { productCode: cRegex },
+      { stockNo: cRegex },
+      { qrCode: { $regex: `${escapeRegex(c)}$`, $options: "i" } }
+    );
+
+    // If candidate is numeric, also query numeric representation for legacy DB records
+    if (!isNaN(c) && !isNaN(parseFloat(c))) {
+      const numVal = Number(c);
+      orConditions.push(
+        { barcode: numVal },
+        { stockNo: numVal },
+        { productCode: numVal }
+      );
+    }
+
+    if (mongoose.Types.ObjectId.isValid(c)) {
+      orConditions.push({ _id: c });
+    }
+  }
+
   const query = {
-    $or: [
-      { qrCode: code },
-      { barcode: code },
-      { productCode: code },
-      { stockNo: code },
-      { sku: code },
-    ],
+    $or: orConditions,
   };
 
-  if (mongoose.Types.ObjectId.isValid(code)) {
-    query.$or.push({ _id: code });
-  }
+  console.log(`[ProductLookup] Input codeRaw: "${codeRaw}" (type: ${typeof codeRaw}) | Search codes:`, targetCodes);
+  console.log(`[ProductLookup] Executing MongoDB query:`, JSON.stringify(query, null, 2));
 
   // Find matching product record (including soft-deleted)
   const productDoc = await Product.findOne(query);
 
   if (!productDoc) {
-    throw new ApiError(404, `No product found matching code: "${code}"`);
+    console.warn(`[ProductLookup] MISMATCH: No product found in database matching code(s):`, targetCodes);
+    throw new ApiError(404, `No active product found matching code: "${extractedCode || code}"`);
   }
+
+  console.log(`[ProductLookup] SUCCESS: Found product _id: "${productDoc._id}", Name: "${productDoc.name}", StockNo: "${productDoc.stockNo}", Barcode: "${productDoc.barcode}", QRCode: "${productDoc.qrCode}", SKU: "${productDoc.sku}"`);
 
   if (productDoc.isDeleted) {
     throw new ApiError(
       410,
-      `Product "${productDoc.name || productDoc.stockNo || "Item"}" has been deleted/archived and is no longer available.`
+      `Product "${productDoc.name || productDoc.stockNo || "Item"}" has been archived or deleted and is no longer available.`
     );
   }
 

@@ -43,8 +43,14 @@ export const deleteComponent = catchAsync(async (req, res) => {
 });
 
 export const scanProduct = catchAsync(async (req, res) => {
-  const { code } = req.params;
-  const result = await productService.lookupProductByCode(code);
+  const codeParam = req.params.code || req.query.code || req.params[0];
+  console.log(`[ProductController] scanProduct HIT: method=${req.method}, originalUrl=${req.originalUrl}, codeParam="${codeParam}"`);
+
+  if (codeParam === undefined || codeParam === null || String(codeParam).trim() === "") {
+    throw new ApiError(400, "Scanned code parameter or query is required");
+  }
+
+  const result = await productService.lookupProductByCode(codeParam);
   sendSuccess(res, { message: "Product details retrieved by scanned code", data: result });
 });
 

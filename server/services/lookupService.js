@@ -218,6 +218,90 @@ const DEFAULT_LOOKUPS = {
     "Consignment Fee",
     "Other",
   ],
+  clarity: [
+    "FL / IF (Flawless)",
+    "VVS1",
+    "VVS2",
+    "VS1",
+    "VS2",
+    "SI1",
+    "SI2",
+    "I1 / Included",
+    "Eye Clean",
+    "Slightly Included",
+    "Other",
+  ],
+  paymentMethod: [
+    "Cash",
+    "Credit Card",
+    "Bank Transfer",
+    "Cheque",
+    "Crypto",
+    "Wire Transfer",
+    "Store Credit",
+    "Other",
+  ],
+  unit: [
+    "grams",
+    "pieces",
+    "carats",
+    "kg",
+    "oz",
+    "meters",
+    "set",
+    "box",
+  ],
+  settingType: [
+    "Prong / Claw",
+    "Bezel",
+    "Channel",
+    "Pave",
+    "Solitaire",
+    "Halo",
+    "Tension",
+    "Flush / Gypsy",
+    "Cluster",
+    "Bar Setting",
+    "Other",
+  ],
+  caseMaterial: [
+    "Stainless Steel",
+    "Titanium",
+    "Rose Gold 18K",
+    "Yellow Gold 18K",
+    "White Gold 18K",
+    "Platinum 950",
+    "Carbon Fiber",
+    "Ceramic",
+    "Two-Tone",
+    "Other",
+  ],
+  strapMaterial: [
+    "Alligator Leather",
+    "Calf Leather Strap",
+    "Steel Bracelet",
+    "Rubber Strap",
+    "NATO Strap",
+    "Gold Bracelet",
+    "Mesh Bracelet",
+    "Other",
+  ],
+  waterResistance: [
+    "30m / 3 ATM",
+    "50m / 5 ATM",
+    "100m / 10 ATM",
+    "200m / 20 ATM",
+    "300m / 30 ATM+",
+    "N/A",
+  ],
+  reportType: [
+    "Grading Report",
+    "Identification Report",
+    "Origin Report",
+    "Certificate of Authenticity",
+    "Valuation Report",
+    "Other",
+  ],
 };
 
 /**
@@ -298,6 +382,38 @@ export async function createLookup({ type, value, label }) {
   }
 }
 
+export async function updateLookup(id, { value, label }) {
+  const lookup = await Lookup.findById(id);
+  if (!lookup) {
+    throw new ApiError(404, "Lookup option not found");
+  }
+
+  if (value && typeof value === "string" && value.trim()) {
+    const trimmedValue = value.trim();
+    const normalizedValue = trimmedValue.toLowerCase();
+
+    // Check collision with another item in same type
+    const collision = await Lookup.findOne({
+      _id: { $ne: id },
+      type: lookup.type,
+      normalizedValue,
+    });
+
+    if (collision) {
+      throw new ApiError(400, `An option with value "${trimmedValue}" already exists in ${lookup.type}`);
+    }
+
+    lookup.value = trimmedValue;
+    lookup.normalizedValue = normalizedValue;
+    lookup.label = label ? label.trim() : trimmedValue;
+  } else if (label && typeof label === "string" && label.trim()) {
+    lookup.label = label.trim();
+  }
+
+  await lookup.save();
+  return lookup;
+}
+
 export async function deleteLookup(id) {
   const lookup = await Lookup.findByIdAndDelete(id);
   if (!lookup) {
@@ -309,5 +425,6 @@ export async function deleteLookup(id) {
 export default {
   getLookups,
   createLookup,
+  updateLookup,
   deleteLookup,
 };

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchLookups, createLookupOption, deleteLookupOption } from "@/services/lookupService";
+import { fetchLookups, createLookupOption, updateLookupOption, deleteLookupOption } from "@/services/lookupService";
 
 export function useLookups(type) {
   const query = useQuery({
@@ -12,6 +12,7 @@ export function useLookups(type) {
         label: item.label || item.value,
         _id: item._id,
         isSystem: item.isSystem,
+        type: item.type,
       })),
   });
 
@@ -40,6 +41,23 @@ export function useCreateLookup() {
   return {
     createLookup: mutation.mutateAsync,
     isCreating: mutation.isPending,
+    error: mutation.error,
+  };
+}
+
+export function useUpdateLookup() {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: ({ id, value, label }) => updateLookupOption(id, { value, label }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lookups"] });
+    },
+  });
+
+  return {
+    updateLookup: mutation.mutateAsync,
+    isUpdating: mutation.isPending,
     error: mutation.error,
   };
 }

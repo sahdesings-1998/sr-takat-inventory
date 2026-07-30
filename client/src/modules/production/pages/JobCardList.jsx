@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { Plus, Eye, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Eye, ChevronDown, ChevronUp, PackagePlus } from "lucide-react";
 import { useJobCards } from "../hooks/useProduction";
 import { useProducts } from "@/modules/products/hooks/useProducts";
 import { useUsers } from "@/modules/settings/hooks/useUsers";
+import { useCustomers } from "@/modules/customers/hooks/useCustomers";
 import { useToast } from "@/contexts/ToastContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import Button from "@/components/ui/Button";
@@ -21,10 +22,12 @@ import TableActionButton from "@/components/ui/TableActionButton";
 import { SkeletonPageHeader } from "@/components/ui/Skeleton";
 
 export default function JobCardList() {
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState("");
   const { jobCards, isLoading, isError, createJobCard } = useJobCards({ status: statusFilter });
   const { products } = useProducts();
   const { users } = useUsers();
+  const { customers } = useCustomers();
   const { showSuccess, showError } = useToast();
 
   // Client-side search
@@ -43,11 +46,16 @@ export default function JobCardList() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { isSubmitting },
   } = useForm({
     defaultValues: {
+      productType: "Custom",
       productId: "",
+      customerId: "",
       assignedTo: "",
+      startDate: new Date().toISOString().split("T")[0],
       expectedDate: "",
       notes: "",
     },
@@ -55,8 +63,11 @@ export default function JobCardList() {
 
   const handleOpenAdd = () => {
     reset({
+      productType: "Custom",
       productId: "",
+      customerId: "",
       assignedTo: "",
+      startDate: new Date().toISOString().split("T")[0],
       expectedDate: "",
       notes: "",
     });
@@ -64,10 +75,26 @@ export default function JobCardList() {
   };
 
   const onSubmit = async (data) => {
+    if (!data.productId) {
+      showError("Validation Error", "Please select a product for production.");
+      return;
+    }
+    if (!data.assignedTo) {
+      showError("Validation Error", "Please select an assigned workshop artisan/staff.");
+      return;
+    }
+    if (!data.expectedDate) {
+      showError("Validation Error", "Please specify an expected completion date.");
+      return;
+    }
+
     try {
       await createJobCard({
+        productType: data.productType || "Custom",
         productId: data.productId,
+        customerId: data.customerId || null,
         assignedTo: data.assignedTo,
+        startDate: data.startDate || null,
         expectedDate: data.expectedDate,
         notes: data.notes,
       });
@@ -92,17 +119,26 @@ export default function JobCardList() {
     }
   };
 
-  const productOptions = products.map((p) => ({
-    value: p._id,
-    label: `${p.productCode} - ${p.name}`,
-  }));
+  const productOptions = useMemo(() => {
+    return (products || []).map((p) => ({
+      value: p._id,
+      label: `${p.productCode || p.stockNo || "PROD"} - ${p.name}`,
+    }));
+  }, [products]);
+
+  const customerOptions = useMemo(() => {
+    return (customers || []).map((c) => ({
+      value: c._id,
+      label: `${c.fullName} ${c.companyName ? `(${c.companyName})` : ""} - ${c.phone || c.email || ""}`,
+    }));
+  }, [customers]);
 
   const userOptions = useMemo(() => {
     return (users || [])
       .filter((u) => u.status === "active")
       .map((u) => ({
         value: u._id,
-        label: `${u.fullName} (${u.roleId?.name || "No Role"})`,
+        label: `${u.fullName} (${u.roleId?.name || "Artisan/Staff"})`,
       }));
   }, [users]);
 
@@ -327,37 +363,80 @@ export default function JobCardList() {
       />
 
       {/* Add Job Card Modal */}
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Create Jewelry Production Job">
+      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Create Jewelry Production Job" className="max-w-xl">
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="Product Type"
+              type="category"
               options={productTypeOptions}
-              {...register("productType")}
+              value={watch("productType") || "Custom"}
+              onChange={(val) => setValue("productType", typeof val === "string" ? val : val?.target?.value || "Custom")}
               required
             />
-            <Select
-              label="Select Product"
-              options={productOptions}
-              {...register("productId")}
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <DatePicker label="Start Date" {...register("startDate")} />
-            <DatePicker label="Expected Completion Date" {...register("expectedDate")} required />
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs sm:text-sm font-semibold text-gray-700">Select Product *</span>
+                <button
+                  type="button"
+                  onClick={() => navigate("/products/add")}
+                  className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <PackagePlus className="h-3.5 w-3.5" /> + Add Product
+                </button>
+              </div>
+              <Select
+                isSearchable
+                options={productOptions}
+                value={watch("productId") || ""}
+                onChange={(val) => setValue("productId", typeof val === "string" ? val : val?.target?.value || "")}
+                placeholder="Search title, SKU, or code..."
+                required
+              />
+            </div>
           </div>
 
           <Select
-            label="Assigned Workshop / Artisan"
+            label="Select Client / Customer (Optional)"
+            isSearchable
+            type="customer"
+            options={customerOptions}
+            value={watch("customerId") || ""}
+            onChange={(val) => setValue("customerId", typeof val === "string" ? val : val?.target?.value || "")}
+            placeholder="Search customer name, company, or phone..."
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <DatePicker
+              label="Start Date"
+              value={watch("startDate") || ""}
+              onChange={(val) => setValue("startDate", typeof val === "string" ? val : val?.target?.value || "")}
+            />
+            <DatePicker
+              label="Expected Completion Date *"
+              value={watch("expectedDate") || ""}
+              onChange={(val) => setValue("expectedDate", typeof val === "string" ? val : val?.target?.value || "")}
+              required
+            />
+          </div>
+
+          <Select
+            label="Assigned Workshop / Artisan *"
+            isSearchable
+            type="salesperson"
             options={userOptions}
-            {...register("assignedTo")}
+            value={watch("assignedTo") || ""}
+            onChange={(val) => setValue("assignedTo", typeof val === "string" ? val : val?.target?.value || "")}
             required
             placeholder="Select artisan or workshop staff"
           />
 
-          <Textarea label="Special Production Notes" {...register("notes")} />
+          <Textarea
+            label="Special Production Notes"
+            value={watch("notes") || ""}
+            onChange={(e) => setValue("notes", e.target.value)}
+            placeholder="Enter custom specifications, alloy requirements, or design instructions..."
+          />
 
           <div className="flex justify-end gap-3 mt-2">
             <Button variant="outline" onClick={() => setIsOpen(false)}>

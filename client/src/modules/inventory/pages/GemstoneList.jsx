@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Edit2, Trash2, ArrowRightLeft, Image as ImageIcon, ChevronDown, ChevronUp } from "lucide-react";
@@ -61,6 +62,8 @@ export default function GemstoneList() {
     handleSubmit,
     reset,
     control,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(gemstoneSchema),
@@ -549,14 +552,28 @@ export default function GemstoneList() {
         >
 
           <Input label="Stock No *" error={errors.stockNo?.message} {...register("stockNo")} />
-          <Input
+          <Select
             label="Gemstone Type (e.g. Ruby) *"
+            type="gemstoneType"
             error={errors.gemstone?.message}
-            {...register("gemstone")}
+            value={watch("gemstone") || ""}
+            onChange={(val) => setValue("gemstone", typeof val === "string" ? val : val?.target?.value || "", { shouldValidate: true })}
           />
           <Input label="Variety" error={errors.variety?.message} {...register("variety")} />
-          <Input label="Shape/Cut" error={errors.shape?.message} {...register("shape")} />
-          <Input label="Origin" error={errors.origin?.message} {...register("origin")} />
+          <Select
+            label="Shape / Cut"
+            type="shape"
+            error={errors.shape?.message}
+            value={watch("shape") || ""}
+            onChange={(val) => setValue("shape", typeof val === "string" ? val : val?.target?.value || "")}
+          />
+          <Select
+            label="Origin"
+            type="origin"
+            error={errors.origin?.message}
+            value={watch("origin") || ""}
+            onChange={(val) => setValue("origin", typeof val === "string" ? val : val?.target?.value || "")}
+          />
           <Input
             label="Carat Weight *"
             type="number"
@@ -570,9 +587,27 @@ export default function GemstoneList() {
             error={errors.pieces?.message}
             {...register("pieces")}
           />
-          <Input label="Color" error={errors.color?.message} {...register("color")} />
-          <Input label="Clarity" error={errors.clarity?.message} {...register("clarity")} />
-          <Input label="Treatment" error={errors.treatment?.message} {...register("treatment")} />
+          <Select
+            label="Color / Shade"
+            type="color"
+            error={errors.color?.message}
+            value={watch("color") || ""}
+            onChange={(val) => setValue("color", typeof val === "string" ? val : val?.target?.value || "")}
+          />
+          <Select
+            label="Clarity Grade"
+            type="clarity"
+            error={errors.clarity?.message}
+            value={watch("clarity") || ""}
+            onChange={(val) => setValue("clarity", typeof val === "string" ? val : val?.target?.value || "")}
+          />
+          <Select
+            label="Treatment"
+            type="treatment"
+            error={errors.treatment?.message}
+            value={watch("treatment") || "None"}
+            onChange={(val) => setValue("treatment", typeof val === "string" ? val : val?.target?.value || "")}
+          />
           <Input
             label="Purchase Price *"
             type="number"
@@ -580,13 +615,28 @@ export default function GemstoneList() {
             error={errors.purchasePrice?.message}
             {...register("purchasePrice")}
           />
+          <div className="col-span-1">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs sm:text-sm font-semibold text-gray-700">Supplier *</span>
+              <Link to="/suppliers" target="_blank" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                + Add Supplier
+              </Link>
+            </div>
+            <Select
+              type="supplier"
+              error={errors.supplierId?.message}
+              options={supplierOptions}
+              value={watch("supplierId") || ""}
+              onChange={(val) => setValue("supplierId", typeof val === "string" ? val : val?.target?.value || "", { shouldValidate: true })}
+            />
+          </div>
           <Select
-            label="Supplier *"
-            error={errors.supplierId?.message}
-            options={supplierOptions}
-            {...register("supplierId")}
+            label="Location"
+            type="location"
+            error={errors.location?.message}
+            value={watch("location") || "Vault"}
+            onChange={(val) => setValue("location", typeof val === "string" ? val : val?.target?.value || "")}
           />
-          <Input label="Location" error={errors.location?.message} {...register("location")} />
           <Select
             label="Status"
             error={errors.status?.message}

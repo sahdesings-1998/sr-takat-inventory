@@ -28,8 +28,8 @@ export const CreatableSelect = forwardRef(function CreatableSelect(
   ref
 ) {
   const toastContext = useToast ? useToast() : null;
-  const showSuccess = toastContext?.showSuccess || (() => {});
-  const showError = toastContext?.showError || (() => {});
+  const showSuccess = toastContext?.showSuccess || (() => { });
+  const showError = toastContext?.showError || (() => { });
 
   const containerRef = useRef(null);
   const inputRef = useRef(null);
@@ -51,12 +51,16 @@ export const CreatableSelect = forwardRef(function CreatableSelect(
 
   // Normalize options into { value, label } objects
   const baseOptions = useMemo(() => {
-    const rawOptions = type ? lookupOptions : passedOptions || [];
+    const rawOptions = (passedOptions && passedOptions.length > 0)
+      ? passedOptions
+      : (type ? lookupOptions : passedOptions || []);
     return rawOptions.map((opt) => {
       if (typeof opt === "string") {
         return { value: opt, label: opt };
       }
-      return { value: opt.value ?? opt.label, label: opt.label ?? opt.value };
+      const val = opt.value !== undefined ? opt.value : opt.label;
+      const lbl = opt.label !== undefined ? opt.label : opt.value;
+      return { value: String(val), label: String(lbl) };
     });
   }, [type, lookupOptions, passedOptions]);
 
@@ -139,6 +143,27 @@ export const CreatableSelect = forwardRef(function CreatableSelect(
     setIsOpen(false);
     setSearchQuery("");
   };
+
+  // Clear value and search query, keep focus on input
+  const handleClear = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (onChange) {
+      const synthEvent = {
+        target: { name, value: "", id: selectId },
+      };
+      onChange("", synthEvent);
+    }
+    setSearchQuery("");
+    setIsOpen(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+  };
+
+  const hasValueOrQuery = Boolean((value && String(value).trim()) || searchQuery.trim());
 
   // Create new option logic
   const handleCreateNew = async () => {
@@ -223,12 +248,16 @@ export const CreatableSelect = forwardRef(function CreatableSelect(
     }
   };
 
+  const isRequired = Boolean(required || (typeof label === "string" && label.includes("*")));
+  const cleanLabelText = typeof label === "string" ? label.replace(/\s*\*+\s*/g, " ").trim() : label;
+
   return (
     <div className={cn("flex flex-col gap-1.5 relative", containerClassName)} ref={containerRef}>
       {label && (
         <label htmlFor={selectId} className="text-xs sm:text-sm font-semibold text-gray-700 select-none flex items-center justify-between">
           <span>
-            {label} {required && <span className="text-danger">*</span>}
+            {cleanLabelText}
+            {isRequired && <span className="text-danger ml-1 font-bold select-none">*</span>}
           </span>
           {isLoading && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
         </label>
@@ -280,15 +309,14 @@ export const CreatableSelect = forwardRef(function CreatableSelect(
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            {isClearable && value && !disabled && !isOpen && (
+            {isClearable && hasValueOrQuery && !disabled && (
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  selectValue("");
-                }}
-                className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-                title="Clear selection"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={handleClear}
+                className="p-1 rounded-md text-gray-400 hover:text-danger hover:bg-rose-50 transition-colors cursor-pointer"
+                title="Clear selection & search"
+                aria-label="Clear field"
               >
                 <X className="h-3.5 w-3.5" />
               </button>

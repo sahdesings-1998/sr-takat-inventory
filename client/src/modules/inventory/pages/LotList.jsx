@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Edit2, ArrowDown, ChevronDown, ChevronUp } from "lucide-react";
@@ -45,6 +46,8 @@ export default function LotList() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(lotSchema),
@@ -376,10 +379,12 @@ export default function LotList() {
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={editingLot ? "Edit Lot" : "Add Lot"}>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
 
-          <Input
+          <Select
             label="Gemstone Type *"
+            type="gemstoneType"
             error={errors.gemstone?.message}
-            {...register("gemstone")}
+            value={watch("gemstone") || ""}
+            onChange={(val) => setValue("gemstone", typeof val === "string" ? val : val?.target?.value || "", { shouldValidate: true })}
           />
           <Input
             label="Total Carat weight *"
@@ -401,13 +406,28 @@ export default function LotList() {
             error={errors.purchaseCost?.message}
             {...register("purchaseCost")}
           />
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs sm:text-sm font-semibold text-gray-700">Supplier *</span>
+              <Link to="/suppliers" target="_blank" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                + Add Supplier
+              </Link>
+            </div>
+            <Select
+              type="supplier"
+              error={errors.supplierId?.message}
+              options={supplierOptions}
+              value={watch("supplierId") || ""}
+              onChange={(val) => setValue("supplierId", typeof val === "string" ? val : val?.target?.value || "", { shouldValidate: true })}
+            />
+          </div>
           <Select
-            label="Supplier *"
-            error={errors.supplierId?.message}
-            options={supplierOptions}
-            {...register("supplierId")}
+            label="Location"
+            type="location"
+            error={errors.location?.message}
+            value={watch("location") || "Vault"}
+            onChange={(val) => setValue("location", typeof val === "string" ? val : val?.target?.value || "")}
           />
-          <Input label="Location" error={errors.location?.message} {...register("location")} />
           <Select
             label="Status"
             error={errors.status?.message}
@@ -417,7 +437,8 @@ export default function LotList() {
               { value: "Depleted", label: "Depleted" },
               { value: "Missing", label: "Missing" },
             ]}
-            {...register("status")}
+            value={watch("status") || "In Stock"}
+            onChange={(val) => setValue("status", typeof val === "string" ? val : val?.target?.value || "In Stock")}
           />
 
           <div className="flex justify-end gap-3 mt-2">

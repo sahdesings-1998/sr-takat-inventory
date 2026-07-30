@@ -176,12 +176,15 @@ const DatePicker = forwardRef(function DatePicker(
 
   const isToday = (date) => isSameDay(date, new Date());
 
+  const isRequired = Boolean(required || (typeof label === "string" && label.includes("*")));
+  const cleanLabelText = typeof label === "string" ? label.replace(/\s*\*+\s*/g, " ").trim() : label;
+
   return (
     <div className={cn("flex flex-col gap-2", containerClassName)} ref={wrapperRef}>
       {label && (
         <label htmlFor={inputId} className="text-xs sm:text-sm font-semibold text-gray-700 tracking-tight select-none">
-          {label}
-          {required && <span className="ml-1 text-danger">*</span>}
+          {cleanLabelText}
+          {isRequired && <span className="ml-1 text-danger font-bold select-none">*</span>}
         </label>
       )}
 

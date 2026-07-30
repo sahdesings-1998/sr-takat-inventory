@@ -38,13 +38,13 @@ export default function WatchSpecFields({ register, errors, setValue, watch, con
           <Input label="Model / Reference" placeholder="e.g. Submariner 126610LN" {...register("model")} />
           <Select
             label="Case Material"
-            type="material"
+            type="caseMaterial"
             value={watch("material") || ""}
             onChange={(val) => setValue("material", typeof val === "string" ? val : val?.target?.value || "")}
           />
           <Select
             label="Strap / Bracelet"
-            type="metalType"
+            type="strapMaterial"
             value={watch("metalType") || ""}
             onChange={(val) => setValue("metalType", typeof val === "string" ? val : val?.target?.value || "")}
           />

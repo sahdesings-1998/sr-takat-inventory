@@ -394,9 +394,11 @@ export default function JobCardDetails() {
         <form onSubmit={handleIssueSubmit} className="flex flex-col gap-4">
           <Select
             label="Select Material *"
+            isSearchable
             value={selectedMatId}
-            onChange={(e) => setSelectedMatId(e.target.value)}
+            onChange={(val) => setSelectedMatId(typeof val === "string" ? val : val?.target?.value || "")}
             options={materialOptions}
+            placeholder="Search material title or code..."
             required
           />
           <Input
@@ -422,9 +424,11 @@ export default function JobCardDetails() {
         <form onSubmit={handleUsageSubmit} className="flex flex-col gap-4">
           <Select
             label="Select Material *"
+            isSearchable
             value={usageMatId}
-            onChange={(e) => setUsageMatId(e.target.value)}
+            onChange={(val) => setUsageMatId(typeof val === "string" ? val : val?.target?.value || "")}
             options={materialOptions}
+            placeholder="Search material title or code..."
             required
           />
           <Input
@@ -450,9 +454,11 @@ export default function JobCardDetails() {
         <form onSubmit={handleReturnSubmit} className="flex flex-col gap-4">
           <Select
             label="Select Material *"
+            isSearchable
             value={returnMatId}
-            onChange={(e) => setReturnMatId(e.target.value)}
+            onChange={(val) => setReturnMatId(typeof val === "string" ? val : val?.target?.value || "")}
             options={materialOptions}
+            placeholder="Search material title or code..."
             required
           />
           <Input
@@ -484,7 +490,7 @@ export default function JobCardDetails() {
           <Select
             label="Wastage Classification *"
             value={returnWastage}
-            onChange={(e) => setReturnWastage(e.target.value)}
+            onChange={(val) => setReturnWastage(typeof val === "string" ? val : val?.target?.value || "")}
             options={[
               { value: "returnedToStock", label: "Returned to Stock (Reusable stock)" },
               { value: "scrapRecovery", label: "Scrap Recovery (Gold refinement)" },

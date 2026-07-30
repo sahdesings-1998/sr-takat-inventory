@@ -161,16 +161,9 @@ export default function RecordPaymentModal({ isOpen, onClose, sale, onSuccess })
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Select
             label="Payment Method *"
+            type="paymentMethod"
             value={paymentMethod}
-            onChange={(e) => setPaymentMethod(e.target.value)}
-            options={[
-              { value: "Cash", label: "Cash" },
-              { value: "Credit Card", label: "Credit Card" },
-              { value: "Bank Transfer", label: "Bank Transfer" },
-              { value: "Cheque", label: "Cheque" },
-              { value: "Crypto", label: "Crypto" },
-              { value: "Other", label: "Other" },
-            ]}
+            onChange={(val) => setPaymentMethod(typeof val === "string" ? val : val?.target?.value || "")}
           />
           <Input
             label="Payment Date"

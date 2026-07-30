@@ -437,15 +437,16 @@ export default function CertificateList() {
           />
           <Select
             label="Laboratory"
+            type="laboratory"
             value={form.lab}
-            onChange={(e) => setForm({ ...form, lab: e.target.value })}
-            options={labsList.map((lab) => ({ value: lab, label: lab }))}
+            onChange={(val) => setForm({ ...form, lab: typeof val === "string" ? val : val?.target?.value || "" })}
             required
           />
-          <Input
+          <Select
             label="Report Type"
+            type="reportType"
             value={form.reportType}
-            onChange={(e) => setForm({ ...form, reportType: e.target.value })}
+            onChange={(val) => setForm({ ...form, reportType: typeof val === "string" ? val : val?.target?.value || "" })}
             required
           />
           <DatePicker
@@ -466,9 +467,11 @@ export default function CertificateList() {
           />
           <Select
             label="Link to Specific Asset"
+            isSearchable
             value={form.entityId}
-            onChange={(e) => setForm({ ...form, entityId: e.target.value })}
+            onChange={(val) => setForm({ ...form, entityId: typeof val === "string" ? val : val?.target?.value || "" })}
             options={assetOptions}
+            placeholder="Search asset title or stock number..."
             required
             disabled={assetOptions.length === 0}
           />

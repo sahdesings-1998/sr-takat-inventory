@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import DatePicker from "@/components/ui/DatePicker";
@@ -121,13 +122,20 @@ export default function StepInventorySupplier({ register, errors, setValue, watc
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Select
-            label="Supplier Vendor"
-            type="supplier"
-            options={supplierOptions}
-            value={watch("supplier") || ""}
-            onChange={(val) => setValue("supplier", typeof val === "string" ? val : val?.target?.value || "")}
-          />
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs sm:text-sm font-semibold text-gray-700">Supplier Vendor</span>
+              <Link to="/suppliers" target="_blank" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                + Add Supplier
+              </Link>
+            </div>
+            <Select
+              type="supplier"
+              options={supplierOptions}
+              value={watch("supplier") || ""}
+              onChange={(val) => setValue("supplier", typeof val === "string" ? val : val?.target?.value || "")}
+            />
+          </div>
           <Input label="Supplier Reference / Lot No" placeholder="e.g. SUP-INV-8910" {...register("supplierReference")} />
           <DatePicker
             label="Purchase Date"

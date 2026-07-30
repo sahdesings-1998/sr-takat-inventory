@@ -9,13 +9,14 @@ import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import Card, { CardHeader, CardBody } from "@/components/ui/Card";
+import Modal from "@/components/ui/Modal";
 
 export default function CreatePurchaseInvoice() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const preselectedSupplierId = searchParams.get("supplierId");
 
-  const { suppliers, isLoading: isLoadingSuppliers } = useSuppliers();
+  const { suppliers, createSupplier, isLoading: isLoadingSuppliers } = useSuppliers();
   const { createInvoice, isCreating } = useCreatePurchaseInvoice();
   const { showSuccess, showError } = useToast();
 
@@ -26,6 +27,28 @@ export default function CreatePurchaseInvoice() {
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [attachments, setAttachments] = useState([]);
+
+  // Quick Supplier Modal State
+  const [isQuickSupplierOpen, setIsQuickSupplierOpen] = useState(false);
+  const [quickSupplierData, setQuickSupplierData] = useState({ companyName: "", contactName: "", email: "", phone: "" });
+
+  const handleCreateQuickSupplier = async (e) => {
+    e.preventDefault();
+    if (!quickSupplierData.companyName.trim()) {
+      showError("Validation Error", "Company name is required.");
+      return;
+    }
+    try {
+      const created = await createSupplier(quickSupplierData);
+      showSuccess("Supplier Created", `Supplier "${quickSupplierData.companyName}" added!`);
+      setIsQuickSupplierOpen(false);
+      setQuickSupplierData({ companyName: "", contactName: "", email: "", phone: "" });
+      const newId = created?.data?._id || created?._id;
+      if (newId) setSupplierId(newId);
+    } catch (err) {
+      showError("Creation Failed", err?.response?.data?.message || "Failed to create supplier.");
+    }
+  };
 
   // Line items state
   const [items, setItems] = useState([
@@ -208,17 +231,28 @@ export default function CreatePurchaseInvoice() {
             </CardHeader>
             <CardBody className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Select
-                  label="Supplier *"
-                  type="supplier"
-                  value={supplierId}
-                  onChange={(val) => setSupplierId(typeof val === "string" ? val : val?.target?.value || "")}
-                  options={[
-                    ...suppliers.map((s) => ({ value: s._id, label: `${s.companyName} (${s.contactName || "No contact"})` })),
-                  ]}
-                  placeholder="-- Select or search supplier --"
-                  required
-                />
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs sm:text-sm font-semibold text-gray-700">Supplier *</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsQuickSupplierOpen(true)}
+                      className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="h-3 w-3" /> + Add Supplier
+                    </button>
+                  </div>
+                  <Select
+                    type="supplier"
+                    value={supplierId}
+                    onChange={(val) => setSupplierId(typeof val === "string" ? val : val?.target?.value || "")}
+                    options={[
+                      ...suppliers.map((s) => ({ value: s._id, label: `${s.companyName} (${s.contactName || "No contact"})` })),
+                    ]}
+                    placeholder="-- Select or search supplier --"
+                    required
+                  />
+                </div>
 
                 <Input
                   label="Supplier Invoice / Bill Number"
@@ -460,6 +494,52 @@ export default function CreatePurchaseInvoice() {
           </Card>
         </div>
       </div>
+
+      {/* Quick Add Supplier Modal */}
+      <Modal
+        isOpen={isQuickSupplierOpen}
+        onClose={() => setIsQuickSupplierOpen(false)}
+        title="Quick Add New Supplier"
+        className="max-w-md"
+      >
+        <form onSubmit={handleCreateQuickSupplier} className="flex flex-col gap-4">
+          <Input
+            label="Company Name *"
+            value={quickSupplierData.companyName}
+            onChange={(e) => setQuickSupplierData({ ...quickSupplierData, companyName: e.target.value })}
+            placeholder="e.g. Takat Fine Gems Co."
+            required
+          />
+          <Input
+            label="Contact Person Name"
+            value={quickSupplierData.contactName}
+            onChange={(e) => setQuickSupplierData({ ...quickSupplierData, contactName: e.target.value })}
+            placeholder="e.g. Rajesh Kumar"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Phone Number"
+              value={quickSupplierData.phone}
+              onChange={(e) => setQuickSupplierData({ ...quickSupplierData, phone: e.target.value })}
+              placeholder="+966..."
+            />
+            <Input
+              label="Email Address"
+              value={quickSupplierData.email}
+              onChange={(e) => setQuickSupplierData({ ...quickSupplierData, email: e.target.value })}
+              placeholder="supplier@example.com"
+            />
+          </div>
+          <div className="flex justify-end gap-3 mt-2">
+            <Button variant="outline" onClick={() => setIsQuickSupplierOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" icon={<Plus className="h-4 w-4" />}>
+              Save &amp; Select Supplier
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

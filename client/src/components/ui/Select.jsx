@@ -13,13 +13,14 @@ export const Select = forwardRef(function Select(
     placeholder = "Select an option",
     isCreatable = false,
     isSearchable = false,
+    nativeSelect = false,
     type,
     onCreateOption,
     ...props
   },
   ref
 ) {
-  if (isCreatable || isSearchable || type || onCreateOption) {
+  if (!nativeSelect || isCreatable || isSearchable || type || onCreateOption) {
     return (
       <CreatableSelect
         ref={ref}
@@ -38,12 +39,15 @@ export const Select = forwardRef(function Select(
   }
 
   const selectId = id || props.name;
+  const isRequired = Boolean(props.required || (typeof label === "string" && label.includes("*")));
+  const cleanLabelText = typeof label === "string" ? label.replace(/\s*\*+\s*/g, " ").trim() : label;
 
   return (
     <div className={cn("flex flex-col gap-2", containerClassName)}>
       {label && (
         <label htmlFor={selectId} className="text-xs sm:text-sm font-semibold text-gray-700 tracking-tight select-none">
-          {label}
+          {cleanLabelText}
+          {isRequired && <span className="text-danger ml-1 font-bold select-none">*</span>}
         </label>
       )}
       <div className="relative">

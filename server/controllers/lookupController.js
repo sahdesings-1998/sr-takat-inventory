@@ -14,6 +14,13 @@ export const createLookup = catchAsync(async (req, res) => {
   sendSuccess(res, { message: "Lookup created successfully", data: lookup }, 201);
 });
 
+export const updateLookup = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const { value, label } = req.body;
+  const lookup = await lookupService.updateLookup(id, { value, label });
+  sendSuccess(res, { message: "Lookup updated successfully", data: lookup });
+});
+
 export const deleteLookup = catchAsync(async (req, res) => {
   const { id } = req.params;
   await lookupService.deleteLookup(id);
@@ -23,5 +30,6 @@ export const deleteLookup = catchAsync(async (req, res) => {
 export default {
   getLookups,
   createLookup,
+  updateLookup,
   deleteLookup,
 };

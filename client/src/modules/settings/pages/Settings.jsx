@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Save, Plus, X, Users, Settings2, Edit2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Save, Plus, X, Users, Settings2, Edit2, Trash2, ChevronDown, ChevronUp, Database } from "lucide-react";
 import { SkeletonPageHeader, SkeletonDetailCard } from "@/components/ui/Skeleton";
 import { useSettings } from "../hooks/useSettings";
 import { useUsers } from "../hooks/useUsers";
 import { settingsSchema } from "../validation/settingsSchema";
+import LookupManagerTab from "../components/LookupManagerTab";
 import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
 import Button from "@/components/ui/Button";
@@ -275,12 +276,15 @@ export default function Settings() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b border-gray-200 overflow-x-auto">
         <button onClick={() => setActiveTab("system")} className={tabClass("system")}>
           <Settings2 className="h-4.5 w-4.5" /> System Configuration
         </button>
         <button onClick={() => setActiveTab("users")} className={tabClass("users")}>
-          <Users className="h-4.5 w-4.5" /> User & Role Management
+          <Users className="h-4.5 w-4.5" /> User &amp; Role Management
+        </button>
+        <button onClick={() => setActiveTab("lookups")} className={tabClass("lookups")}>
+          <Database className="h-4.5 w-4.5" /> Custom Lookups &amp; Master Data
         </button>
       </div>
 
@@ -438,7 +442,7 @@ export default function Settings() {
             </Button>
           </div>
         </form>
-      ) : (
+      ) : activeTab === "users" ? (
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">System Users</h2>
@@ -624,6 +628,8 @@ export default function Settings() {
             </form>
           </Modal>
         </div>
+      ) : (
+        <LookupManagerTab />
       )}
 
       <ConfirmDialog

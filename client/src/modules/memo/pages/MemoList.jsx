@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Plus,
   Eye,
@@ -15,6 +15,8 @@ import {
   Package,
   Calendar,
   Sparkles,
+  PackagePlus,
+  UserPlus,
 } from "lucide-react";
 import { useMemos } from "../hooks/useMemo";
 import { useCustomers } from "@/modules/customers/hooks/useCustomers";
@@ -37,11 +39,12 @@ import Card from "@/components/ui/Card";
 import { SkeletonPageHeader } from "@/components/ui/Skeleton";
 
 export default function MemoList() {
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState("");
   const { memos, metrics, isLoading, isError, createMemo, extendMemo, returnMemoItem, convertMemoItem } = useMemos({
     status: statusFilter,
   });
-  const { customers } = useCustomers();
+  const { customers, createCustomer } = useCustomers();
   const { products } = useProducts();
   const { gemstones } = useGemstones();
   const { showSuccess, showError } = useToast();
@@ -547,9 +550,12 @@ export default function MemoList() {
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <Select
             label="Select Client / Customer *"
+            isSearchable
+            type="customer"
             value={customerId}
-            onChange={(e) => setCustomerId(e.target.value)}
+            onChange={(val) => setCustomerId(typeof val === "string" ? val : val?.target?.value || "")}
             options={customers.map((c) => ({ value: c._id, label: `${c.fullName} ${c.companyName ? `(${c.companyName})` : ""}` }))}
+            placeholder="Search customer name or company..."
             required
           />
 
@@ -572,12 +578,21 @@ export default function MemoList() {
 
           {/* Add Item Box */}
           <div className="space-y-3 bg-gray-50/80 p-3.5 rounded-xl border border-gray-200">
-            <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Add Inventory Items</h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Add Inventory Items</h4>
+              <button
+                type="button"
+                onClick={() => navigate("/products/add")}
+                className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <PackagePlus className="h-3.5 w-3.5" /> + Add Product
+              </button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
               <Select
                 label="Item Type"
                 value={newItemType}
-                onChange={(e) => handleItemTypeChange(e.target.value)}
+                onChange={(val) => handleItemTypeChange(typeof val === "string" ? val : val?.target?.value || "Product")}
                 options={[
                   { value: "Product", label: "Finished Product" },
                   { value: "Gemstone", label: "Gemstone" },
@@ -585,9 +600,11 @@ export default function MemoList() {
               />
               <Select
                 label="Select Available Item"
+                isSearchable
                 value={newItemId}
-                onChange={(e) => handleItemSelect(e.target.value)}
+                onChange={(val) => handleItemSelect(typeof val === "string" ? val : val?.target?.value || "")}
                 options={availableItems}
+                placeholder="Search title or stock no..."
               />
               <Input
                 label="Selling Value ($)"

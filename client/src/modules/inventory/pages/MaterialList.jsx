@@ -368,10 +368,12 @@ export default function MaterialList() {
             error={errors.materialName?.message}
             {...register("materialName")}
           />
-          <Input
+          <Select
             label="Unit (e.g. grams, pieces) *"
+            type="unit"
             error={errors.unit?.message}
-            {...register("unit")}
+            value={watch("unit") || "grams"}
+            onChange={(val) => setValue("unit", typeof val === "string" ? val : val?.target?.value || "")}
           />
           <Input
             label="Initial Quantity"
@@ -386,7 +388,13 @@ export default function MaterialList() {
             error={errors.cost?.message}
             {...register("cost")}
           />
-          <Input label="Location" error={errors.location?.message} {...register("location")} />
+          <Select
+            label="Location"
+            type="location"
+            error={errors.location?.message}
+            value={watch("location") || "Workshop Vault"}
+            onChange={(val) => setValue("location", typeof val === "string" ? val : val?.target?.value || "")}
+          />
           <Select
             label="Status"
             error={errors.status?.message}
@@ -394,7 +402,8 @@ export default function MaterialList() {
               { value: "active", label: "Active" },
               { value: "inactive", label: "Inactive" },
             ]}
-            {...register("status")}
+            value={watch("status") || "active"}
+            onChange={(val) => setValue("status", typeof val === "string" ? val : val?.target?.value || "active")}
           />
 
           <div className="flex justify-end gap-3 mt-2">

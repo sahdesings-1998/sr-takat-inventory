@@ -6,12 +6,15 @@ export const Textarea = forwardRef(function Textarea(
   ref
 ) {
   const textareaId = id || props.name;
+  const isRequired = Boolean(props.required || (typeof label === "string" && label.includes("*")));
+  const cleanLabelText = typeof label === "string" ? label.replace(/\s*\*+\s*/g, " ").trim() : label;
 
   return (
     <div className={cn("flex flex-col gap-2", containerClassName)}>
       {label && (
         <label htmlFor={textareaId} className="text-xs sm:text-sm font-semibold text-gray-700 tracking-tight select-none">
-          {label}
+          {cleanLabelText}
+          {isRequired && <span className="text-danger ml-1 font-bold select-none">*</span>}
         </label>
       )}
       <textarea

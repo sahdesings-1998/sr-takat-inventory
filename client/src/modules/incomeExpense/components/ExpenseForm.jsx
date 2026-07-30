@@ -104,6 +104,7 @@ export function ExpenseForm({ initialData, onSubmit, isLoading }) {
             <Select
               {...field}
               label="Payment Method *"
+              type="paymentMethod"
               options={PAYMENT_METHODS}
               error={errors.paymentMethod?.message}
             />
@@ -141,11 +142,11 @@ export function ExpenseForm({ initialData, onSubmit, isLoading }) {
           name="vendor"
           control={control}
           render={({ field }) => (
-            <Input
+            <Select
               {...field}
-              type="text"
-              label="Vendor"
-              placeholder="Vendor name"
+              label="Vendor / Supplier"
+              type="supplier"
+              placeholder="Select or type vendor name..."
               error={errors.vendor?.message}
             />
           )}

@@ -8,6 +8,7 @@ router.use(auth);
 
 router.get("/", lookupController.getLookups);
 router.post("/", lookupController.createLookup);
+router.put("/:id", lookupController.updateLookup);
 router.delete("/:id", lookupController.deleteLookup);
 
 export default router;

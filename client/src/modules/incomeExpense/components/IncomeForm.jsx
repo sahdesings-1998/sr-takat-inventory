@@ -102,6 +102,7 @@ export function IncomeForm({ initialData, onSubmit, isLoading }) {
             <Select
               {...field}
               label="Payment Method *"
+              type="paymentMethod"
               options={PAYMENT_METHODS}
               error={errors.paymentMethod?.message}
             />

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { Plus, Eye, Trash2, FileDown, CreditCard, ChevronDown, ChevronUp } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Plus, Eye, Trash2, FileDown, CreditCard, ChevronDown, ChevronUp, ExternalLink, Sparkles, UserPlus, PackagePlus } from "lucide-react";
 import { useSales, downloadInvoicePdf } from "../hooks/useSales";
 import { useCustomers } from "@/modules/customers/hooks/useCustomers";
 import { useProducts } from "@/modules/products/hooks/useProducts";
@@ -20,9 +20,10 @@ import { SkeletonPageHeader } from "@/components/ui/Skeleton";
 import RecordPaymentModal from "../components/RecordPaymentModal";
 
 export default function SalesList() {
+  const navigate = useNavigate();
   const { sales, isLoading, isError, createSale } = useSales();
   const { customers, createCustomer } = useCustomers();
-  const { products } = useProducts();
+  const { products, createProduct, isCreating: isCreatingProduct } = useProducts();
   const { gemstones } = useGemstones();
   const { showSuccess, showError } = useToast();
 
@@ -69,6 +70,109 @@ export default function SalesList() {
 
   // Validation Error States
   const [formErrors, setFormErrors] = useState({});
+
+  // Quick Product Creation Modal State
+  const [isQuickProductModalOpen, setIsQuickProductModalOpen] = useState(false);
+  const [quickProductData, setQuickProductData] = useState({
+    stockNo: "",
+    name: "",
+    category: "Jewellery",
+    sellingPrice: "",
+    costPrice: "",
+    quantity: 1,
+  });
+
+  const handleOpenQuickProduct = () => {
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    setQuickProductData({
+      stockNo: `STK-${randomSuffix}`,
+      name: "",
+      category: "Jewellery",
+      sellingPrice: "",
+      costPrice: "",
+      quantity: 1,
+    });
+    setIsQuickProductModalOpen(true);
+  };
+
+  const handleSaveQuickProduct = async (e) => {
+    e.preventDefault();
+    if (!quickProductData.name.trim()) {
+      showError("Validation Error", "Product title is required.");
+      return;
+    }
+    if (!quickProductData.sellingPrice || Number(quickProductData.sellingPrice) <= 0) {
+      showError("Validation Error", "Please enter a valid selling price.");
+      return;
+    }
+
+    try {
+      const created = await createProduct({
+        stockNo: quickProductData.stockNo,
+        name: quickProductData.name,
+        category: quickProductData.category,
+        sellingPrice: Number(quickProductData.sellingPrice),
+        costPrice: Number(quickProductData.costPrice || 0),
+        quantity: Number(quickProductData.quantity || 1),
+        status: "Available",
+      });
+
+      showSuccess("Product Created", `"${quickProductData.name}" created and added to inventory!`);
+      setIsQuickProductModalOpen(false);
+
+      // Auto select newly created product
+      const newProdId = created?.data?._id || created?._id;
+      setNewItemType("Product");
+      if (newProdId) {
+        setNewItemId(newProdId);
+        setNewItemPrice(Number(quickProductData.sellingPrice));
+      }
+    } catch (err) {
+      showError("Creation Failed", err?.response?.data?.message || "Failed to create product.");
+    }
+  };
+
+  const handleNavigateToAddProduct = () => {
+    sessionStorage.setItem(
+      "draftSaleState",
+      JSON.stringify({
+        customerId,
+        paymentMethod,
+        discountType,
+        discountValue,
+        isTaxEnabled,
+        taxPercentage,
+        isGstEnabled,
+        gstPercentage,
+        notes,
+        items,
+      })
+    );
+    navigate("/products/add");
+  };
+
+  useEffect(() => {
+    const savedDraft = sessionStorage.getItem("draftSaleState");
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed.customerId) setCustomerId(parsed.customerId);
+        if (parsed.paymentMethod) setPaymentMethod(parsed.paymentMethod);
+        if (parsed.discountType) setDiscountType(parsed.discountType);
+        if (parsed.discountValue !== undefined) setDiscountValue(parsed.discountValue);
+        if (parsed.isTaxEnabled !== undefined) setIsTaxEnabled(parsed.isTaxEnabled);
+        if (parsed.taxPercentage !== undefined) setTaxPercentage(parsed.taxPercentage);
+        if (parsed.isGstEnabled !== undefined) setIsGstEnabled(parsed.isGstEnabled);
+        if (parsed.gstPercentage !== undefined) setGstPercentage(parsed.gstPercentage);
+        if (parsed.notes) setNotes(parsed.notes);
+        if (parsed.items && Array.isArray(parsed.items)) setItems(parsed.items);
+        setIsOpen(true);
+        sessionStorage.removeItem("draftSaleState");
+      } catch (err) {
+        sessionStorage.removeItem("draftSaleState");
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (customers && customers.length > 0 && !customerId) {
@@ -634,12 +738,15 @@ export default function SalesList() {
               <div>
                 <Select
                   label="Choose Customer *"
+                  isSearchable
                   options={customerOptions}
                   value={customerId}
-                  onChange={(e) => {
-                    setCustomerId(e.target.value);
+                  onChange={(val) => {
+                    const str = typeof val === "string" ? val : val?.target?.value || "";
+                    setCustomerId(str);
                     setFormErrors((prev) => ({ ...prev, customerId: null }));
                   }}
+                  placeholder="Search customer name, phone, or company..."
                   required
                 />
                 {formErrors.customerId && (
@@ -692,27 +799,47 @@ export default function SalesList() {
           {/* Step 2: Add Products / Stones */}
           <div className={`p-4 rounded-xl border transition-colors space-y-3 ${formErrors.items ? "bg-rose-50/50 border-rose-300" : "bg-gray-50/80 border-gray-200/80"
             }`}>
-            <h4 className="font-bold text-xs sm:text-sm text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white text-xs font-bold">2</span>
-              Add Products &amp; Gemstones
-            </h4>
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-xs sm:text-sm text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white text-xs font-bold">2</span>
+                Add Products &amp; Gemstones
+              </h4>
+              <button
+                type="button"
+                onClick={handleNavigateToAddProduct}
+                className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                title="Go to Add Product page"
+              >
+                <PackagePlus className="h-3.5 w-3.5" /> + Add Product
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end bg-white p-3 rounded-lg border border-gray-200">
               <Select
                 label="Item Type"
                 value={newItemType}
-                onChange={(e) => handleItemTypeChange(e.target.value)}
+                onChange={(val) => {
+                  const str = typeof val === "string" ? val : val?.target?.value || "Product";
+                  handleItemTypeChange(str);
+                }}
                 options={[
                   { value: "Product", label: "Finished Product" },
                   { value: "Gemstone", label: "Gemstone" },
                 ]}
               />
-              <Select
-                label="Select In-Stock Item"
-                value={newItemId}
-                onChange={(e) => handleItemChange(e.target.value)}
-                options={availableItems}
-              />
+              <div className="sm:col-span-2">
+                <Select
+                  label="Select In-Stock Item"
+                  isSearchable
+                  options={availableItems}
+                  value={newItemId}
+                  onChange={(val) => {
+                    const str = typeof val === "string" ? val : val?.target?.value || "";
+                    handleItemChange(str);
+                  }}
+                  placeholder="Search title, SKU, or stock no..."
+                />
+              </div>
               <Input
                 label="Qty"
                 type="number"
@@ -721,15 +848,17 @@ export default function SalesList() {
                 onChange={(e) => setNewItemQty(e.target.value)}
               />
               <Input
-                label="Auto Unit Price ($)"
+                label="Auto Price ($)"
                 type="number"
                 step="0.01"
                 value={newItemPrice}
                 onChange={(e) => setNewItemPrice(e.target.value)}
               />
-              <Button type="button" variant="outline" onClick={handleAddItem} className="w-full">
-                Add Item
-              </Button>
+              <div className="sm:col-span-5 flex justify-end">
+                <Button type="button" variant="outline" size="sm" onClick={handleAddItem} icon={<Plus className="h-3.5 w-3.5" />}>
+                  Add to Sale Invoice
+                </Button>
+              </div>
             </div>
 
             {formErrors.items && (
@@ -879,16 +1008,9 @@ export default function SalesList() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white p-3 rounded-lg border border-gray-200 items-end">
               <Select
                 label="Payment Method *"
+                type="paymentMethod"
                 value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                options={[
-                  { value: "Cash", label: "Cash" },
-                  { value: "Credit Card", label: "Credit Card" },
-                  { value: "Bank Transfer", label: "Bank Transfer" },
-                  { value: "Cheque", label: "Cheque" },
-                  { value: "Crypto", label: "Crypto" },
-                  { value: "Other", label: "Other" },
-                ]}
+                onChange={(val) => setPaymentMethod(typeof val === "string" ? val : val?.target?.value || "")}
               />
               <Input
                 label="Amount Paid ($) *"
@@ -921,6 +1043,16 @@ export default function SalesList() {
           </div>
         </form>
       </Modal>
+
+      {/* Record Additional Payment Modal */}
+      <RecordPaymentModal
+        isOpen={isRecordPaymentOpen}
+        onClose={() => {
+          setIsRecordPaymentOpen(false);
+          setSelectedSaleForPayment(null);
+        }}
+        sale={selectedSaleForPayment}
+      />
 
       {/* Record Additional Payment Modal */}
       <RecordPaymentModal

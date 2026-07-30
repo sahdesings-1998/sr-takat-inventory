@@ -75,10 +75,12 @@ export default function StepBasicInfo({ register, errors, setValue, watch }) {
             error={errors?.name?.message}
           />
 
-          <Input
+          <Select
             label="Sub-Category"
+            type="subCategory"
             placeholder="e.g. Engagement Ring, Solitaire"
-            {...register("subCategory")}
+            value={watch("subCategory") || ""}
+            onChange={(val) => setValue("subCategory", typeof val === "string" ? val : val?.target?.value || "")}
           />
 
           <Select
@@ -95,10 +97,12 @@ export default function StepBasicInfo({ register, errors, setValue, watch }) {
             {...register("model")}
           />
 
-          <Input
+          <Select
             label="Collection Name"
+            type="collection"
             placeholder="e.g. Royal Heritage 2026"
-            {...register("collection")}
+            value={watch("collection") || ""}
+            onChange={(val) => setValue("collection", typeof val === "string" ? val : val?.target?.value || "")}
           />
 
           <Select

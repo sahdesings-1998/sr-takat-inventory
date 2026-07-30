@@ -73,12 +73,37 @@ export default function JewellerySpecFields({ register, errors, setValue, watch,
           <span className="text-xs font-semibold text-gray-400">Optional</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Input label="Gemstone Type" placeholder="e.g. Emerald, Diamond" {...register("gemstoneType")} />
+          <Select
+            label="Gemstone Type"
+            type="gemstoneType"
+            value={watch("gemstoneType") || ""}
+            onChange={(val) => setValue("gemstoneType", typeof val === "string" ? val : val?.target?.value || "")}
+          />
           <Input label="Carat Weight (ct)" type="number" step="any" placeholder="0.00" {...register("totalCarat", { valueAsNumber: true })} />
-          <Input label="Color / Clarity" placeholder="e.g. F / VVS1" {...register("colour")} />
-          <Input label="Shape & Cut" placeholder="e.g. Oval Brilliant" {...register("shape")} />
-          <Input label="Origin" placeholder="e.g. Colombia" {...register("origin")} />
-          <Input label="Treatment" placeholder="e.g. None" {...register("treatment")} />
+          <Select
+            label="Color / Shade"
+            type="color"
+            value={watch("colour") || ""}
+            onChange={(val) => setValue("colour", typeof val === "string" ? val : val?.target?.value || "")}
+          />
+          <Select
+            label="Shape & Cut"
+            type="shape"
+            value={watch("shape") || ""}
+            onChange={(val) => setValue("shape", typeof val === "string" ? val : val?.target?.value || "")}
+          />
+          <Select
+            label="Origin"
+            type="origin"
+            value={watch("origin") || ""}
+            onChange={(val) => setValue("origin", typeof val === "string" ? val : val?.target?.value || "")}
+          />
+          <Select
+            label="Treatment"
+            type="treatment"
+            value={watch("treatment") || ""}
+            onChange={(val) => setValue("treatment", typeof val === "string" ? val : val?.target?.value || "")}
+          />
         </div>
       </div>
 

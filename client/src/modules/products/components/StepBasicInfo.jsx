@@ -26,8 +26,12 @@ const statusOptions = [
   { value: "On Memo", label: "On Memo" },
   { value: "In Production", label: "In Production" },
   { value: "Sold", label: "Sold" },
+  { value: "Sold Out", label: "Sold Out" },
+  { value: "Returned", label: "Returned" },
   { value: "In Stock", label: "In Stock" },
   { value: "Archived", label: "Archived" },
+  { value: "Missing", label: "Missing" },
+  { value: "Damaged", label: "Damaged" },
 ];
 
 export default function StepBasicInfo({ register, errors, setValue, watch }) {
@@ -109,7 +113,7 @@ export default function StepBasicInfo({ register, errors, setValue, watch }) {
             label="Initial Status *"
             options={statusOptions}
             value={watch("status") || "Available"}
-            onChange={(e) => setValue("status", e.target.value)}
+            onChange={(val) => setValue("status", typeof val === "string" ? val : val?.target?.value || "Available", { shouldValidate: true, shouldDirty: true })}
             error={errors?.status?.message}
           />
         </div>

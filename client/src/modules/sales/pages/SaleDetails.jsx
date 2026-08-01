@@ -288,20 +288,26 @@ export default function SaleDetails() {
             <tbody>
               {items && items.length > 0 ? (
                 items.map((item, idx) => {
+                  const isGemstone = item.inventoryType === "Gemstone";
+                  const soldWeight = item.caratWeight;
                   const desc =
                     item.inventoryType === "Product"
                       ? `${item.inventoryId?.productCode ? `[${item.inventoryId.productCode}] ` : ""}${item.inventoryId?.name || "Product Item"}`
-                      : `${item.inventoryId?.stoneId ? `[${item.inventoryId.stoneId}] ` : ""}${item.inventoryId?.gemstone || "Gemstone Item"}${item.inventoryId?.carat ? ` (${item.inventoryId.carat} ct)` : ""}`;
+                      : `${item.inventoryId?.stoneId ? `[${item.inventoryId.stoneId}] ` : ""}${item.inventoryId?.gemstone || "Gemstone Item"}${soldWeight ? ` (${soldWeight} ct)` : ""}`;
 
-                  const lineTotal = item.sellingPrice * item.quantity;
+                  const qtyDisplay = isGemstone ? (soldWeight ? `${soldWeight} ct` : "1 ct") : `${item.quantity} pc`;
+                  const priceDisplay = isGemstone
+                    ? `$${Number(item.pricePerCarat || (soldWeight ? item.sellingPrice / soldWeight : item.sellingPrice)).toLocaleString("en-US", { minimumFractionDigits: 2 })}/ct`
+                    : `$${Number(item.sellingPrice).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+                  const lineTotal = isGemstone ? Number(item.sellingPrice) : Number(item.sellingPrice * item.quantity);
 
                   return (
                     <tr key={idx} className="border-b border-gray-300 hover:bg-gray-50/50">
                       <td className="border border-black py-2 px-2 text-center font-mono">{idx + 1}</td>
                       <td className="border border-black py-2 px-3 font-semibold text-black">{desc}</td>
-                      <td className="border border-black py-2 px-2 text-center font-mono">{item.quantity}</td>
+                      <td className="border border-black py-2 px-2 text-center font-mono font-semibold">{qtyDisplay}</td>
                       <td className="border border-black py-2 px-3 text-right font-mono">
-                        ${item.sellingPrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        {priceDisplay}
                       </td>
                       <td className="border border-black py-2 px-3 text-right font-mono font-semibold">
                         ${lineTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}

@@ -23,7 +23,27 @@ const saleItemSchema = new Schema(
       type: Number,
       required: true,
       default: 1,
-      min: 1,
+      min: 0,
+    },
+    caratWeight: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+    pricePerCarat: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    costPerCarat: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    pricingType: {
+      type: String,
+      enum: ["default", "manual"],
+      default: "default",
     },
     sellingPrice: {
       type: Number,

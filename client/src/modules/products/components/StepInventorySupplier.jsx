@@ -151,7 +151,7 @@ export default function StepInventorySupplier({ register, errors, setValue, watc
             label="Payment Status"
             options={paymentStatusOptions}
             value={watch("paymentStatus") || "Paid"}
-            onChange={(e) => setValue("paymentStatus", e.target.value)}
+            onChange={(val) => setValue("paymentStatus", typeof val === "string" ? val : val?.target?.value || "Paid", { shouldDirty: true })}
           />
           <Input
             label="Outstanding Balance ($)"

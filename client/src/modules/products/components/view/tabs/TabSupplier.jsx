@@ -231,7 +231,7 @@ export default function TabSupplier({ product, updateProduct, isUpdating }) {
                   label="Payment Status"
                   options={PAYMENT_STATUS_OPTIONS}
                   value={formData.paymentStatus}
-                  onChange={(e) => handleChange("paymentStatus", e.target.value)}
+                  onChange={(val) => handleChange("paymentStatus", typeof val === "string" ? val : val?.target?.value || "Paid")}
                 />
 
                 <Input

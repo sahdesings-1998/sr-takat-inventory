@@ -1,5 +1,4 @@
 import Memo from "../models/Memo.js";
-import Gemstone from "../models/Gemstone.js";
 import Product from "../models/Product.js";
 import Sale from "../models/Sale.js";
 import SaleItem from "../models/SaleItem.js";
@@ -114,11 +113,11 @@ async function createMemo(data, userId, ipAddress = "") {
     let caratWeight = Number(item.carat || 0);
 
     if (item.inventoryType === "Gemstone") {
-      const stone = await Gemstone.findById(item.inventoryId);
+      const stone = await Product.findOne({ _id: item.inventoryId, category: "Gemstone" });
       if (!stone || (stone.status !== "In Stock" && stone.status !== "Available")) {
         throw new ApiError(
           400,
-          `Gemstone ${stone?.stoneId || item.inventoryId} is not available in stock (Status: ${stone?.status})`
+          `Gemstone ${stone?.stoneId || stone?.productCode || item.inventoryId} is not available in stock (Status: ${stone?.status})`
         );
       }
       stone.status = "On Memo";
@@ -222,9 +221,9 @@ async function returnMemoItem(memoId, itemId, userId, ipAddress = "") {
   item.returnedDate = new Date();
 
   if (item.inventoryType === "Gemstone") {
-    await Gemstone.findByIdAndUpdate(item.inventoryId, { status: "In Stock" });
+    await Product.findByIdAndUpdate(item.inventoryId, { status: "Available" });
   } else if (item.inventoryType === "Product") {
-    await Product.findByIdAndUpdate(item.inventoryId, { status: "In Stock" });
+    await Product.findByIdAndUpdate(item.inventoryId, { status: "Available" });
   }
 
   const allOnMemo = memo.items.filter((i) => i.status === "On Memo").length;
@@ -292,11 +291,13 @@ async function convertMemoToSale(memoId, itemId, paymentMethod = "Cash", userId,
   let sellingPrice = Number(item.value || 0);
 
   if (item.inventoryType === "Gemstone") {
-    const stone = await Gemstone.findById(item.inventoryId);
-    costPrice = stone.purchasePrice || 0;
-    if (!sellingPrice) sellingPrice = stone.purchasePrice * 1.25;
-    stone.status = "Sold";
-    await stone.save();
+    const stone = await Product.findById(item.inventoryId);
+    costPrice = stone?.costPrice || stone?.purchasePrice || 0;
+    if (!sellingPrice) sellingPrice = stone?.sellingPrice || costPrice * 1.25;
+    if (stone) {
+      stone.status = "Sold";
+      await stone.save();
+    }
   } else if (item.inventoryType === "Product") {
     const prod = await Product.findById(item.inventoryId);
     costPrice = prod.costPrice || 0;

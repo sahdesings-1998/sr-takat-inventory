@@ -291,9 +291,9 @@ export default function Dashboard() {
   const BAR_COLORS = ["#0A4958", "#CB9B42", "#F87171", "#10B981"];
 
   const pieData = [
-    { name: "Gemstones", value: kpis.inventoryCost * 0.45, color: "#BF953F" },
-    { name: "Products", value: kpis.inventoryCost * 0.35, color: "#0A4958" },
-    { name: "Materials", value: kpis.inventoryCost * 0.20, color: "#7A8B99" },
+    { name: "Gemstones", value: kpis.gemstoneValue ?? (kpis.inventoryCost * 0.45), color: "#BF953F" },
+    { name: "Products", value: kpis.productValue ?? (kpis.inventoryCost * 0.35), color: "#0A4958" },
+    { name: "Materials", value: kpis.materialValue ?? (kpis.inventoryCost * 0.20), color: "#7A8B99" },
   ];
 
   if (isDashLoading) {

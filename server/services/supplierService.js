@@ -1,5 +1,5 @@
 import Supplier from "../models/Supplier.js";
-import Gemstone from "../models/Gemstone.js";
+import Product from "../models/Product.js";
 import Material from "../models/Material.js";
 import SupplierPayment from "../models/SupplierPayment.js";
 import PurchaseInvoice from "../models/PurchaseInvoice.js";
@@ -22,9 +22,9 @@ async function computeSupplierTotals(supplierId) {
     });
   });
 
-  // Legacy direct Gemstones/Metals/Components assigned to supplier
-  const gemstones = await Gemstone.find({ supplierId, isDeleted: false });
-  const gemstoneTotal = gemstones.reduce((sum, g) => sum + Number(g.purchasePrice || 0) * Number(g.pieces || 1), 0);
+  // Gemstones assigned to supplier (managed as Products)
+  const gemstones = await Product.find({ supplierId, category: "Gemstone", isDeleted: false });
+  const gemstoneTotal = gemstones.reduce((sum, g) => sum + (Number(g.costPrice || g.purchasePrice || 0) * Number(g.quantity || 1)), 0);
 
   const metals = await Material.find({
     supplierId,

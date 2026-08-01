@@ -1,11 +1,14 @@
-import Gemstone from "../models/Gemstone.js";
 import Material from "../models/Material.js";
 import Product from "../models/Product.js";
+import Gemstone from "../models/Gemstone.js";
 import Sale from "../models/Sale.js";
 import Memo from "../models/Memo.js";
 import JobCard from "../models/JobCard.js";
 import InventoryMovement from "../models/InventoryMovement.js";
 import Supplier from "../models/Supplier.js";
+import Customer from "../models/Customer.js";
+import User from "../models/User.js";
+import Certificate from "../models/Certificate.js";
 import Settings from "../models/Settings.js";
 import Income from "../models/Income.js";
 import Expense from "../models/Expense.js";
@@ -88,29 +91,35 @@ function buildQueryFilter(queryParams = {}, dateField = "createdAt") {
 }
 
 async function getStockValuation(queryParams = {}) {
-  const stoneFilter = buildQueryFilter(queryParams, "createdAt");
-  const productFilter = buildQueryFilter(queryParams, "createdAt");
+  const filter = buildQueryFilter(queryParams, "createdAt");
   const materialFilter = { status: "active" };
 
-  stoneFilter.status = { $in: ["In Stock", "Reserved", "In Production", "On Memo"] };
-  productFilter.status = { $in: ["In Stock", "Reserved", "On Memo"] };
+  filter.status = { $in: ["In Stock", "Available", "Reserved", "In Production", "On Memo"] };
+
+  const gemFilter = { ...filter, category: { $in: ["Gemstone", "Gemstones"] } };
+  const prodFilter = { ...filter, category: { $nin: ["Gemstone", "Gemstones"] } };
 
   if (queryParams.category && queryParams.category !== "All") {
-    if (queryParams.category === "Gemstone") {
-      productFilter._id = null;
+    if (queryParams.category === "Gemstone" || queryParams.category === "Gemstones") {
+      prodFilter._id = null;
       materialFilter._id = null;
     } else {
-      stoneFilter._id = null;
-      productFilter.category = queryParams.category;
+      gemFilter._id = null;
+      prodFilter.category = queryParams.category;
       materialFilter._id = null;
     }
   }
 
-  const stones = await Gemstone.find(stoneFilter);
-  const products = await Product.find(productFilter);
-  const materials = await Material.find(materialFilter);
+  const stones = gemFilter._id === null ? [] : await Product.find(gemFilter);
+  const products = prodFilter._id === null ? [] : await Product.find(prodFilter);
+  const materials = materialFilter._id === null ? [] : await Material.find(materialFilter);
 
-  const gemstoneValue = stones.reduce((acc, curr) => acc + (curr.purchasePrice || 0), 0);
+  const gemstoneValue = stones.reduce((acc, curr) => {
+    const costPerCarat = curr.costPerCarat || ((curr.originalCarat || curr.carat || curr.totalCarat) > 0 ? (curr.purchasePrice || curr.costPrice) / (curr.originalCarat || curr.carat || curr.totalCarat) : 0);
+    const weight = curr.carat || curr.totalCarat || 0;
+    return acc + (weight > 0 ? weight * costPerCarat : (curr.costPrice || curr.purchasePrice || 0));
+  }, 0);
+
   const productValue = products.reduce((acc, curr) => acc + (curr.costPrice || 0), 0);
   const materialValue = materials.reduce(
     (acc, curr) => acc + (curr.cost || 0) * (curr.quantity || 0),
@@ -160,20 +169,22 @@ async function getDashboardSummary(queryParams = {}) {
   const valuation = await getStockValuation(queryParams);
   const revenues = await getRevenuesSummary(queryParams);
 
-  const activeStones = await Gemstone.find({
-    status: { $in: ["In Stock", "Reserved", "In Production", "On Memo"] },
+  const activeStones = await Product.find({
+    category: { $in: ["Gemstone", "Gemstones"] },
+    status: { $in: ["In Stock", "Available", "Reserved", "In Production", "On Memo"] },
     isDeleted: { $ne: true },
   });
   const activeProducts = await Product.find({
-    status: { $in: ["In Stock", "Reserved", "On Memo"] },
+    category: { $nin: ["Gemstone", "Gemstones"] },
+    status: { $in: ["In Stock", "Available", "Reserved", "On Memo"] },
     isDeleted: { $ne: true },
   });
 
-  const totalGemstonesCount = activeStones.reduce((acc, curr) => acc + (curr.pieces || 1), 0);
+  const totalGemstonesCount = activeStones.reduce((acc, curr) => acc + (curr.quantity || curr.pieces || 1), 0);
   const jewelleryStockCount = activeProducts.filter((p) => p.category !== "Watch").length;
   const watchStockCount = activeProducts.filter((p) => p.category === "Watch").length;
 
-  const gemstonesSelling = activeStones.reduce((acc, curr) => acc + (curr.purchasePrice || 0) * 1.25, 0);
+  const gemstonesSelling = activeStones.reduce((acc, curr) => acc + (curr.sellingPrice || (curr.purchasePrice || curr.costPrice || 0) * 1.25), 0);
   const productsSelling = activeProducts.reduce((acc, curr) => acc + (curr.sellingPrice || 0), 0);
   const sellingValue = gemstonesSelling + productsSelling;
 
@@ -211,12 +222,13 @@ async function getDashboardSummary(queryParams = {}) {
     }
   }
 
-  const recentStones = await Gemstone.find({ status: "In Stock" }).sort({ createdAt: -1 }).limit(5);
-  const recentProducts = await Product.find({ status: "In Stock" }).sort({ createdAt: -1 }).limit(5);
+  const recentStones = await Product.find({ category: { $in: ["Gemstone", "Gemstones"] }, isDeleted: { $ne: true } }).sort({ createdAt: -1 }).limit(5);
+  const recentProducts = await Product.find({ category: { $nin: ["Gemstone", "Gemstones"] }, isDeleted: { $ne: true } }).sort({ createdAt: -1 }).limit(5);
 
-  const lowStockOrMissingCert = await Gemstone.find({
-    status: "In Stock",
-    $or: [{ certificateId: null }, { pieces: { $lte: 1 } }],
+  const lowStockOrMissingCert = await Product.find({
+    category: { $in: ["Gemstone", "Gemstones"] },
+    isDeleted: { $ne: true },
+    $or: [{ certificateId: null }, { certificateNumber: "" }, { quantity: { $lte: 1 } }, { carat: { $lte: 1 } }],
   }).limit(5);
 
   const recentSales = await Sale.find({ paymentStatus: "Paid" })
@@ -234,6 +246,9 @@ async function getDashboardSummary(queryParams = {}) {
   return {
     kpis: {
       totalGemstones: totalGemstonesCount,
+      gemstoneValue: valuation.gemstoneValue,
+      productValue: valuation.productValue,
+      materialValue: valuation.materialValue,
       jewelleryStock: jewelleryStockCount,
       watchStock: watchStockCount,
       inventoryCost: valuation.totalValue,
@@ -251,9 +266,9 @@ async function getDashboardSummary(queryParams = {}) {
         ...recentStones.map((s) => ({
           _id: s._id,
           type: "Gemstone",
-          code: s.stoneId,
-          name: s.gemstone,
-          cost: s.purchasePrice,
+          code: s.stoneId || s.productCode,
+          name: s.gemstone || s.name,
+          cost: s.costPrice || s.purchasePrice,
           createdAt: s.createdAt,
         })),
         ...recentProducts.map((p) => ({
@@ -269,7 +284,9 @@ async function getDashboardSummary(queryParams = {}) {
         .slice(0, 5),
       lowStockOrMissingCert: lowStockOrMissingCert.map((stone) => ({
         ...stone.toObject ? stone.toObject() : stone,
-        reason: stone.certificateId ? "Low stock" : "Missing certificate",
+        gemstone: stone.gemstone || stone.name,
+        stoneId: stone.stoneId || stone.productCode,
+        reason: (stone.certificateId || stone.certificateNumber) ? "Low stock" : "Missing certificate",
       })),
       overdueMemos: overdueMemosList,
       recentSales,
@@ -280,18 +297,22 @@ async function getDashboardSummary(queryParams = {}) {
 
 async function getGemstoneStockReport(queryParams = {}) {
   const filter = buildQueryFilter(queryParams, "createdAt");
+  filter.category = "Gemstone";
   if (!filter.status) {
-    filter.status = { $ne: "Sold" };
+    filter.status = { $nin: ["Sold", "Sold Out"] };
   }
   if (queryParams.search) {
     filter.$or = [
       { stoneId: { $regex: queryParams.search, $options: "i" } },
+      { productCode: { $regex: queryParams.search, $options: "i" } },
+      { name: { $regex: queryParams.search, $options: "i" } },
       { gemstone: { $regex: queryParams.search, $options: "i" } },
+      { gemstoneType: { $regex: queryParams.search, $options: "i" } },
       { variety: { $regex: queryParams.search, $options: "i" } },
       { shape: { $regex: queryParams.search, $options: "i" } },
     ];
   }
-  return Gemstone.find(filter).populate("supplierId");
+  return Product.find(filter).populate("supplierId").populate("certificateId");
 }
 
 async function getJewelleryStockReport(queryParams = {}) {
@@ -464,7 +485,8 @@ async function getStockMovementReport(queryParams = {}) {
 
 async function getSupplierPurchaseReport(queryParams = {}) {
   const stoneFilter = buildQueryFilter(queryParams, "createdAt");
-  const stones = await Gemstone.find(stoneFilter).populate("supplierId");
+  stoneFilter.category = "Gemstone";
+  const stones = await Product.find(stoneFilter).populate("supplierId");
   const materials = await Material.find({ status: "active" }).populate("supplierId");
   const suppliers = await Supplier.find({});
 

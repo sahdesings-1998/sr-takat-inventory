@@ -203,6 +203,7 @@ export default function GemstoneList() {
       case "In Production":
         return "info";
       case "Sold":
+      case "Sold Out":
         return "accent";
       default:
         return "neutral";
@@ -215,10 +216,10 @@ export default function GemstoneList() {
     "Stone ID",
     "Stock No",
     "Gemstone",
-    "Variety",
-    "Weight",
+    "Original Weight",
+    "Sold Weight",
+    "Available Weight",
     "Cost/Carat",
-    "Price",
     "Location",
     "Status",
     "Actions",
@@ -271,6 +272,7 @@ export default function GemstoneList() {
     { value: "Reserved", label: "Reserved" },
     { value: "In Production", label: "In Production" },
     { value: "On Memo", label: "On Memo" },
+    { value: "Sold Out", label: "Sold Out" },
     { value: "Sold", label: "Sold" },
     { value: "Damaged", label: "Damaged" },
     { value: "Missing", label: "Missing" },
@@ -426,15 +428,19 @@ export default function GemstoneList() {
             <td className="px-3 py-4 sm:px-4 md:px-6 font-medium text-gray-900 truncate text-xs sm:text-sm">
               {stone.gemstone} {stone.variety ? `(${stone.variety})` : ""}
             </td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{stone.shape || "—"}</td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-900 font-semibold whitespace-nowrap text-xs sm:text-sm">
-              {stone.carat} ct ({stone.pieces} pc)
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm font-mono">
+              {(stone.originalCarat || (stone.carat + (stone.soldCarat || 0))).toFixed(2)} ct
             </td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
-              ${stone.costPerCarat ? stone.costPerCarat.toFixed(2) : "0.00"}
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-amber-700 font-mono whitespace-nowrap text-xs sm:text-sm font-semibold">
+              {(stone.soldCarat || 0).toFixed(2)} ct
             </td>
-            <td className="px-3 py-4 sm:px-4 md:px-6 font-semibold text-gray-900 whitespace-nowrap text-xs sm:text-sm">
-              ${stone.purchasePrice.toLocaleString()}
+            <td className="px-3 py-4 sm:px-4 md:px-6 whitespace-nowrap text-xs sm:text-sm">
+              <span className={`font-mono font-bold ${stone.carat <= 0 ? "text-rose-600" : "text-emerald-700"}`}>
+                {stone.carat.toFixed(2)} ct
+              </span>
+            </td>
+            <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 whitespace-nowrap text-xs sm:text-sm font-mono">
+              ${stone.costPerCarat ? stone.costPerCarat.toFixed(2) : ((stone.originalCarat || stone.carat) > 0 ? (stone.purchasePrice / (stone.originalCarat || stone.carat)).toFixed(2) : "0.00")}
             </td>
             <td className="px-3 py-4 sm:px-4 md:px-6 text-gray-600 truncate text-xs sm:text-sm">{stone.location}</td>
             <td className="px-3 py-4 sm:px-4 md:px-6">

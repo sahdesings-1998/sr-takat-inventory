@@ -123,6 +123,13 @@ export default function ProductWizard({ initialData = null, isEditing = false, o
 
   const formValues = watch();
 
+  // Reset form with initialData when editing
+  useEffect(() => {
+    if (isEditing && initialData) {
+      reset(defaultValues);
+    }
+  }, [initialData, isEditing, reset]);
+
   // Check for unsaved draft in local storage on mount (create mode)
   useEffect(() => {
     if (!isEditing) {

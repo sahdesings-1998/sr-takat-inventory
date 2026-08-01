@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import Product from "../models/Product.js";
 import ProductComponent from "../models/ProductComponent.js";
-import Gemstone from "../models/Gemstone.js";
 import GemstoneLot from "../models/GemstoneLot.js";
 import Settings from "../models/Settings.js";
 import SaleItem from "../models/SaleItem.js";
@@ -335,10 +334,10 @@ async function updateProduct(id, data, userId, ipAddress = "") {
 
 async function addProductComponent(productId, componentData, userId) {
   if (componentData.sourceType === "Gemstone") {
-    const stone = await Gemstone.findById(componentData.sourceId);
-    if (!stone) throw new ApiError(404, "Gemstone not found");
-    if (stone.status !== "In Stock") {
-      throw new ApiError(400, `Gemstone ${stone.stoneId} is not available (Status: ${stone.status})`);
+    const stone = await Product.findOne({ _id: componentData.sourceId, category: "Gemstone" });
+    if (!stone) throw new ApiError(404, "Gemstone product not found");
+    if (stone.status !== "In Stock" && stone.status !== "Available") {
+      throw new ApiError(400, `Gemstone ${stone.stoneId || stone.productCode} is not available (Status: ${stone.status})`);
     }
     stone.status = "In Production";
     await stone.save();
@@ -370,7 +369,7 @@ async function deleteProductComponent(productId, componentId, userId) {
   if (!component) throw new ApiError(404, "Component not found");
 
   if (component.sourceType === "Gemstone") {
-    await Gemstone.findByIdAndUpdate(component.sourceId, { status: "In Stock" });
+    await Product.findByIdAndUpdate(component.sourceId, { status: "Available" });
   } else if (component.sourceType === "GemstoneLot") {
     const lot = await GemstoneLot.findById(component.sourceId);
     if (lot) {

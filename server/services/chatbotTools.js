@@ -1,5 +1,4 @@
 import Product from "../models/Product.js";
-import Gemstone from "../models/Gemstone.js";
 import GemstoneLot from "../models/GemstoneLot.js";
 import Material from "../models/Material.js";
 import Customer from "../models/Customer.js";
@@ -205,7 +204,7 @@ export async function executeChatbotTool({ name, args = {}, user }) {
           Product.countDocuments({ ...match, status: "Available" }),
           Product.countDocuments({ ...match, status: "Reserved" }),
           Product.countDocuments({ ...match, status: "On Memo" }),
-          Gemstone.countDocuments({ isDeleted: { $ne: true } }),
+          Product.countDocuments({ category: "Gemstone", isDeleted: { $ne: true } }),
           GemstoneLot.countDocuments({ isDeleted: { $ne: true } }),
           Material.countDocuments({ isDeleted: { $ne: true } }),
           Product.aggregate([

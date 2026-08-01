@@ -103,8 +103,8 @@ export default function StepPricing({ register, errors, setValue, watch }) {
           <Select
             label="Currency"
             options={currencyOptions}
-            value={currency}
-            onChange={(e) => setValue("currency", e.target.value)}
+            value={currency || "USD"}
+            onChange={(val) => setValue("currency", typeof val === "string" ? val : val?.target?.value || "USD", { shouldDirty: true })}
           />
         </div>
       </div>

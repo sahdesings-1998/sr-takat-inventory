@@ -3,7 +3,6 @@ import Supplier from "../models/Supplier.js";
 import SupplierPayment from "../models/SupplierPayment.js";
 import InventoryMovement from "../models/InventoryMovement.js";
 import Material from "../models/Material.js";
-import Gemstone from "../models/Gemstone.js";
 import GemstoneLot from "../models/GemstoneLot.js";
 import Product from "../models/Product.js";
 import generateId from "../utils/generateId.js";
@@ -227,10 +226,11 @@ async function confirmPurchaseInvoice(id, userId, ipAddress = "") {
           await inventoryDoc.save();
         }
       } else if (item.inventoryType === "Gemstone") {
-        inventoryDoc = await Gemstone.findById(item.inventoryId);
+        inventoryDoc = await Product.findById(item.inventoryId);
         if (inventoryDoc) {
-          previousStock = Number(inventoryDoc.pieces || 1);
+          previousStock = Number(inventoryDoc.quantity || inventoryDoc.pieces || 1);
           updatedStock = previousStock + Number(item.quantity);
+          inventoryDoc.quantity = updatedStock;
           inventoryDoc.pieces = updatedStock;
           await inventoryDoc.save();
         }
@@ -381,10 +381,11 @@ async function cancelPurchaseInvoice(id, reason, userId, ipAddress = "") {
           await mat.save();
         }
       } else if (item.inventoryType === "Gemstone") {
-        const gem = await Gemstone.findById(item.inventoryId);
+        const gem = await Product.findById(item.inventoryId);
         if (gem) {
-          previousStock = Number(gem.pieces || 1);
+          previousStock = Number(gem.quantity || gem.pieces || 1);
           updatedStock = Math.max(0, previousStock - Number(item.quantity));
+          gem.quantity = updatedStock;
           gem.pieces = updatedStock;
           await gem.save();
         }

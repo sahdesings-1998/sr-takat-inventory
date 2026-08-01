@@ -1,6 +1,5 @@
 import Sale from "../models/Sale.js";
 import SaleItem from "../models/SaleItem.js";
-import Gemstone from "../models/Gemstone.js";
 import Product from "../models/Product.js";
 import Customer from "../models/Customer.js";
 import Settings from "../models/Settings.js";
@@ -97,15 +96,79 @@ async function createDirectSale(data, userId, ipAddress = "") {
 
       await p.save();
     } else if (item.inventoryType === "Gemstone") {
-      const g = await Gemstone.findById(item.inventoryId);
-      if (!g) throw new ApiError(404, `Gemstone not found: ${item.inventoryId}`);
-      if (g.status === "Sold") throw new ApiError(400, `Gemstone ${g.stoneId} is already sold`);
+      const g = await Product.findById(item.inventoryId);
+      if (!g) throw new ApiError(404, `Gemstone Product not found: ${item.inventoryId}`);
+      const availWeight = g.carat || g.totalCarat || 0;
+      if (g.status === "Sold" || g.status === "Sold Out" || availWeight <= 0) {
+        throw new ApiError(400, `Gemstone ${g.stoneId || g.productCode || g.name} is sold out`);
+      }
 
-      costPrice = g.costPrice || g.purchasePrice || 0;
-      if (!sellingPrice) sellingPrice = g.sellingPrice || costPrice * 1.25;
+      // Determine partial carat weight to sell
+      const sellingCarat = Number(item.caratWeight ?? item.carat ?? item.quantity ?? g.carat);
 
-      g.status = "Sold";
+      if (isNaN(sellingCarat) || sellingCarat <= 0) {
+        throw new ApiError(400, "Selling carat weight must be greater than 0");
+      }
+      if (sellingCarat > g.carat + 0.0001) {
+        throw new ApiError(400, `Cannot sell more than the available stock (${g.carat} ct)`);
+      }
+
+      // Ensure originalCarat is tracked
+      const origCarat = g.originalCarat || (g.carat + (g.soldCarat || 0)) || g.carat;
+      g.originalCarat = origCarat;
+
+      const gemCostPerCarat = g.costPerCarat || (origCarat > 0 ? g.purchasePrice / origCarat : 0);
+      const itemMaterialCost = sellingCarat * gemCostPerCarat;
+      costPrice = itemMaterialCost;
+
+      const defaultPricePerCarat = g.sellingPrice || gemCostPerCarat * 1.25;
+      const pricePerCarat = Number(item.pricePerCarat ?? (item.sellingPrice && sellingCarat > 0 ? item.sellingPrice / sellingCarat : defaultPricePerCarat));
+      
+      const itemSellingTotal = item.sellingPrice !== undefined && item.sellingPrice !== null && !isNaN(Number(item.sellingPrice))
+        ? Number(item.sellingPrice)
+        : sellingCarat * pricePerCarat;
+
+      // Update Gemstone Carat Balance and Status
+      const newSoldCarat = Number(((g.soldCarat || 0) + sellingCarat).toFixed(4));
+      const remainingCarat = Math.max(0, Number((g.carat - sellingCarat).toFixed(4)));
+
+      g.soldCarat = newSoldCarat;
+      g.carat = remainingCarat;
+
+      if (remainingCarat <= 0) {
+        g.status = "Sold Out";
+      } else {
+        g.status = "In Stock";
+      }
+
+      g.history = [
+        ...(g.history || []),
+        {
+          date: new Date(),
+          action: `Sold ${sellingCarat.toFixed(2)} ct via Invoice #${invoiceNo} (Remaining: ${remainingCarat.toFixed(2)} ct)`,
+          caratSold: sellingCarat,
+          remainingCarat,
+          user: userId?.toString() || "System",
+        },
+      ];
+
       await g.save();
+
+      calculatedSubtotal += itemSellingTotal;
+      totalCostPrice += itemMaterialCost;
+
+      itemsToCreate.push({
+        inventoryType: item.inventoryType,
+        inventoryId: item.inventoryId,
+        quantity: 1,
+        caratWeight: sellingCarat,
+        pricePerCarat,
+        costPerCarat: gemCostPerCarat,
+        pricingType: item.pricingType || "default",
+        sellingPrice: itemSellingTotal,
+        discount: Number(item.discount || 0),
+      });
+      continue;
     }
 
     calculatedSubtotal += sellingPrice * qty;
@@ -226,6 +289,7 @@ async function createDirectSale(data, userId, ipAddress = "") {
       action: "Sale",
       toLocation: "Sold",
       quantity: itemData.quantity,
+      weight: itemData.caratWeight || null,
       referenceType: "Sale",
       referenceId: sale._id,
       userId,

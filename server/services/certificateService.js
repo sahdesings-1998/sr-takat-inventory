@@ -1,5 +1,4 @@
 import Certificate from "../models/Certificate.js";
-import Gemstone from "../models/Gemstone.js";
 import Product from "../models/Product.js";
 import ApiError from "../utils/ApiError.js";
 
@@ -22,10 +21,8 @@ async function createCertificate(data) {
 
   const cert = await Certificate.create(data);
 
-  if (data.entityType === "Gemstone") {
-    await Gemstone.findByIdAndUpdate(data.entityId, { certificateId: cert._id });
-  } else if (data.entityType === "Product") {
-    await Product.findByIdAndUpdate(data.entityId, { $push: { certificateIds: cert._id } });
+  if (data.entityId) {
+    await Product.findByIdAndUpdate(data.entityId, { certificateId: cert._id, $push: { certificateIds: cert._id } });
   }
 
   return cert;
@@ -35,10 +32,8 @@ async function deleteCertificate(id, userId) {
   const cert = await getCertificateById(id);
 
   // Unlink from parent entity
-  if (cert.entityType === "Gemstone") {
-    await Gemstone.findByIdAndUpdate(cert.entityId, { certificateId: null });
-  } else if (cert.entityType === "Product") {
-    await Product.findByIdAndUpdate(cert.entityId, { $pull: { certificateIds: cert._id } });
+  if (cert.entityId) {
+    await Product.findByIdAndUpdate(cert.entityId, { certificateId: null, $pull: { certificateIds: cert._id } });
   }
 
   // Soft delete — mark as deleted, do not remove from DB

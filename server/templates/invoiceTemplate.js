@@ -84,21 +84,22 @@ export function generateInvoiceHTML(data = {}) {
         description = p.name ? `${p.productCode ? `[${p.productCode}] ` : ""}${p.name}` : "Product Item";
       } else if (item.inventoryType === "Gemstone") {
         const g = item.inventoryId || {};
+        const soldWeight = item.caratWeight || item.carat;
         description = g.gemstone
-          ? `${g.stoneId ? `[${g.stoneId}] ` : ""}${g.gemstone}${g.carat ? ` (${g.carat} ct)` : ""}`
+          ? `${g.stoneId ? `[${g.stoneId}] ` : ""}${g.gemstone}${soldWeight ? ` (${soldWeight} ct)` : ""}`
           : "Gemstone Item";
       } else {
         description = "Sale Item";
       }
     }
 
-    const qtyGiven = item.qtyGiven || item.qtyGivenPcs || item.quantity || "";
+    const qtyGiven = item.caratWeight ? `${item.caratWeight} ct` : (item.qtyGiven || item.qtyGivenPcs || item.quantity || "");
     const returnVal = item.return || item.returnPcs || "";
     const kept = item.kept || item.keptPcs || "";
-    const pricePerCts = item.pricePerCts || item.price || item.sellingPrice || "";
-    const amount = item.amount || (Number(qtyGiven) && Number(pricePerCts)
+    const pricePerCts = item.pricePerCarat ? item.pricePerCarat : (item.pricePerCts || item.price || item.sellingPrice || "");
+    const amount = item.sellingPrice ? Number(item.sellingPrice).toFixed(2) : (item.amount || (Number(qtyGiven) && Number(pricePerCts)
       ? (Number(qtyGiven) * Number(pricePerCts)).toFixed(2)
-      : "");
+      : ""));
     const remark = item.remark || "";
 
     return { description, qtyGiven, returnVal, kept, pricePerCts, amount, remark };

@@ -1,11 +1,11 @@
-import Gemstone from "../models/Gemstone.js";
+import Product from "../models/Product.js";
 import generateId from "../utils/generateId.js";
 import movementService from "./movementService.js";
 import auditLogService from "./auditLogService.js";
 import ApiError from "../utils/ApiError.js";
 
 async function getAllGemstones({ status, location, supplierId, gemstone, search } = {}) {
-  const query = { isDeleted: false };
+  const query = { category: { $in: ["Gemstone", "Gemstones"] }, isDeleted: false };
   if (status) query.status = status;
   if (location) query.location = location;
   if (supplierId) query.supplierId = supplierId;
@@ -13,24 +13,25 @@ async function getAllGemstones({ status, location, supplierId, gemstone, search 
   if (search) {
     query.$or = [
       { stoneId: { $regex: search, $options: "i" } },
+      { productCode: { $regex: search, $options: "i" } },
       { stockNo: { $regex: search, $options: "i" } },
+      { gemstone: { $regex: search, $options: "i" } },
+      { gemstoneType: { $regex: search, $options: "i" } },
       { variety: { $regex: search, $options: "i" } },
       { origin: { $regex: search, $options: "i" } },
     ];
   }
-  return Gemstone.find(query)
+  return Product.find(query)
     .sort({ createdAt: -1 })
     .populate("supplierId")
-    .populate("certificateId")
-    .populate("createdBy");
+    .populate("certificateId");
 }
 
 async function getGemstoneById(id) {
-  const stone = await Gemstone.findOne({ _id: id, isDeleted: false })
+  const stone = await Product.findOne({ _id: id, category: { $in: ["Gemstone", "Gemstones"] }, isDeleted: false })
     .populate("supplierId")
-    .populate("certificateId")
-    .populate("createdBy");
-  if (!stone) throw new ApiError(404, "Gemstone not found");
+    .populate("certificateId");
+  if (!stone) throw new ApiError(404, "Gemstone Product not found");
   return stone;
 }
 
@@ -38,40 +39,50 @@ async function createGemstone(data, userId, ipAddress = "") {
   if (data.certificateId === "") {
     data.certificateId = null;
   }
-  const stoneId = await generateId(Gemstone, "stoneId", "gemstone", 5);
+  const stoneId = data.stoneId || (await generateId(Product, "stoneId", "gemstone", 5));
+  const productCode = data.productCode || stoneId;
+  const carat = Number(data.carat || data.totalCarat || 0);
 
-  const costPerCarat = data.carat > 0 ? data.purchasePrice / data.carat : 0;
+  const costPerCarat = carat > 0 ? (data.purchasePrice || data.costPrice || 0) / carat : 0;
 
-  const gemstone = await Gemstone.create({
+  const gemstoneProduct = await Product.create({
     ...data,
+    category: "Gemstone",
     stoneId,
+    productCode,
+    name: data.name || `${data.gemstone || data.gemstoneType || "Gemstone"} (${carat} ct)`,
+    carat,
+    totalCarat: carat,
+    originalCarat: data.originalCarat ?? carat,
     costPerCarat,
-    createdBy: userId,
+    quantity: data.quantity ?? 1,
+    availableQuantity: data.quantity ?? 1,
+    status: data.status || "Available",
   });
 
   await movementService.logMovement({
-    inventoryType: "Gemstone",
-    inventoryId: gemstone._id,
+    inventoryType: "Product",
+    inventoryId: gemstoneProduct._id,
     action: "Purchase",
-    toLocation: gemstone.location,
-    quantity: gemstone.pieces,
-    weight: gemstone.carat,
+    toLocation: gemstoneProduct.location || "Vault",
+    quantity: gemstoneProduct.quantity || 1,
+    weight: gemstoneProduct.carat,
     referenceType: "Supplier",
-    referenceId: gemstone.supplierId,
+    referenceId: gemstoneProduct.supplierId,
     userId,
-    remarks: "Initial purchase stock entry",
+    remarks: "Initial gemstone product purchase entry",
   });
 
   await auditLogService.logAction({
     userId,
-    entity: "Gemstone",
-    entityId: gemstone._id,
+    entity: "Product",
+    entityId: gemstoneProduct._id,
     action: "create",
-    newValue: gemstone.toObject(),
+    newValue: gemstoneProduct.toObject(),
     ipAddress,
   });
 
-  return getGemstoneById(gemstone._id);
+  return getGemstoneById(gemstoneProduct._id);
 }
 
 async function updateGemstone(id, data, userId, ipAddress = "") {
@@ -94,12 +105,12 @@ async function updateGemstone(id, data, userId, ipAddress = "") {
 
   if (data.location && data.location !== prevLocation) {
     await movementService.logMovement({
-      inventoryType: "Gemstone",
+      inventoryType: "Product",
       inventoryId: gemstone._id,
       action: "Location Transfer",
       fromLocation: prevLocation,
       toLocation: gemstone.location,
-      quantity: gemstone.pieces,
+      quantity: gemstone.quantity,
       weight: gemstone.carat,
       userId,
       remarks: "Location manually updated",
@@ -108,7 +119,7 @@ async function updateGemstone(id, data, userId, ipAddress = "") {
 
   await auditLogService.logAction({
     userId,
-    entity: "Gemstone",
+    entity: "Product",
     entityId: gemstone._id,
     action: "update",
     oldValue: oldVal,
@@ -128,7 +139,7 @@ async function updateGemstoneStatus(id, status, userId, remarks = "", ipAddress 
   await gemstone.save();
 
   await movementService.logMovement({
-    inventoryType: "Gemstone",
+    inventoryType: "Product",
     inventoryId: gemstone._id,
     action: "Adjustment",
     userId,
@@ -137,7 +148,7 @@ async function updateGemstoneStatus(id, status, userId, remarks = "", ipAddress 
 
   await auditLogService.logAction({
     userId,
-    entity: "Gemstone",
+    entity: "Product",
     entityId: gemstone._id,
     action: "update",
     oldValue: oldVal,
@@ -152,8 +163,7 @@ async function deleteGemstone(id, userId, ipAddress = "") {
   const gemstone = await getGemstoneById(id);
   const oldVal = gemstone.toObject();
 
-  // Soft delete — mark as deleted, do not remove from DB
-  await Gemstone.findByIdAndUpdate(id, {
+  await Product.findByIdAndUpdate(id, {
     isDeleted: true,
     deletedAt: new Date(),
     deletedBy: userId,
@@ -161,7 +171,7 @@ async function deleteGemstone(id, userId, ipAddress = "") {
 
   await auditLogService.logAction({
     userId,
-    entity: "Gemstone",
+    entity: "Product",
     entityId: gemstone._id,
     action: "delete",
     oldValue: oldVal,

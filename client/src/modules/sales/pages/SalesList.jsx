@@ -68,6 +68,18 @@ export default function SalesList() {
   const [isGstEnabled, setIsGstEnabled] = useState(false);
   const [gstPercentage, setGstPercentage] = useState(0);
 
+  // Partial Gemstone Sale States
+  const [newItemCarat, setNewItemCarat] = useState("");
+  const [newItemPricePerCarat, setNewItemPricePerCarat] = useState("");
+  const [newItemTotalPrice, setNewItemTotalPrice] = useState("");
+  const [isManualPriceOverride, setIsManualPriceOverride] = useState(false);
+  const [caratValidationError, setCaratValidationError] = useState("");
+
+  const selectedGemstone = useMemo(() => {
+    if (newItemType !== "Gemstone" || !newItemId) return null;
+    return (gemstones || []).find((g) => g._id === newItemId) || null;
+  }, [newItemType, newItemId, gemstones]);
+
   // Validation Error States
   const [formErrors, setFormErrors] = useState({});
 
@@ -241,6 +253,12 @@ export default function SalesList() {
     setNewItemType(type);
     setNewItemId("");
     setNewItemPrice(0);
+    setNewItemQty(1);
+    setNewItemCarat("");
+    setNewItemPricePerCarat("");
+    setNewItemTotalPrice("");
+    setIsManualPriceOverride(false);
+    setCaratValidationError("");
   };
 
   const handleItemChange = (id) => {
@@ -249,19 +267,75 @@ export default function SalesList() {
       const match = products.find((p) => p._id === id);
       setNewItemPrice(match ? match.sellingPrice : 0);
     } else {
-      const match = gemstones.find((g) => g._id === id);
-      setNewItemPrice(match ? (match.sellingPrice || (match.purchasePrice || match.costPrice || 0) * 1.25) : 0);
+      const match = (gemstones || []).find((g) => g._id === id);
+      if (match) {
+        const availCarat = match.carat || 0;
+        const defaultCostPerCarat = match.costPerCarat || ((match.originalCarat || match.carat) > 0 ? match.purchasePrice / (match.originalCarat || match.carat) : 0);
+        const defaultPerCarat = match.sellingPrice ? match.sellingPrice : defaultCostPerCarat * 1.25;
+
+        setNewItemCarat(availCarat);
+        setNewItemPricePerCarat(Number(defaultPerCarat.toFixed(2)));
+        setNewItemTotalPrice(Number((availCarat * defaultPerCarat).toFixed(2)));
+        setIsManualPriceOverride(false);
+        setCaratValidationError("");
+      } else {
+        setNewItemCarat("");
+        setNewItemPricePerCarat("");
+        setNewItemTotalPrice("");
+      }
     }
+  };
+
+  const handleCaratChange = (valStr) => {
+    setNewItemCarat(valStr);
+    const caratVal = parseFloat(valStr);
+    if (!valStr || isNaN(caratVal) || caratVal <= 0) {
+      setCaratValidationError("Selling carat weight must be greater than 0.");
+    } else if (selectedGemstone && caratVal > selectedGemstone.carat + 0.0001) {
+      setCaratValidationError(`Cannot sell more than the available stock (${selectedGemstone.carat.toFixed(2)} ct).`);
+    } else {
+      setCaratValidationError("");
+    }
+
+    if (!isNaN(caratVal) && caratVal > 0) {
+      const perCarat = parseFloat(newItemPricePerCarat) || 0;
+      setNewItemTotalPrice(Number((caratVal * perCarat).toFixed(2)));
+    }
+  };
+
+  const handlePricePerCaratChange = (valStr) => {
+    setNewItemPricePerCarat(valStr);
+    setIsManualPriceOverride(true);
+    const perCaratVal = parseFloat(valStr) || 0;
+    const caratVal = parseFloat(newItemCarat) || 0;
+    setNewItemTotalPrice(Number((caratVal * perCaratVal).toFixed(2)));
+  };
+
+  const handleTotalPriceChange = (valStr) => {
+    setNewItemTotalPrice(valStr);
+    setIsManualPriceOverride(true);
+    const totalVal = parseFloat(valStr) || 0;
+    const caratVal = parseFloat(newItemCarat) || 0;
+    if (caratVal > 0) {
+      setNewItemPricePerCarat(Number((totalVal / caratVal).toFixed(2)));
+    }
+  };
+
+  const handleResetPricing = () => {
+    if (!selectedGemstone) return;
+    const defaultCostPerCarat = selectedGemstone.costPerCarat || ((selectedGemstone.originalCarat || selectedGemstone.carat) > 0 ? selectedGemstone.purchasePrice / (selectedGemstone.originalCarat || selectedGemstone.carat) : 0);
+    const defaultPerCarat = selectedGemstone.sellingPrice ? selectedGemstone.sellingPrice : defaultCostPerCarat * 1.25;
+    const caratVal = parseFloat(newItemCarat) || selectedGemstone.carat;
+
+    setNewItemPricePerCarat(Number(defaultPerCarat.toFixed(2)));
+    setNewItemTotalPrice(Number((caratVal * defaultPerCarat).toFixed(2)));
+    setIsManualPriceOverride(false);
   };
 
   const handleAddItem = () => {
     if (!newItemId) {
       showError("Validation Error", "Please select a product or gemstone to add.");
       setFormErrors((prev) => ({ ...prev, newItemId: "Please select an item." }));
-      return;
-    }
-    if (Number(newItemQty) <= 0) {
-      showError("Validation Error", "Quantity must be greater than 0.");
       return;
     }
 
@@ -271,18 +345,64 @@ export default function SalesList() {
       return;
     }
 
-    setItems([
-      ...items,
-      {
-        inventoryType: newItemType,
-        inventoryId: newItemId,
-        quantity: Number(newItemQty || 1),
-        sellingPrice: Number(newItemPrice || 0),
-      },
-    ]);
+    if (newItemType === "Product") {
+      if (Number(newItemQty) <= 0) {
+        showError("Validation Error", "Quantity must be greater than 0.");
+        return;
+      }
+      setItems([
+        ...items,
+        {
+          inventoryType: newItemType,
+          inventoryId: newItemId,
+          quantity: Number(newItemQty || 1),
+          sellingPrice: Number(newItemPrice || 0),
+        },
+      ]);
+    } else if (newItemType === "Gemstone") {
+      const caratVal = parseFloat(newItemCarat);
+      if (isNaN(caratVal) || caratVal <= 0) {
+        showError("Validation Error", "Selling carat weight must be greater than 0.");
+        setCaratValidationError("Selling carat weight must be greater than 0.");
+        return;
+      }
+      if (selectedGemstone && caratVal > selectedGemstone.carat + 0.0001) {
+        const msg = `Cannot sell more than the available stock (${selectedGemstone.carat.toFixed(2)} ct).`;
+        showError("Validation Error", msg);
+        setCaratValidationError(msg);
+        return;
+      }
+      const totalVal = parseFloat(newItemTotalPrice);
+      if (isNaN(totalVal) || totalVal <= 0) {
+        showError("Validation Error", "Total selling price must be greater than 0.");
+        return;
+      }
+
+      const defaultCostPerCarat = selectedGemstone ? (selectedGemstone.costPerCarat || ((selectedGemstone.originalCarat || selectedGemstone.carat) > 0 ? selectedGemstone.purchasePrice / (selectedGemstone.originalCarat || selectedGemstone.carat) : 0)) : 0;
+
+      setItems([
+        ...items,
+        {
+          inventoryType: "Gemstone",
+          inventoryId: newItemId,
+          quantity: 1,
+          caratWeight: caratVal,
+          pricePerCarat: parseFloat(newItemPricePerCarat) || 0,
+          costPerCarat: defaultCostPerCarat,
+          pricingType: isManualPriceOverride ? "manual" : "default",
+          sellingPrice: totalVal,
+        },
+      ]);
+    }
+
     setNewItemId("");
     setNewItemQty(1);
     setNewItemPrice(0);
+    setNewItemCarat("");
+    setNewItemPricePerCarat("");
+    setNewItemTotalPrice("");
+    setIsManualPriceOverride(false);
+    setCaratValidationError("");
     setFormErrors((prev) => ({ ...prev, items: null, newItemId: null }));
   };
 
@@ -292,7 +412,12 @@ export default function SalesList() {
 
   // Financial Calculations
   const subtotal = useMemo(() => {
-    return items.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0);
+    return items.reduce((sum, item) => {
+      if (item.inventoryType === "Gemstone") {
+        return sum + Number(item.sellingPrice || 0);
+      }
+      return sum + Number(item.sellingPrice || 0) * Number(item.quantity || 1);
+    }, 0);
   }, [items]);
 
   const computedDiscount = useMemo(() => {
@@ -814,47 +939,183 @@ export default function SalesList() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end bg-white p-3 rounded-lg border border-gray-200">
-              <Select
-                label="Item Type"
-                value={newItemType}
-                onChange={(val) => {
-                  const str = typeof val === "string" ? val : val?.target?.value || "Product";
-                  handleItemTypeChange(str);
-                }}
-                options={[
-                  { value: "Product", label: "Finished Product" },
-                  { value: "Gemstone", label: "Gemstone" },
-                ]}
-              />
-              <div className="sm:col-span-2">
+            <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <Select
-                  label="Select In-Stock Item"
-                  isSearchable
-                  options={availableItems}
-                  value={newItemId}
+                  label="Item Type"
+                  value={newItemType}
                   onChange={(val) => {
-                    const str = typeof val === "string" ? val : val?.target?.value || "";
-                    handleItemChange(str);
+                    const str = typeof val === "string" ? val : val?.target?.value || "Product";
+                    handleItemTypeChange(str);
                   }}
-                  placeholder="Search title, SKU, or stock no..."
+                  options={[
+                    { value: "Product", label: "Finished Product" },
+                    { value: "Gemstone", label: "Gemstone" },
+                  ]}
                 />
+                <div className="sm:col-span-2">
+                  <Select
+                    label="Select In-Stock Item *"
+                    isSearchable
+                    options={availableItems}
+                    value={newItemId}
+                    onChange={(val) => {
+                      const str = typeof val === "string" ? val : val?.target?.value || "";
+                      handleItemChange(str);
+                    }}
+                    placeholder="Search title, SKU, stone ID, or stock no..."
+                  />
+                </div>
               </div>
-              <Input
-                label="Qty"
-                type="number"
-                min="1"
-                value={newItemQty}
-                onChange={(e) => setNewItemQty(e.target.value)}
-              />
-              <Input
-                label="Auto Price ($)"
-                type="number"
-                step="0.01"
-                value={newItemPrice}
-                onChange={(e) => setNewItemPrice(e.target.value)}
-              />
-              <div className="sm:col-span-5 flex justify-end">
+
+              {/* Gemstone Selected - Display Gemstone Summary & Partial Sale Controls */}
+              {newItemType === "Gemstone" && selectedGemstone && (
+                <div className="space-y-4 pt-2 border-t border-gray-100">
+                  {/* Gemstone Form Details Card */}
+                  <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200/70 text-xs grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <span className="text-gray-500 block font-medium">Gemstone Name:</span>
+                      <strong className="text-gray-900">{selectedGemstone.gemstone} {selectedGemstone.variety ? `(${selectedGemstone.variety})` : ""}</strong>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block font-medium">Lot / Stock No:</span>
+                      <strong className="text-gray-900 font-mono">{selectedGemstone.stockNo || selectedGemstone.stoneId}</strong>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block font-medium">Certificate No:</span>
+                      <strong className="text-gray-900 font-mono">
+                        {selectedGemstone.certificateId?.certificateNumber || selectedGemstone.certificateId?.number || "N/A"}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block font-medium">Available Carat Weight:</span>
+                      <strong className="text-emerald-700 font-bold">{selectedGemstone.carat.toFixed(2)} ct</strong>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block font-medium">Cost per Carat:</span>
+                      <strong className="text-gray-900 font-mono">
+                        ${(selectedGemstone.costPerCarat || ((selectedGemstone.originalCarat || selectedGemstone.carat) > 0 ? selectedGemstone.purchasePrice / (selectedGemstone.originalCarat || selectedGemstone.carat) : 0)).toFixed(2)}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block font-medium">Default Price/ct:</span>
+                      <strong className="text-primary font-mono font-bold">
+                        ${(selectedGemstone.sellingPrice || ((selectedGemstone.costPerCarat || (selectedGemstone.purchasePrice / (selectedGemstone.originalCarat || selectedGemstone.carat))) * 1.25)).toFixed(2)}
+                      </strong>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-500 block font-medium">Total Available Stock Value:</span>
+                      <strong className="text-gray-900 font-mono">
+                        ${(selectedGemstone.carat * (selectedGemstone.costPerCarat || (selectedGemstone.purchasePrice / (selectedGemstone.originalCarat || selectedGemstone.carat)))).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Partial Sales & Pricing Controls */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+                    <div>
+                      <Input
+                        label="Selling Carat Weight (ct) *"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        max={selectedGemstone.carat}
+                        value={newItemCarat}
+                        onChange={(e) => handleCaratChange(e.target.value)}
+                        placeholder={`Max ${selectedGemstone.carat} ct`}
+                      />
+                      {caratValidationError && (
+                        <p className="text-[11px] font-bold text-rose-600 mt-1">{caratValidationError}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Input
+                        label="Price per Carat ($) *"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={newItemPricePerCarat}
+                        onChange={(e) => handlePricePerCaratChange(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        label="Total Selling Price ($) *"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={newItemTotalPrice}
+                        onChange={(e) => handleTotalPriceChange(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Live Carat Preview & Pricing Audit Badge */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs">
+                    <div className="flex items-center gap-4">
+                      <span>
+                        Available: <strong className="font-mono">{selectedGemstone.carat.toFixed(2)} ct</strong>
+                      </span>
+                      <span>
+                        Selling: <strong className="font-mono text-primary">{(parseFloat(newItemCarat) || 0).toFixed(2)} ct</strong>
+                      </span>
+                      <span>
+                        Remaining Preview:{" "}
+                        <strong
+                          className={`font-mono font-bold ${
+                            selectedGemstone.carat - (parseFloat(newItemCarat) || 0) < 0
+                              ? "text-rose-600"
+                              : "text-emerald-600"
+                          }`}
+                        >
+                          {Math.max(0, selectedGemstone.carat - (parseFloat(newItemCarat) || 0)).toFixed(2)} ct
+                        </strong>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                          isManualPriceOverride ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                        }`}
+                      >
+                        {isManualPriceOverride ? "Manual Price Adjustment" : "Default Pricing"}
+                      </span>
+                      {isManualPriceOverride && (
+                        <button
+                          type="button"
+                          onClick={handleResetPricing}
+                          className="text-[11px] font-bold text-primary hover:underline cursor-pointer"
+                        >
+                          Reset to Default
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Product Selected - Display Product Qty & Auto Price */}
+              {newItemType === "Product" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    label="Quantity *"
+                    type="number"
+                    min="1"
+                    value={newItemQty}
+                    onChange={(e) => setNewItemQty(e.target.value)}
+                  />
+                  <Input
+                    label="Auto Unit Price ($)"
+                    type="number"
+                    step="0.01"
+                    value={newItemPrice}
+                    onChange={(e) => setNewItemPrice(e.target.value)}
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end pt-2">
                 <Button type="button" variant="outline" size="sm" onClick={handleAddItem} icon={<Plus className="h-3.5 w-3.5" />}>
                   Add to Sale Invoice
                 </Button>
@@ -867,14 +1128,23 @@ export default function SalesList() {
 
             {items.length > 0 && (
               <DataTable
-                headers={["Item Description", "Auto Unit Price", "Qty", "Item Total", "Action"]}
+                headers={["Item Description", "Item Type", "Qty / Carat Weight", "Price Details", "Item Total", "Action"]}
                 data={items}
                 renderRow={(item, idx) => (
                   <tr key={idx} className="border-b border-gray-100 text-xs hover:bg-gray-50">
                     <td className="px-4 py-2.5 font-bold text-gray-900">{getItemLabel(item)}</td>
-                    <td className="px-4 py-2.5 font-mono">${item.sellingPrice.toLocaleString()}</td>
-                    <td className="px-4 py-2.5 font-semibold">{item.quantity}</td>
-                    <td className="px-4 py-2.5 font-mono font-bold text-primary">${(item.sellingPrice * item.quantity).toLocaleString()}</td>
+                    <td className="px-4 py-2.5 font-semibold text-gray-600">{item.inventoryType}</td>
+                    <td className="px-4 py-2.5 font-semibold">
+                      {item.inventoryType === "Gemstone" ? `${item.caratWeight} ct` : `${item.quantity} pc`}
+                    </td>
+                    <td className="px-4 py-2.5 font-mono">
+                      {item.inventoryType === "Gemstone"
+                        ? `$${Number(item.pricePerCarat).toFixed(2)}/ct ${item.pricingType === "manual" ? "(Manual)" : ""}`
+                        : `$${Number(item.sellingPrice).toLocaleString()} / unit`}
+                    </td>
+                    <td className="px-4 py-2.5 font-mono font-bold text-primary">
+                      ${(item.inventoryType === "Gemstone" ? item.sellingPrice : item.sellingPrice * item.quantity).toLocaleString()}
+                    </td>
                     <td className="px-4 py-2.5">
                       <button
                         type="button"

@@ -4,7 +4,6 @@ import { Plus, Eye, Trash2, FileDown, CreditCard, ChevronDown, ChevronUp, Extern
 import { useSales, downloadInvoicePdf } from "../hooks/useSales";
 import { useCustomers } from "@/modules/customers/hooks/useCustomers";
 import { useProducts } from "@/modules/products/hooks/useProducts";
-import { useGemstones } from "@/modules/inventory/hooks/useInventory";
 import { useToast } from "@/contexts/ToastContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import Button from "@/components/ui/Button";
@@ -24,7 +23,6 @@ export default function SalesList() {
   const { sales, isLoading, isError, createSale } = useSales();
   const { customers, createCustomer } = useCustomers();
   const { products, createProduct, isCreating: isCreatingProduct } = useProducts();
-  const { gemstones } = useGemstones();
   const { showSuccess, showError } = useToast();
 
   // Client-side search & Payment Status Filter
@@ -76,9 +74,72 @@ export default function SalesList() {
   const [caratValidationError, setCaratValidationError] = useState("");
 
   const selectedGemstone = useMemo(() => {
-    if (newItemType !== "Gemstone" || !newItemId) return null;
-    return (gemstones || []).find((g) => g._id === newItemId) || null;
-  }, [newItemType, newItemId, gemstones]);
+    if (!newItemId) return null;
+    const match = (products || []).find((p) => p._id === newItemId);
+    if (match && (match.category === "Gemstone" || match.category === "Gemstones" || newItemType === "Gemstone")) {
+      return match;
+    }
+    return null;
+  }, [newItemId, newItemType, products]);
+
+  // Available item options filtered by product category and stock availability
+  const availableItems = useMemo(() => {
+    if (newItemType === "Gemstone") {
+      return (products || [])
+        .filter(
+          (p) =>
+            (p.category === "Gemstone" || p.category === "Gemstones") &&
+            p.status !== "Sold Out" &&
+            p.status !== "Sold" &&
+            p.status !== "Archived" &&
+            p.isDeleted !== true &&
+            (p.carat || 0) > 0
+        )
+        .map((g) => {
+          const availCarat = g.carat || g.totalCarat || 0;
+          const origCarat = g.originalCarat || availCarat;
+          const costPerCarat = g.costPerCarat || (origCarat > 0 ? (g.purchasePrice || g.costPrice || 0) / origCarat : 0);
+          const perCarat = g.sellingPricePerCarat || (g.sellingPrice && availCarat > 0 ? g.sellingPrice / availCarat : (costPerCarat > 0 ? costPerCarat * 1.25 : 0));
+          return {
+            value: g._id,
+            label: `${g.productCode || g.stockNo || g.stoneId || "GEM"} - ${g.name || g.gemstone || "Gemstone"} (${availCarat.toFixed(2)} ct) ($${perCarat.toFixed(2)}/ct)`,
+          };
+        });
+    } else {
+      return (products || [])
+        .filter(
+          (p) =>
+            p.category !== "Gemstone" &&
+            p.category !== "Gemstones" &&
+            p.status !== "Sold Out" &&
+            p.status !== "Sold" &&
+            p.status !== "Archived" &&
+            p.isDeleted !== true &&
+            ((p.availableQuantity !== undefined ? p.availableQuantity : p.quantity) || 0) > 0
+        )
+        .map((p) => ({
+          value: p._id,
+          label: `${p.productCode || p.stockNo || "PRD"} - ${p.name} ($${p.sellingPrice || 0})`,
+        }));
+    }
+  }, [newItemType, products]);
+
+  const customerOptions = useMemo(() => {
+    return (customers || []).map((c) => ({
+      value: c._id,
+      label: `${c.fullName} ${c.companyName ? `(${c.companyName})` : ""} ${c.phone ? `• ${c.phone}` : ""}`.trim(),
+    }));
+  }, [customers]);
+
+  const getItemLabel = (item) => {
+    const match = (products || []).find((p) => p._id === item.inventoryId);
+    if (match) {
+      const code = match.productCode || match.stockNo || match.stoneId || "";
+      const title = match.name || match.gemstone || "Item";
+      return code ? `[${code}] ${title}` : title;
+    }
+    return item.inventoryType === "Gemstone" ? "Gemstone Item" : "Finished Product Item";
+  };
 
   // Validation Error States
   const [formErrors, setFormErrors] = useState({});
@@ -263,25 +324,40 @@ export default function SalesList() {
 
   const handleItemChange = (id) => {
     setNewItemId(id);
-    if (newItemType === "Product") {
-      const match = products.find((p) => p._id === id);
-      setNewItemPrice(match ? match.sellingPrice : 0);
-    } else {
-      const match = (gemstones || []).find((g) => g._id === id);
-      if (match) {
-        const availCarat = match.carat || 0;
-        const defaultCostPerCarat = match.costPerCarat || ((match.originalCarat || match.carat) > 0 ? match.purchasePrice / (match.originalCarat || match.carat) : 0);
-        const defaultPerCarat = match.sellingPrice ? match.sellingPrice : defaultCostPerCarat * 1.25;
+    if (!id) {
+      setNewItemPrice(0);
+      setNewItemCarat("");
+      setNewItemPricePerCarat("");
+      setNewItemTotalPrice("");
+      setIsManualPriceOverride(false);
+      setCaratValidationError("");
+      return;
+    }
 
-        setNewItemCarat(availCarat);
-        setNewItemPricePerCarat(Number(defaultPerCarat.toFixed(2)));
-        setNewItemTotalPrice(Number((availCarat * defaultPerCarat).toFixed(2)));
+    const match = (products || []).find((p) => p._id === id);
+    if (match) {
+      const isGem = match.category === "Gemstone" || match.category === "Gemstones";
+      if (isGem) {
+        setNewItemType("Gemstone");
+        const availCarat = match.carat || match.totalCarat || 0;
+        const origCarat = match.originalCarat || availCarat;
+        const costPerCarat = match.costPerCarat || (origCarat > 0 ? (match.purchasePrice || match.costPrice || 0) / origCarat : 0);
+        const defaultPerCarat = match.sellingPricePerCarat || (match.sellingPrice && availCarat > 0 ? match.sellingPrice / availCarat : (costPerCarat > 0 ? costPerCarat * 1.25 : 0));
+
+        setNewItemCarat(availCarat > 0 ? availCarat.toString() : "");
+        setNewItemPricePerCarat(Number(defaultPerCarat.toFixed(2)).toString());
+        setNewItemTotalPrice(Number((availCarat * defaultPerCarat).toFixed(2)).toString());
         setIsManualPriceOverride(false);
         setCaratValidationError("");
       } else {
+        setNewItemType("Product");
+        setNewItemPrice(match.sellingPrice || 0);
+        setNewItemQty(1);
         setNewItemCarat("");
         setNewItemPricePerCarat("");
         setNewItemTotalPrice("");
+        setIsManualPriceOverride(false);
+        setCaratValidationError("");
       }
     }
   };
@@ -291,15 +367,15 @@ export default function SalesList() {
     const caratVal = parseFloat(valStr);
     if (!valStr || isNaN(caratVal) || caratVal <= 0) {
       setCaratValidationError("Selling carat weight must be greater than 0.");
-    } else if (selectedGemstone && caratVal > selectedGemstone.carat + 0.0001) {
-      setCaratValidationError(`Cannot sell more than the available stock (${selectedGemstone.carat.toFixed(2)} ct).`);
+    } else if (selectedGemstone && caratVal > (selectedGemstone.carat || 0) + 0.0001) {
+      setCaratValidationError(`Cannot sell more than available stock (${(selectedGemstone.carat || 0).toFixed(2)} ct).`);
     } else {
       setCaratValidationError("");
     }
 
     if (!isNaN(caratVal) && caratVal > 0) {
       const perCarat = parseFloat(newItemPricePerCarat) || 0;
-      setNewItemTotalPrice(Number((caratVal * perCarat).toFixed(2)));
+      setNewItemTotalPrice(Number((caratVal * perCarat).toFixed(2)).toString());
     }
   };
 
@@ -308,7 +384,7 @@ export default function SalesList() {
     setIsManualPriceOverride(true);
     const perCaratVal = parseFloat(valStr) || 0;
     const caratVal = parseFloat(newItemCarat) || 0;
-    setNewItemTotalPrice(Number((caratVal * perCaratVal).toFixed(2)));
+    setNewItemTotalPrice(Number((caratVal * perCaratVal).toFixed(2)).toString());
   };
 
   const handleTotalPriceChange = (valStr) => {
@@ -317,18 +393,20 @@ export default function SalesList() {
     const totalVal = parseFloat(valStr) || 0;
     const caratVal = parseFloat(newItemCarat) || 0;
     if (caratVal > 0) {
-      setNewItemPricePerCarat(Number((totalVal / caratVal).toFixed(2)));
+      setNewItemPricePerCarat(Number((totalVal / caratVal).toFixed(2)).toString());
     }
   };
 
   const handleResetPricing = () => {
     if (!selectedGemstone) return;
-    const defaultCostPerCarat = selectedGemstone.costPerCarat || ((selectedGemstone.originalCarat || selectedGemstone.carat) > 0 ? selectedGemstone.purchasePrice / (selectedGemstone.originalCarat || selectedGemstone.carat) : 0);
-    const defaultPerCarat = selectedGemstone.sellingPrice ? selectedGemstone.sellingPrice : defaultCostPerCarat * 1.25;
-    const caratVal = parseFloat(newItemCarat) || selectedGemstone.carat;
+    const availCarat = selectedGemstone.carat || selectedGemstone.totalCarat || 0;
+    const origCarat = selectedGemstone.originalCarat || availCarat;
+    const defaultCostPerCarat = selectedGemstone.costPerCarat || (origCarat > 0 ? (selectedGemstone.purchasePrice || selectedGemstone.costPrice || 0) / origCarat : 0);
+    const defaultPerCarat = selectedGemstone.sellingPricePerCarat || (selectedGemstone.sellingPrice && availCarat > 0 ? selectedGemstone.sellingPrice / availCarat : defaultCostPerCarat * 1.25);
+    const caratVal = parseFloat(newItemCarat) || availCarat;
 
-    setNewItemPricePerCarat(Number(defaultPerCarat.toFixed(2)));
-    setNewItemTotalPrice(Number((caratVal * defaultPerCarat).toFixed(2)));
+    setNewItemPricePerCarat(Number(defaultPerCarat.toFixed(2)).toString());
+    setNewItemTotalPrice(Number((caratVal * defaultPerCarat).toFixed(2)).toString());
     setIsManualPriceOverride(false);
   };
 
@@ -508,28 +586,7 @@ export default function SalesList() {
     }
   };
 
-  const customerOptions = customers.map((c) => ({ value: c._id, label: `${c.fullName} ${c.companyName ? `(${c.companyName})` : ""}` }));
 
-  let availableItems = [];
-  if (newItemType === "Product") {
-    availableItems = products
-      .filter((p) => p.status === "In Stock" || p.status === "Available")
-      .map((p) => ({ value: p._id, label: `${p.productCode} - ${p.name} ($${p.sellingPrice})` }));
-  } else if (newItemType === "Gemstone") {
-    availableItems = gemstones
-      .filter((g) => g.status === "In Stock" || g.status === "Available")
-      .map((g) => ({ value: g._id, label: `${g.stoneId} - ${g.gemstone} (${g.carat} ct) ($${g.sellingPrice || (g.purchasePrice || g.costPrice || 0) * 1.25})` }));
-  }
-
-  const getItemLabel = (item) => {
-    if (item.inventoryType === "Product") {
-      const match = products.find((p) => p._id === item.inventoryId);
-      return match ? `${match.productCode} - ${match.name}` : "Product Component";
-    } else {
-      const match = gemstones.find((g) => g._id === item.inventoryId);
-      return match ? `${match.stoneId} - ${match.gemstone}` : "Gemstone Component";
-    }
-  };
 
   const filteredSales = useMemo(() => {
     return (sales || []).filter((s) => {
@@ -972,42 +1029,77 @@ export default function SalesList() {
               {newItemType === "Gemstone" && selectedGemstone && (
                 <div className="space-y-4 pt-2 border-t border-gray-100">
                   {/* Gemstone Form Details Card */}
-                  <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200/70 text-xs grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div>
-                      <span className="text-gray-500 block font-medium">Gemstone Name:</span>
-                      <strong className="text-gray-900">{selectedGemstone.gemstone} {selectedGemstone.variety ? `(${selectedGemstone.variety})` : ""}</strong>
+                  <div className="p-3.5 bg-amber-50/70 rounded-xl border border-amber-200/80 text-xs space-y-3">
+                    <div className="flex items-start justify-between gap-3 border-b border-amber-200/60 pb-2">
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        {selectedGemstone.imageUrls?.[0] ? (
+                          <img
+                            src={selectedGemstone.imageUrls[0]}
+                            alt={selectedGemstone.name || selectedGemstone.gemstone}
+                            className="h-10 w-10 object-cover rounded-lg border border-amber-200 shrink-0"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-lg bg-amber-200/60 flex items-center justify-center font-bold text-amber-800 text-sm shrink-0">
+                            GEM
+                          </div>
+                        )}
+                        <div>
+                          <h5 className="font-bold text-gray-900 text-xs sm:text-sm truncate">
+                            {selectedGemstone.name || selectedGemstone.gemstone}
+                            {selectedGemstone.variety ? ` (${selectedGemstone.variety})` : ""}
+                          </h5>
+                          <p className="text-[11px] font-mono text-gray-600">
+                            Code/Stock: {selectedGemstone.productCode || selectedGemstone.stockNo || selectedGemstone.stoneId}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
+                        {selectedGemstone.gemstoneType || "Gemstone"}
+                      </span>
                     </div>
-                    <div>
-                      <span className="text-gray-500 block font-medium">Lot / Stock No:</span>
-                      <strong className="text-gray-900 font-mono">{selectedGemstone.stockNo || selectedGemstone.stoneId}</strong>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 block font-medium">Certificate No:</span>
-                      <strong className="text-gray-900 font-mono">
-                        {selectedGemstone.certificateId?.certificateNumber || selectedGemstone.certificateId?.number || "N/A"}
-                      </strong>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 block font-medium">Available Carat Weight:</span>
-                      <strong className="text-emerald-700 font-bold">{selectedGemstone.carat.toFixed(2)} ct</strong>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 block font-medium">Cost per Carat:</span>
-                      <strong className="text-gray-900 font-mono">
-                        ${(selectedGemstone.costPerCarat || ((selectedGemstone.originalCarat || selectedGemstone.carat) > 0 ? selectedGemstone.purchasePrice / (selectedGemstone.originalCarat || selectedGemstone.carat) : 0)).toFixed(2)}
-                      </strong>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 block font-medium">Default Price/ct:</span>
-                      <strong className="text-primary font-mono font-bold">
-                        ${(selectedGemstone.sellingPrice || ((selectedGemstone.costPerCarat || (selectedGemstone.purchasePrice / (selectedGemstone.originalCarat || selectedGemstone.carat))) * 1.25)).toFixed(2)}
-                      </strong>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-gray-500 block font-medium">Total Available Stock Value:</span>
-                      <strong className="text-gray-900 font-mono">
-                        ${(selectedGemstone.carat * (selectedGemstone.costPerCarat || (selectedGemstone.purchasePrice / (selectedGemstone.originalCarat || selectedGemstone.carat)))).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </strong>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
+                      <div>
+                        <span className="text-gray-500 block font-medium">Shape &amp; Cut:</span>
+                        <strong className="text-gray-900">{selectedGemstone.shape || "N/A"} / {selectedGemstone.cut || "N/A"}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block font-medium">Colour / Clarity:</span>
+                        <strong className="text-gray-900">{selectedGemstone.colour || "N/A"} / {selectedGemstone.clarity || "N/A"}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block font-medium">Lab &amp; Cert No:</span>
+                        <strong className="text-gray-900 font-mono">
+                          {selectedGemstone.laboratory ? `${selectedGemstone.laboratory}: ` : ""}
+                          {selectedGemstone.certificateNumber || selectedGemstone.certificateId?.certificateNumber || "Uncertified"}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block font-medium">Origin / Treatment:</span>
+                        <strong className="text-gray-900">{selectedGemstone.origin || "N/A"} ({selectedGemstone.treatment || selectedGemstone.heatStatus || "None"})</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block font-medium">Available Carat Weight:</span>
+                        <strong className="text-emerald-700 font-bold text-xs">{(selectedGemstone.carat || 0).toFixed(2)} ct</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block font-medium">Cost per Carat:</span>
+                        <strong className="text-gray-900 font-mono">
+                          ${(selectedGemstone.costPerCarat || ((selectedGemstone.originalCarat || selectedGemstone.carat) > 0 ? (selectedGemstone.purchasePrice || selectedGemstone.costPrice || 0) / (selectedGemstone.originalCarat || selectedGemstone.carat) : 0)).toFixed(2)}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block font-medium">Default Selling Price/ct:</span>
+                        <strong className="text-primary font-mono font-bold">
+                          ${(selectedGemstone.sellingPricePerCarat || (selectedGemstone.sellingPrice && selectedGemstone.carat ? selectedGemstone.sellingPrice / selectedGemstone.carat : (selectedGemstone.costPerCarat || 0) * 1.25)).toFixed(2)}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block font-medium">Available Stock Value:</span>
+                        <strong className="text-gray-900 font-mono font-bold">
+                          ${((selectedGemstone.carat || 0) * (selectedGemstone.sellingPricePerCarat || (selectedGemstone.sellingPrice && selectedGemstone.carat ? selectedGemstone.sellingPrice / selectedGemstone.carat : (selectedGemstone.costPerCarat || 0) * 1.25))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </strong>
+                      </div>
                     </div>
                   </div>
 
